@@ -190,7 +190,7 @@ export default function ReportsPage() {
   };
 
   return (
-    <main className="min-h-screen p-4 md:p-8 bg-gray-50">
+    <main className="min-h-screen p-4 md:p-8 ">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
           <div>

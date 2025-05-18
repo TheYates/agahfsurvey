@@ -605,7 +605,7 @@ export default function SurveyForm({ locations = [] }: SurveyFormProps) {
           <div>Progress: {calculateProgress()}%</div>
           <button
             className="mt-2 px-2 py-1 bg-gray-200 rounded text-xs"
-            onClick={() => console.log("Survey Data:", surveyData)}
+            onClick={() => console.log(surveyData)}
           >
             Log Survey Data
           </button>
