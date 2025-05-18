@@ -1,0 +1,159 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Survey submission model
+model SurveySubmission {
+  id                 String   @id @default(uuid())
+  visitTime          String // "less-than-month", "one-two-months", "three-six-months", "more-than-six-months"
+  visitPurpose       String // "General Practice", "Medicals (Occupational Health)"
+  visitedOtherPlaces Boolean  @default(false)
+  wouldRecommend     Boolean?
+  whyNotRecommend    String?  @db.Text
+  recommendation     String?  @db.Text
+  userType           String // "AGAG Employee", "AGAG/Contractor Dependant", "Other Corporate Employee", "Contractor Employee"
+  patientType        String // "New Patient", "Returning Patient"
+  submittedAt        DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relations
+  submissionLocations SubmissionLocation[]
+  ratings             Rating[]
+  generalObservations GeneralObservation?
+  departmentConcerns  DepartmentConcern[]
+}
+
+// Location model
+model Location {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique
+  locationType String // "department", "ward", "canteen", "occupational_health"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  submissionLocations SubmissionLocation[]
+  ratings             Rating[]
+  departmentConcerns  DepartmentConcern[]
+
+  @@index([name])
+}
+
+// Junction table for many-to-many relationship between submissions and locations
+model SubmissionLocation {
+  id           Int      @id @default(autoincrement())
+  submissionId String
+  locationId   Int
+  isPrimary    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  // Relations
+  submission SurveySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  location   Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([locationId])
+}
+
+// Consolidated rating model with all possible rating fields
+model Rating {
+  id           Int    @id @default(autoincrement())
+  submissionId String
+  locationId   Int
+
+  // Common fields for all location types
+  reception          String? // Rating for Reception/Customer service
+  professionalism    String? // Rating for Professionalism of staff
+  understanding      String? // Rating for Understanding of needs
+  promptnessCare     String? // Rating for Promptness of care
+  promptnessFeedback String? // Rating for Promptness of feedback
+  overall            String? // Rating for Overall impression
+
+  // Ward-specific fields
+  admission             String? // Rating for Admission process (ward)
+  nurseProfessionalism  String? // Rating for Professionalism of nurse (ward)
+  doctorProfessionalism String? // Rating for Professionalism of doctor (ward)
+  discharge             String? // Rating for Discharge process (ward)
+
+  // Food-related fields (ward and canteen)
+  foodQuality String? // Rating for Food quality and timely serving
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  submission SurveySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  location   Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([locationId])
+}
+
+// General observation model with specific question columns
+model GeneralObservation {
+  id           Int      @id @default(autoincrement())
+  submissionId String   @unique
+  cleanliness  String? // Rating for Cleanliness/serenity
+  facilities   String? // Rating for Facilities
+  security     String? // Rating for Security
+  overall      String? // Rating for Overall impression
+  createdAt    DateTime @default(now())
+
+  // Relations
+  submission SurveySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+}
+
+// Department concern model
+model DepartmentConcern {
+  id           Int      @id @default(autoincrement())
+  submissionId String
+  locationId   Int
+  concern      String   @db.Text
+  createdAt    DateTime @default(now())
+
+  // Relations
+  submission SurveySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  location   Location         @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([locationId])
+}
+
+// Enums
+enum VisitTime {
+  LESS_THAN_MONTH
+  ONE_TWO_MONTHS
+  THREE_SIX_MONTHS
+  MORE_THAN_SIX_MONTHS
+}
+
+enum VisitPurpose {
+  GENERAL_PRACTICE
+  OCCUPATIONAL_HEALTH
+}
+
+enum UserType {
+  AGAG_EMPLOYEE
+  AGAG_CONTRACTOR_DEPENDANT
+  OTHER_CORPORATE_EMPLOYEE
+  CONTRACTOR_EMPLOYEE
+}
+
+enum PatientType {
+  NEW_PATIENT
+  RETURNING_PATIENT
+}
