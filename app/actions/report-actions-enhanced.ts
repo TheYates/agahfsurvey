@@ -119,6 +119,44 @@ export interface OverviewData {
   improvementAreas: ImprovementArea[];
 }
 
+// Update the DepartmentData interface
+export interface DepartmentData {
+  id: string;
+  name: string;
+  type: string;
+  visitCount: number;
+  satisfaction: number;
+  recommendRate: number;
+  ratings: {
+    reception: number;
+    professionalism: number;
+    understanding: number;
+    "promptness-care": number;
+    "promptness-feedback": number;
+    overall: number;
+  };
+}
+
+// Add this interface for Ward data
+export interface WardData {
+  id: string;
+  name: string;
+  type: string;
+  visitCount: number;
+  satisfaction: number;
+  recommendRate: number;
+  ratings: {
+    reception: number;
+    professionalism: number;
+    understanding: number;
+    "promptness-care": number;
+    "promptness-feedback": number;
+    overall: number;
+  };
+  capacity?: number;
+  occupancy?: number;
+}
+
 // Mock data for development
 const mockData = {
   getRecommendations: (): Recommendation[] => [
@@ -429,7 +467,6 @@ export async function fetchVisitTimeAnalysis(): Promise<VisitTimeAnalysis[]> {
       })
     );
 
-    console.log("Visit time analysis:", result);
     return result;
   } catch (error) {
     console.error("Error fetching visit time analysis:", error);
@@ -634,7 +671,6 @@ export async function fetchTopImprovementAreas(): Promise<ImprovementArea[]> {
       })
       .sort((a, b) => b.impactScore - a.impactScore);
 
-    console.log("Improvement areas:", improvementAreas);
     return improvementAreas;
   } catch (error) {
     console.error("Error fetching top improvement areas:", error);
@@ -648,22 +684,11 @@ export async function fetchAllSurveyData(
   dateRange: { from: string; to: string } | null = null
 ): Promise<any[]> {
   try {
-    console.log("fetchAllSurveyData: Starting query...");
     // Query all submissions without filtering
     const data = await prisma.surveySubmission.findMany({
       include: {
         ratings: true,
       },
-    });
-
-    console.log(`fetchAllSurveyData: Found ${data.length} submissions`, {
-      firstSubmissionDate: data.length > 0 ? data[0].submittedAt : null,
-      willRecommendCount: data.filter((s) => s.wouldRecommend === true).length,
-      willNotRecommendCount: data.filter((s) => s.wouldRecommend === false)
-        .length,
-      visitPurposes: [...new Set(data.map((s) => s.visitPurpose))],
-      patientTypes: [...new Set(data.map((s) => s.patientType))],
-      userTypes: [...new Set(data.map((s) => s.userType))],
     });
 
     // Map the data to return
@@ -695,7 +720,6 @@ export async function fetchAllSurveyData(
           : 0,
     }));
 
-    console.log("fetchAllSurveyData: Data processing complete");
     return mappedData;
   } catch (error) {
     console.error("Error fetching survey data:", error);
@@ -877,7 +901,6 @@ export async function fetchVisitPurposeData(): Promise<VisitPurposeData> {
       },
     };
 
-    console.log("Visit purpose data:", result);
     return result;
   } catch (error) {
     console.error("Error fetching visit purpose data:", error);
@@ -904,7 +927,6 @@ export async function fetchVisitPurposeData(): Promise<VisitPurposeData> {
 
 export async function fetchPatientTypeData(): Promise<PatientTypeData> {
   try {
-    console.log("fetchPatientTypeData: Starting query...");
     // Get all submissions with ratings and locations
     const submissions = await prisma.surveySubmission.findMany({
       include: {
@@ -917,20 +939,12 @@ export async function fetchPatientTypeData(): Promise<PatientTypeData> {
       },
     });
 
-    console.log(
-      `fetchPatientTypeData: Found ${submissions.length} submissions`
-    );
-
     // Split by patient type
     const newPatients = submissions.filter(
       (s) => s.patientType === "New Patient"
     );
     const returningPatients = submissions.filter(
       (s) => s.patientType === "Returning Patient"
-    );
-
-    console.log(
-      `fetchPatientTypeData: ${newPatients.length} new patients, ${returningPatients.length} returning patients`
     );
 
     // Process new patients data
@@ -1148,23 +1162,6 @@ export async function fetchPatientTypeData(): Promise<PatientTypeData> {
       },
     };
 
-    console.log("fetchPatientTypeData: Results calculated", {
-      newPatients: {
-        count: result.newPatients.count,
-        satisfaction: result.newPatients.satisfaction,
-        recommendRate: result.newPatients.recommendRate,
-        topDept: result.newPatients.topDepartment,
-        bottomDept: result.newPatients.bottomDepartment,
-      },
-      returningPatients: {
-        count: result.returningPatients.count,
-        satisfaction: result.returningPatients.satisfaction,
-        recommendRate: result.returningPatients.recommendRate,
-        topDept: result.returningPatients.topDepartment,
-        bottomDept: result.returningPatients.bottomDepartment,
-      },
-    });
-
     return result;
   } catch (error) {
     console.error("Error fetching patient type data:", error);
@@ -1189,16 +1186,12 @@ export async function fetchPatientTypeData(): Promise<PatientTypeData> {
 
 export async function fetchVisitTimeData(): Promise<any[]> {
   try {
-    console.log("fetchVisitTimeData: Starting query...");
-
     // Get all submissions ordered by date
     const submissions = await prisma.surveySubmission.findMany({
       include: {
         ratings: true,
       },
     });
-
-    console.log(`fetchVisitTimeData: Found ${submissions.length} submissions`);
 
     // Define the time periods from the survey form
     type VisitTimePeriod =
@@ -1298,7 +1291,6 @@ export async function fetchVisitTimeData(): Promise<any[]> {
       }
     );
 
-    console.log("fetchVisitTimeData: Processed data:", visitTimeData);
     return visitTimeData;
   } catch (error) {
     console.error("Error fetching visit time data:", error);
@@ -1309,52 +1301,19 @@ export async function fetchVisitTimeData(): Promise<any[]> {
 // Update fetchOverviewData with better logging
 export async function fetchOverviewData(): Promise<OverviewData> {
   try {
-    console.log("fetchOverviewData: Starting data collection process");
-
-    console.log("fetchOverviewData: Fetching surveyData");
     const surveyData = await fetchAllSurveyData();
-    console.log(
-      `fetchOverviewData: surveyData fetched - ${surveyData.length} items`
-    );
 
-    console.log("fetchOverviewData: Fetching visitPurposeData");
     const visitPurposeData = await fetchVisitPurposeData();
-    console.log("fetchOverviewData: visitPurposeData fetched", {
-      gpCount: visitPurposeData.generalPractice.count,
-      ohCount: visitPurposeData.occupationalHealth.count,
-    });
 
-    console.log("fetchOverviewData: Fetching patientTypeData");
     const patientTypeData = await fetchPatientTypeData();
-    console.log("fetchOverviewData: patientTypeData fetched", {
-      newCount: patientTypeData.newPatients.count,
-      returningCount: patientTypeData.returningPatients.count,
-    });
 
-    console.log("fetchOverviewData: Fetching visitTimeData");
     const visitTimeData = await fetchVisitTimeData();
-    console.log(
-      `fetchOverviewData: visitTimeData fetched - ${visitTimeData.length} items`
-    );
 
-    console.log("fetchOverviewData: Fetching satisfactionByDemographic");
     const satisfactionByDemographic = await fetchSatisfactionByDemographic();
-    console.log("fetchOverviewData: satisfactionByDemographic fetched", {
-      userTypeCount: satisfactionByDemographic.byUserType.length,
-      patientTypeCount: satisfactionByDemographic.byPatientType.length,
-    });
 
-    console.log("fetchOverviewData: Fetching visitTimeAnalysis");
     const visitTimeAnalysis = await fetchVisitTimeAnalysis();
-    console.log(
-      `fetchOverviewData: visitTimeAnalysis fetched - ${visitTimeAnalysis.length} items`
-    );
 
-    console.log("fetchOverviewData: Fetching improvementAreas");
     const improvementAreas = await fetchTopImprovementAreas();
-    console.log(
-      `fetchOverviewData: improvementAreas fetched - ${improvementAreas.length} items`
-    );
 
     const result = {
       surveyData,
@@ -1366,10 +1325,616 @@ export async function fetchOverviewData(): Promise<OverviewData> {
       improvementAreas,
     };
 
-    console.log("fetchOverviewData: All data collection complete");
     return result;
   } catch (error) {
     console.error("Error fetching overview data:", error);
     throw error;
+  }
+}
+
+// Fix the fetchDepartments function to use camelCase in the database queries
+export async function fetchDepartments(): Promise<DepartmentData[]> {
+  try {
+    console.log("fetchDepartments: Starting query...");
+
+    // Get all locations from the database
+    const locations = await prisma.location.findMany({
+      where: {
+        locationType: "department",
+      },
+    });
+
+    console.log(`fetchDepartments: Found ${locations.length} departments`);
+
+    // Get all submissions that include these locations
+    const submissionLocations = await prisma.submissionLocation.findMany({
+      include: {
+        location: true,
+        submission: {
+          include: {
+            ratings: true,
+          },
+        },
+      },
+      where: {
+        location: {
+          locationType: "department",
+        },
+      },
+    });
+
+    console.log(
+      `fetchDepartments: Found ${submissionLocations.length} submission locations`
+    );
+
+    // Count submissions per location and calculate metrics
+    const departmentMap = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        type: string;
+        visitCount: number;
+        recommendCount: number;
+        ratings: {
+          reception: { sum: number; count: number };
+          professionalism: { sum: number; count: number };
+          understanding: { sum: number; count: number };
+          "promptness-care": { sum: number; count: number };
+          "promptness-feedback": { sum: number; count: number };
+          overall: { sum: number; count: number };
+        };
+      }
+    >();
+
+    // Initialize department map for all locations
+    locations.forEach((location) => {
+      departmentMap.set(location.id.toString(), {
+        id: location.id.toString(),
+        name: location.name,
+        type: "department",
+        visitCount: 0,
+        recommendCount: 0,
+        ratings: {
+          reception: { sum: 0, count: 0 },
+          professionalism: { sum: 0, count: 0 },
+          understanding: { sum: 0, count: 0 },
+          "promptness-care": { sum: 0, count: 0 },
+          "promptness-feedback": { sum: 0, count: 0 },
+          overall: { sum: 0, count: 0 },
+        },
+      });
+    });
+
+    // Process each submission location
+    submissionLocations.forEach((sl) => {
+      const locationId = sl.location.id.toString();
+      const dept = departmentMap.get(locationId);
+
+      if (dept) {
+        // Count visit
+        dept.visitCount++;
+
+        // Count recommendation
+        if (sl.submission.wouldRecommend) {
+          dept.recommendCount++;
+        }
+
+        // Process ratings
+        sl.submission.ratings.forEach((rating) => {
+          // Handle each rating category
+          if (rating.reception) {
+            const value =
+              rating.reception === "Excellent"
+                ? 5
+                : rating.reception === "Very Good"
+                ? 4
+                : rating.reception === "Good"
+                ? 3
+                : rating.reception === "Fair"
+                ? 2
+                : rating.reception === "Poor"
+                ? 1
+                : 0;
+
+            dept.ratings.reception.sum += value;
+            dept.ratings.reception.count++;
+          }
+
+          if (rating.professionalism) {
+            const value =
+              rating.professionalism === "Excellent"
+                ? 5
+                : rating.professionalism === "Very Good"
+                ? 4
+                : rating.professionalism === "Good"
+                ? 3
+                : rating.professionalism === "Fair"
+                ? 2
+                : rating.professionalism === "Poor"
+                ? 1
+                : 0;
+
+            dept.ratings.professionalism.sum += value;
+            dept.ratings.professionalism.count++;
+          }
+
+          if (rating.understanding) {
+            const value =
+              rating.understanding === "Excellent"
+                ? 5
+                : rating.understanding === "Very Good"
+                ? 4
+                : rating.understanding === "Good"
+                ? 3
+                : rating.understanding === "Fair"
+                ? 2
+                : rating.understanding === "Poor"
+                ? 1
+                : 0;
+
+            dept.ratings.understanding.sum += value;
+            dept.ratings.understanding.count++;
+          }
+
+          if (rating.promptnessCare) {
+            const value =
+              rating.promptnessCare === "Excellent"
+                ? 5
+                : rating.promptnessCare === "Very Good"
+                ? 4
+                : rating.promptnessCare === "Good"
+                ? 3
+                : rating.promptnessCare === "Fair"
+                ? 2
+                : rating.promptnessCare === "Poor"
+                ? 1
+                : 0;
+
+            dept.ratings["promptness-care"].sum += value;
+            dept.ratings["promptness-care"].count++;
+          }
+
+          if (rating.promptnessFeedback) {
+            const value =
+              rating.promptnessFeedback === "Excellent"
+                ? 5
+                : rating.promptnessFeedback === "Very Good"
+                ? 4
+                : rating.promptnessFeedback === "Good"
+                ? 3
+                : rating.promptnessFeedback === "Fair"
+                ? 2
+                : rating.promptnessFeedback === "Poor"
+                ? 1
+                : 0;
+
+            dept.ratings["promptness-feedback"].sum += value;
+            dept.ratings["promptness-feedback"].count++;
+          }
+
+          if (rating.overall) {
+            const value =
+              rating.overall === "Excellent"
+                ? 5
+                : rating.overall === "Very Good"
+                ? 4
+                : rating.overall === "Good"
+                ? 3
+                : rating.overall === "Fair"
+                ? 2
+                : rating.overall === "Poor"
+                ? 1
+                : 0;
+
+            dept.ratings.overall.sum += value;
+            dept.ratings.overall.count++;
+          }
+        });
+      }
+    });
+
+    // Convert the map to array and calculate averages
+    const departmentsData: DepartmentData[] = Array.from(
+      departmentMap.values()
+    ).map((dept) => {
+      // Calculate recommend rate
+      const recommendRate =
+        dept.visitCount > 0
+          ? Math.round((dept.recommendCount / dept.visitCount) * 100)
+          : 0;
+
+      // Calculate average ratings
+      const ratings = {
+        reception:
+          dept.ratings.reception.count > 0
+            ? Number(
+                (
+                  dept.ratings.reception.sum / dept.ratings.reception.count
+                ).toFixed(1)
+              )
+            : 0,
+        professionalism:
+          dept.ratings.professionalism.count > 0
+            ? Number(
+                (
+                  dept.ratings.professionalism.sum /
+                  dept.ratings.professionalism.count
+                ).toFixed(1)
+              )
+            : 0,
+        understanding:
+          dept.ratings.understanding.count > 0
+            ? Number(
+                (
+                  dept.ratings.understanding.sum /
+                  dept.ratings.understanding.count
+                ).toFixed(1)
+              )
+            : 0,
+        "promptness-care":
+          dept.ratings["promptness-care"].count > 0
+            ? Number(
+                (
+                  dept.ratings["promptness-care"].sum /
+                  dept.ratings["promptness-care"].count
+                ).toFixed(1)
+              )
+            : 0,
+        "promptness-feedback":
+          dept.ratings["promptness-feedback"].count > 0
+            ? Number(
+                (
+                  dept.ratings["promptness-feedback"].sum /
+                  dept.ratings["promptness-feedback"].count
+                ).toFixed(1)
+              )
+            : 0,
+        overall:
+          dept.ratings.overall.count > 0
+            ? Number(
+                (dept.ratings.overall.sum / dept.ratings.overall.count).toFixed(
+                  1
+                )
+              )
+            : 0,
+      };
+
+      // Calculate overall satisfaction as average of all ratings or use overall rating if available
+      const overallValues = Object.values(ratings).filter((val) => val > 0);
+      const satisfaction =
+        ratings.overall > 0
+          ? ratings.overall
+          : overallValues.length > 0
+          ? Number(
+              (
+                overallValues.reduce((a, b) => a + b, 0) / overallValues.length
+              ).toFixed(1)
+            )
+          : 0;
+
+      return {
+        id: dept.id,
+        name: dept.name,
+        type: dept.type,
+        visitCount: dept.visitCount,
+        satisfaction,
+        recommendRate,
+        ratings,
+      };
+    });
+
+    console.log(
+      `fetchDepartments: Processed ${departmentsData.length} departments with data`
+    );
+    return departmentsData;
+  } catch (error) {
+    console.error("Error fetching departments data:", error);
+    return [];
+  }
+}
+
+// Function to fetch real ward data
+export async function fetchWards(): Promise<WardData[]> {
+  try {
+    console.log("fetchWards: Starting query...");
+
+    // Get all locations from the database with type "ward"
+    const locations = await prisma.location.findMany({
+      where: {
+        locationType: "ward",
+      },
+    });
+
+    console.log(`fetchWards: Found ${locations.length} wards`);
+
+    // Get all submissions that include these locations
+    const submissionLocations = await prisma.submissionLocation.findMany({
+      include: {
+        location: true,
+        submission: {
+          include: {
+            ratings: true,
+          },
+        },
+      },
+      where: {
+        location: {
+          locationType: "ward",
+        },
+      },
+    });
+
+    console.log(
+      `fetchWards: Found ${submissionLocations.length} submission locations for wards`
+    );
+
+    // Count submissions per location and calculate metrics
+    const wardMap = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        type: string;
+        visitCount: number;
+        recommendCount: number;
+        ratings: {
+          reception: { sum: number; count: number };
+          professionalism: { sum: number; count: number };
+          understanding: { sum: number; count: number };
+          "promptness-care": { sum: number; count: number };
+          "promptness-feedback": { sum: number; count: number };
+          overall: { sum: number; count: number };
+        };
+      }
+    >();
+
+    // Initialize ward map for all locations
+    locations.forEach((location) => {
+      wardMap.set(location.id.toString(), {
+        id: location.id.toString(),
+        name: location.name,
+        type: "ward",
+        visitCount: 0,
+        recommendCount: 0,
+        ratings: {
+          reception: { sum: 0, count: 0 },
+          professionalism: { sum: 0, count: 0 },
+          understanding: { sum: 0, count: 0 },
+          "promptness-care": { sum: 0, count: 0 },
+          "promptness-feedback": { sum: 0, count: 0 },
+          overall: { sum: 0, count: 0 },
+        },
+      });
+    });
+
+    // Process each submission location
+    submissionLocations.forEach((sl) => {
+      const locationId = sl.location.id.toString();
+      const ward = wardMap.get(locationId);
+
+      if (ward) {
+        // Count visit
+        ward.visitCount++;
+
+        // Count recommendation
+        if (sl.submission.wouldRecommend) {
+          ward.recommendCount++;
+        }
+
+        // Process ratings
+        sl.submission.ratings.forEach((rating) => {
+          // Handle each rating category
+          if (rating.reception) {
+            const value =
+              rating.reception === "Excellent"
+                ? 5
+                : rating.reception === "Very Good"
+                ? 4
+                : rating.reception === "Good"
+                ? 3
+                : rating.reception === "Fair"
+                ? 2
+                : rating.reception === "Poor"
+                ? 1
+                : 0;
+
+            ward.ratings.reception.sum += value;
+            ward.ratings.reception.count++;
+          }
+
+          if (rating.professionalism) {
+            const value =
+              rating.professionalism === "Excellent"
+                ? 5
+                : rating.professionalism === "Very Good"
+                ? 4
+                : rating.professionalism === "Good"
+                ? 3
+                : rating.professionalism === "Fair"
+                ? 2
+                : rating.professionalism === "Poor"
+                ? 1
+                : 0;
+
+            ward.ratings.professionalism.sum += value;
+            ward.ratings.professionalism.count++;
+          }
+
+          if (rating.understanding) {
+            const value =
+              rating.understanding === "Excellent"
+                ? 5
+                : rating.understanding === "Very Good"
+                ? 4
+                : rating.understanding === "Good"
+                ? 3
+                : rating.understanding === "Fair"
+                ? 2
+                : rating.understanding === "Poor"
+                ? 1
+                : 0;
+
+            ward.ratings.understanding.sum += value;
+            ward.ratings.understanding.count++;
+          }
+
+          if (rating.promptnessCare) {
+            const value =
+              rating.promptnessCare === "Excellent"
+                ? 5
+                : rating.promptnessCare === "Very Good"
+                ? 4
+                : rating.promptnessCare === "Good"
+                ? 3
+                : rating.promptnessCare === "Fair"
+                ? 2
+                : rating.promptnessCare === "Poor"
+                ? 1
+                : 0;
+
+            ward.ratings["promptness-care"].sum += value;
+            ward.ratings["promptness-care"].count++;
+          }
+
+          if (rating.promptnessFeedback) {
+            const value =
+              rating.promptnessFeedback === "Excellent"
+                ? 5
+                : rating.promptnessFeedback === "Very Good"
+                ? 4
+                : rating.promptnessFeedback === "Good"
+                ? 3
+                : rating.promptnessFeedback === "Fair"
+                ? 2
+                : rating.promptnessFeedback === "Poor"
+                ? 1
+                : 0;
+
+            ward.ratings["promptness-feedback"].sum += value;
+            ward.ratings["promptness-feedback"].count++;
+          }
+
+          if (rating.overall) {
+            const value =
+              rating.overall === "Excellent"
+                ? 5
+                : rating.overall === "Very Good"
+                ? 4
+                : rating.overall === "Good"
+                ? 3
+                : rating.overall === "Fair"
+                ? 2
+                : rating.overall === "Poor"
+                ? 1
+                : 0;
+
+            ward.ratings.overall.sum += value;
+            ward.ratings.overall.count++;
+          }
+        });
+      }
+    });
+
+    // Convert the map to array and calculate averages
+    const wardsData: WardData[] = Array.from(wardMap.values()).map((ward) => {
+      // Calculate recommend rate
+      const recommendRate =
+        ward.visitCount > 0
+          ? Math.round((ward.recommendCount / ward.visitCount) * 100)
+          : 0;
+
+      // Calculate average ratings
+      const ratings = {
+        reception:
+          ward.ratings.reception.count > 0
+            ? Number(
+                (
+                  ward.ratings.reception.sum / ward.ratings.reception.count
+                ).toFixed(1)
+              )
+            : 0,
+        professionalism:
+          ward.ratings.professionalism.count > 0
+            ? Number(
+                (
+                  ward.ratings.professionalism.sum /
+                  ward.ratings.professionalism.count
+                ).toFixed(1)
+              )
+            : 0,
+        understanding:
+          ward.ratings.understanding.count > 0
+            ? Number(
+                (
+                  ward.ratings.understanding.sum /
+                  ward.ratings.understanding.count
+                ).toFixed(1)
+              )
+            : 0,
+        "promptness-care":
+          ward.ratings["promptness-care"].count > 0
+            ? Number(
+                (
+                  ward.ratings["promptness-care"].sum /
+                  ward.ratings["promptness-care"].count
+                ).toFixed(1)
+              )
+            : 0,
+        "promptness-feedback":
+          ward.ratings["promptness-feedback"].count > 0
+            ? Number(
+                (
+                  ward.ratings["promptness-feedback"].sum /
+                  ward.ratings["promptness-feedback"].count
+                ).toFixed(1)
+              )
+            : 0,
+        overall:
+          ward.ratings.overall.count > 0
+            ? Number(
+                (ward.ratings.overall.sum / ward.ratings.overall.count).toFixed(
+                  1
+                )
+              )
+            : 0,
+      };
+
+      // Calculate overall satisfaction as average of all ratings or use overall rating if available
+      const overallValues = Object.values(ratings).filter((val) => val > 0);
+      const satisfaction =
+        ratings.overall > 0
+          ? ratings.overall
+          : overallValues.length > 0
+          ? Number(
+              (
+                overallValues.reduce((a, b) => a + b, 0) / overallValues.length
+              ).toFixed(1)
+            )
+          : 0;
+
+      // Random sensible values for capacity and occupancy since these are typically in the ward system
+      // In a real application, these would come from a ward management system
+      const capacity = Math.floor(Math.random() * 20) + 10; // 10-30 beds
+      const occupancy = Math.floor(Math.random() * capacity); // Random occupancy below capacity
+
+      return {
+        id: ward.id,
+        name: ward.name,
+        type: ward.type,
+        visitCount: ward.visitCount,
+        satisfaction,
+        recommendRate,
+        ratings,
+        capacity,
+        occupancy,
+      };
+    });
+
+    console.log(`fetchWards: Processed ${wardsData.length} wards with data`);
+    return wardsData;
+  } catch (error) {
+    console.error("Error fetching wards data:", error);
+    return [];
   }
 }

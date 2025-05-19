@@ -3,8 +3,6 @@ import { PrismaClient } from "../lib/generated/prisma";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Starting database seeding...");
-
   // Insert department locations
   const departments = [
     "Audiology Unit",

@@ -334,13 +334,6 @@ export default function SurveyForm({ locations = [] }: SurveyFormProps) {
 
   // Determine which step to show
   const renderStep = () => {
-    console.log(
-      "Rendering step:",
-      currentStep,
-      "Location index:",
-      currentLocationIndex
-    );
-
     // For General Practice flow
     if (surveyData.visitPurpose === "General Practice") {
       if (currentStep === 0) {
@@ -605,7 +598,7 @@ export default function SurveyForm({ locations = [] }: SurveyFormProps) {
           <div>Progress: {calculateProgress()}%</div>
           <button
             className="mt-2 px-2 py-1 bg-gray-200 rounded text-xs"
-            onClick={() => console.log(surveyData)}
+            onClick={() => surveyData}
           >
             Log Survey Data
           </button>
