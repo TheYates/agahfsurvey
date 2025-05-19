@@ -20,6 +20,7 @@ export default function OccupationalHealthRating({
   onBack,
 }: OccupationalHealthRatingProps) {
   const location = "Occupational Health Unit (Medicals)";
+  const visitPurpose = "Medicals (Occupational Health)";
 
   const ratingCategories = [
     { id: "reception", label: "Reception/Customer service" },

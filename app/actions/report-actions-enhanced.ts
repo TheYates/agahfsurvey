@@ -109,6 +109,12 @@ export interface PatientTypeData {
   };
 }
 
+// Create a new interface for user type distribution
+export interface UserTypeDistribution {
+  name: string;
+  value: number;
+}
+
 export interface OverviewData {
   surveyData: any[];
   visitPurposeData: VisitPurposeData;
@@ -117,6 +123,10 @@ export interface OverviewData {
   satisfactionByDemographic: DemographicSatisfaction;
   visitTimeAnalysis: VisitTimeAnalysis[];
   improvementAreas: ImprovementArea[];
+  userTypeData: {
+    distribution: UserTypeDistribution[];
+    insight: string;
+  };
 }
 
 // Update the DepartmentData interface
@@ -155,6 +165,25 @@ export interface WardData {
   };
   capacity?: number;
   occupancy?: number;
+}
+
+// Update OccupationalHealthData interface to include top/lowest locations
+export interface OccupationalHealthData {
+  id: string;
+  name: string;
+  visitCount: number;
+  satisfaction: number;
+  recommendRate: number;
+  ratings: {
+    reception: number;
+    professionalism: number;
+    understanding: number;
+    "promptness-care": number;
+    "promptness-feedback": number;
+    overall: number;
+  };
+  topRatedLocations: Array<{ name: string; rating: number }>;
+  lowestRatedLocations: Array<{ name: string; rating: number }>;
 }
 
 // Mock data for development
@@ -1298,6 +1327,77 @@ export async function fetchVisitTimeData(): Promise<any[]> {
   }
 }
 
+// Add new function to fetch user type distribution
+export async function fetchUserTypeDistribution(): Promise<{
+  distribution: UserTypeDistribution[];
+  insight: string;
+}> {
+  try {
+    console.log("Fetching user type distribution data...");
+
+    // Get all survey submissions
+    const submissions = await prisma.surveySubmission.findMany();
+
+    // Count user types
+    const userTypeCounts: Record<string, number> = {};
+
+    submissions.forEach((submission) => {
+      if (submission.userType) {
+        userTypeCounts[submission.userType] =
+          (userTypeCounts[submission.userType] || 0) + 1;
+      }
+    });
+
+    // Format data for visualization
+    const distribution = Object.entries(userTypeCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    // Generate insight based on data
+    let insight = "";
+    if (distribution.length > 0) {
+      const totalUsers = distribution.reduce(
+        (sum, item) => sum + item.value,
+        0
+      );
+      const largestGroup = distribution[0];
+      const percentage = ((largestGroup.value / totalUsers) * 100).toFixed(1);
+
+      insight = `${largestGroup.name} is the most common user type, representing ${percentage}% of all respondents. Understanding this distribution helps in tailoring services to meet the specific needs of your main user groups.`;
+    } else {
+      insight =
+        "No user type data is available yet. As more surveys are collected, insights about your user demographics will appear here.";
+    }
+
+    // Ensure there's always something to display
+    const finalDistribution =
+      distribution.length > 0
+        ? distribution
+        : [
+            { name: "AGAG Employee", value: 0 },
+            { name: "AGAG/Contractor Dependant", value: 0 },
+            { name: "Other Corporate Employee", value: 0 },
+            { name: "Contractor Employee", value: 0 },
+          ];
+
+    return {
+      distribution: finalDistribution,
+      insight,
+    };
+  } catch (error) {
+    console.error("Error fetching user type distribution:", error);
+    return {
+      distribution: [
+        { name: "AGAG Employee", value: 0 },
+        { name: "AGAG/Contractor Dependant", value: 0 },
+        { name: "Other Corporate Employee", value: 0 },
+        { name: "Contractor Employee", value: 0 },
+      ],
+      insight: "Unable to load user type data.",
+    };
+  }
+}
+
 // Update fetchOverviewData with better logging
 export async function fetchOverviewData(): Promise<OverviewData> {
   try {
@@ -1315,6 +1415,8 @@ export async function fetchOverviewData(): Promise<OverviewData> {
 
     const improvementAreas = await fetchTopImprovementAreas();
 
+    const userTypeData = await fetchUserTypeDistribution();
+
     const result = {
       surveyData,
       visitPurposeData,
@@ -1323,6 +1425,7 @@ export async function fetchOverviewData(): Promise<OverviewData> {
       satisfactionByDemographic,
       visitTimeAnalysis,
       improvementAreas,
+      userTypeData,
     };
 
     return result;
@@ -1936,5 +2039,263 @@ export async function fetchWards(): Promise<WardData[]> {
   } catch (error) {
     console.error("Error fetching wards data:", error);
     return [];
+  }
+}
+
+// Fetch occupational health specific data
+export async function fetchOccupationalHealthData(): Promise<{
+  ohData: OccupationalHealthData | null;
+  ohConcerns: DepartmentConcern[];
+}> {
+  try {
+    console.log("Fetching occupational health specific data...");
+
+    // Get all submissions with occupational health visit purpose
+    const ohSubmissions = await prisma.surveySubmission.findMany({
+      where: {
+        visitPurpose: "Medicals (Occupational Health)",
+      },
+      include: {
+        ratings: true,
+        submissionLocations: {
+          include: {
+            location: true,
+          },
+        },
+        departmentConcerns: {
+          include: {
+            location: true,
+          },
+        },
+      },
+    });
+
+    console.log(
+      `Found ${ohSubmissions.length} occupational health submissions`
+    );
+
+    // If no data found, return null with empty concerns
+    if (ohSubmissions.length === 0) {
+      return { ohData: null, ohConcerns: [] };
+    }
+
+    // Calculate visit count
+    const visitCount = ohSubmissions.length;
+
+    // Track ratings by location
+    const locationRatings: Record<string, { sum: number; count: number }> = {};
+
+    // Calculate satisfaction from ratings (if available)
+    let totalSatisfaction = 0;
+    let totalRecommend = 0;
+    let ratingCount = 0;
+
+    // Initialize ratings object
+    const aggregatedRatings: Record<string, number> = {
+      reception: 0,
+      professionalism: 0,
+      understanding: 0,
+      "promptness-care": 0,
+      "promptness-feedback": 0,
+      overall: 0,
+    };
+
+    const ratingCounts: Record<string, number> = {
+      reception: 0,
+      professionalism: 0,
+      understanding: 0,
+      "promptness-care": 0,
+      "promptness-feedback": 0,
+      overall: 0,
+    };
+
+    // Process each submission's ratings
+    for (const submission of ohSubmissions) {
+      // Calculate overall satisfaction
+      if (submission.ratings && submission.ratings.length > 0) {
+        // Average the overall ratings for this submission
+        const submissionOverallRating =
+          submission.ratings.reduce((sum: number, rating: any) => {
+            // Convert string ratings to numbers (1-5 scale)
+            const numericRating =
+              rating.overall === "Excellent"
+                ? 5
+                : rating.overall === "Very Good"
+                ? 4
+                : rating.overall === "Good"
+                ? 3
+                : rating.overall === "Fair"
+                ? 2
+                : rating.overall === "Poor"
+                ? 1
+                : 0;
+
+            return sum + numericRating;
+          }, 0) / submission.ratings.length;
+
+        totalSatisfaction += submissionOverallRating;
+        ratingCount++;
+
+        // Track ratings by location
+        if (
+          submission.submissionLocations &&
+          submission.submissionLocations.length > 0
+        ) {
+          submission.submissionLocations.forEach((submissionLocation) => {
+            const locationName = submissionLocation.location.name;
+
+            // Initialize location in tracking if not exists
+            if (!locationRatings[locationName]) {
+              locationRatings[locationName] = { sum: 0, count: 0 };
+            }
+
+            // Add this submission's rating to the location
+            locationRatings[locationName].sum += submissionOverallRating;
+            locationRatings[locationName].count++;
+          });
+        }
+      }
+
+      // Count recommendation
+      if (submission.wouldRecommend) {
+        totalRecommend++;
+      }
+
+      // Process detailed ratings
+      if (submission.ratings) {
+        for (const rating of submission.ratings) {
+          const processRating = (field: string, value: string | null) => {
+            if (!value) return; // Skip if null
+
+            const numericValue =
+              value === "Excellent"
+                ? 5
+                : value === "Very Good"
+                ? 4
+                : value === "Good"
+                ? 3
+                : value === "Fair"
+                ? 2
+                : value === "Poor"
+                ? 1
+                : 0;
+
+            if (numericValue > 0) {
+              aggregatedRatings[field] =
+                (aggregatedRatings[field] || 0) + numericValue;
+              ratingCounts[field] = (ratingCounts[field] || 0) + 1;
+            }
+          };
+
+          // Process each rating field
+          processRating("reception", rating.reception);
+          processRating("professionalism", rating.professionalism);
+          processRating("understanding", rating.understanding);
+          processRating("promptness-care", rating.promptnessCare);
+          processRating("promptness-feedback", rating.promptnessFeedback);
+          processRating("overall", rating.overall);
+        }
+      }
+    }
+
+    // Calculate averages for each rating category
+    const finalRatings = {
+      reception:
+        ratingCounts.reception > 0
+          ? aggregatedRatings.reception / ratingCounts.reception
+          : 0,
+      professionalism:
+        ratingCounts.professionalism > 0
+          ? aggregatedRatings.professionalism / ratingCounts.professionalism
+          : 0,
+      understanding:
+        ratingCounts.understanding > 0
+          ? aggregatedRatings.understanding / ratingCounts.understanding
+          : 0,
+      "promptness-care":
+        ratingCounts["promptness-care"] > 0
+          ? aggregatedRatings["promptness-care"] /
+            ratingCounts["promptness-care"]
+          : 0,
+      "promptness-feedback":
+        ratingCounts["promptness-feedback"] > 0
+          ? aggregatedRatings["promptness-feedback"] /
+            ratingCounts["promptness-feedback"]
+          : 0,
+      overall:
+        ratingCounts.overall > 0
+          ? aggregatedRatings.overall / ratingCounts.overall
+          : 0,
+    };
+
+    // Calculate overall metrics
+    const avgSatisfaction =
+      ratingCount > 0 ? totalSatisfaction / ratingCount : 0;
+    const recommendRate =
+      visitCount > 0 ? (totalRecommend / visitCount) * 100 : 0;
+
+    // Calculate average ratings per location and prepare top/lowest lists
+    const locationAverages = Object.entries(locationRatings)
+      .filter(([_, data]) => data.count > 0)
+      .map(([name, data]) => ({
+        name,
+        rating: Number((data.sum / data.count).toFixed(1)),
+      }))
+      .filter((loc) => loc.name !== "Occupational Health Unit (Medicals)"); // Exclude the main OH unit itself
+
+    // Sort by rating (descending for top, ascending for lowest)
+    const topRatedLocations = [...locationAverages]
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 3); // Get top 3
+
+    const lowestRatedLocations = [...locationAverages]
+      .sort((a, b) => a.rating - b.rating)
+      .slice(0, 3); // Get bottom 3
+
+    console.log("Top rated locations during OH visits:", topRatedLocations);
+    console.log(
+      "Lowest rated locations during OH visits:",
+      lowestRatedLocations
+    );
+
+    // Format concerns
+    const ohConcerns: DepartmentConcern[] = ohSubmissions.flatMap(
+      (submission) => {
+        if (!submission.departmentConcerns) return [];
+
+        return submission.departmentConcerns.map((concern) => ({
+          submissionId: submission.id,
+          submittedAt: submission.submittedAt.toISOString(),
+          locationName: concern.location.name,
+          concern: concern.concern,
+          visitPurpose: submission.visitPurpose,
+          patientType: submission.patientType,
+          userType: submission.userType,
+        }));
+      }
+    );
+
+    // Create occupational health data object
+    const ohData: OccupationalHealthData = {
+      id: "occupational-health",
+      name: "Occupational Health Unit (Medicals)",
+      visitCount,
+      satisfaction: avgSatisfaction,
+      recommendRate,
+      ratings: finalRatings,
+      topRatedLocations,
+      lowestRatedLocations,
+    };
+
+    return {
+      ohData,
+      ohConcerns,
+    };
+  } catch (error) {
+    console.error("Error fetching occupational health data:", error);
+    return {
+      ohData: null,
+      ohConcerns: [],
+    };
   }
 }

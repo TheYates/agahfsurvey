@@ -19,26 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-} from "recharts";
+
 import {
   ArrowLeft,
   Download,
@@ -82,6 +63,7 @@ import { DepartmentsTab } from "./components/departments-tab";
 import { WardsTab } from "./components/wards-tab";
 import { CanteenTab } from "./components/canteen-tab";
 import { OccupationalHealthTab } from "./components/occupational-health-tab";
+import { FeedbackTab } from "./components/feedback-tab";
 
 // Colors for charts
 const COLORS = [
@@ -112,6 +94,10 @@ interface EnhancedData {
   visitTimeAnalysis: VisitTimeAnalysis[];
   satisfactionByDemographic: DemographicSatisfaction;
   improvementAreas: ImprovementArea[];
+  userTypeData?: {
+    distribution: any[];
+    insight: string;
+  };
 }
 
 // Update the getData function to fetch the enhanced data
@@ -184,17 +170,8 @@ export default function EnhancedAnalysisPage() {
       const overviewData = await fetchOverviewData();
 
       // Fetch real department data
-      console.log("EnhancedAnalysisPage: Fetching departments data...");
       const departmentsData = await fetchDepartments();
-      console.log(
-        "EnhancedAnalysisPage: Received departments data:",
-        departmentsData
-      );
-
-      // Fetch real ward data
-      console.log("EnhancedAnalysisPage: Fetching wards data...");
       const wardsData = await fetchWards();
-      console.log("EnhancedAnalysisPage: Received wards data:", wardsData);
 
       // Set data state
       setData({
@@ -208,6 +185,10 @@ export default function EnhancedAnalysisPage() {
           byPatientType: [],
         },
         improvementAreas: overviewData.improvementAreas || [],
+        userTypeData: overviewData.userTypeData || {
+          distribution: [],
+          insight: "No user type data available.",
+        },
       });
 
       // Combine departments and wards into locations
@@ -626,10 +607,10 @@ export default function EnhancedAnalysisPage() {
                 <span className="hidden sm:inline">Medicals</span>
               </span>
             </TabsTrigger>
-            <TabsTrigger value="ratings">
+            <TabsTrigger value="feedback">
               <span className="flex items-center gap-1.5">
-                <Star className="h-4 w-4" />
-                <span className="hidden sm:inline">Ratings</span>
+                <MessageSquare className="h-4 w-4" />
+                <span className="hidden sm:inline">Feedback</span>
               </span>
             </TabsTrigger>
           </TabsList>
@@ -688,6 +669,9 @@ export default function EnhancedAnalysisPage() {
               visitPurposeData={visitPurposeData}
               patientTypeData={patientTypeData}
               visitTimeData={visitTimeData}
+              userTypeData={
+                data.userTypeData || { distribution: [], insight: "" }
+              }
             />
           </TabsContent>
 
@@ -711,15 +695,12 @@ export default function EnhancedAnalysisPage() {
 
           {/* Occupational Health Tab Content */}
           <TabsContent value="occupational-health">
-            <OccupationalHealthTab
-              isLoading={isLoading}
-              departments={locations}
-            />
+            <OccupationalHealthTab isLoading={isLoading} />
           </TabsContent>
 
-          {/* Ratings Tab Content */}
-          <TabsContent value="ratings">
-            {/* Ratings content will be implemented here */}
+          {/* Feedback Tab Content */}
+          <TabsContent value="feedback">
+            <FeedbackTab isLoading={isLoading} surveyData={data.surveyData} />
           </TabsContent>
         </Tabs>
       </div>

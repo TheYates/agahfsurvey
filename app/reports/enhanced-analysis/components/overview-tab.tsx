@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils";
 import {
   DemographicSatisfaction,
   ImprovementArea,
+  UserTypeDistribution,
   VisitTimeAnalysis,
 } from "@/app/actions/report-actions-enhanced";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -53,6 +54,14 @@ import {
   PolarRadiusAxis,
   Radar,
 } from "recharts";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+} from "@/components/ui/table";
 
 interface SurveyData {
   totalResponses: number;
@@ -75,6 +84,10 @@ interface OverviewTabProps {
   visitPurposeData: any;
   patientTypeData: any;
   visitTimeData: any;
+  userTypeData: {
+    distribution: UserTypeDistribution[];
+    insight: string;
+  };
 }
 
 const COLORS = [
@@ -95,6 +108,7 @@ export function OverviewTab({
   visitPurposeData,
   patientTypeData,
   visitTimeData,
+  userTypeData,
 }: OverviewTabProps) {
   if (isLoading) {
     return (
@@ -565,10 +579,11 @@ export function OverviewTab({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users size={18} />
-                Patient Type Comparison
+                Patient & User Type Analysis
               </CardTitle>
               <CardDescription>
-                Comparing experiences between new and returning patients
+                Comparing experiences between different patient types and
+                analyzing user demographics
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -764,77 +779,151 @@ export function OverviewTab({
               </div>
 
               <div className="mt-8">
-                <h3 className="text-lg font-medium mb-4">
-                  Satisfaction Comparison
+                <Separator className="my-8" />
+                <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                  <Users size={18} />
+                  User Type Distribution
                 </h3>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart
-                      outerRadius={150}
-                      data={[
-                        {
-                          subject: "Overall Satisfaction",
-                          "New Patient":
-                            patientTypeData.newPatients.satisfaction,
-                          "Returning Patient":
-                            patientTypeData.returningPatients.satisfaction,
-                          fullMark: 5,
-                        },
-                        {
-                          subject: "Recommendation Rate",
-                          "New Patient":
-                            patientTypeData.newPatients.recommendRate / 20, // Scale to 0-5
-                          "Returning Patient":
-                            patientTypeData.returningPatients.recommendRate /
-                            20,
-                          fullMark: 5,
-                        },
-                        {
-                          subject: "Top Department Rating",
-                          "New Patient":
-                            patientTypeData.newPatients.topDepartment.score,
-                          "Returning Patient":
-                            patientTypeData.returningPatients.topDepartment
-                              .score,
-                          fullMark: 5,
-                        },
-                        {
-                          subject: "Bottom Department Rating",
-                          "New Patient":
-                            patientTypeData.newPatients.bottomDepartment.score,
-                          "Returning Patient":
-                            patientTypeData.returningPatients.bottomDepartment
-                              .score,
-                          fullMark: 5,
-                        },
-                      ]}
-                    >
-                      <PolarGrid />
-                      <PolarAngleAxis dataKey="subject" />
-                      <PolarRadiusAxis domain={[0, 5]} />
-                      <Radar
-                        name="New Patient"
-                        dataKey="New Patient"
-                        stroke="#4b5563"
-                        fill="#4b5563"
-                        fillOpacity={0.6}
-                      />
-                      <Radar
-                        name="Returning Patient"
-                        dataKey="Returning Patient"
-                        stroke="#6b7280"
-                        fill="#6b7280"
-                        fillOpacity={0.6}
-                      />
-                      <Legend />
-                      <Tooltip
-                        formatter={(value) => [
-                          typeof value === "number" ? value.toFixed(2) : value,
-                          "",
-                        ]}
-                      />
-                    </RadarChart>
-                  </ResponsiveContainer>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-base font-medium mb-4">
+                      User Type Composition
+                    </h4>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={userTypeData.distribution}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={120}
+                            fill="#8884d8"
+                            label={({ name, percent }) =>
+                              `${name}: ${(percent * 100).toFixed(1)}%`
+                            }
+                          >
+                            {userTypeData.distribution.map((entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={COLORS[index % COLORS.length]}
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value) => [
+                              `${value} responses`,
+                              "Count",
+                            ]}
+                          />
+                          <Legend
+                            layout="vertical"
+                            verticalAlign="middle"
+                            align="right"
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-base font-medium mb-4">
+                      User Type Analysis
+                    </h4>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User Type</TableHead>
+                          <TableHead className="text-right">Count</TableHead>
+                          <TableHead className="text-right">
+                            Percentage
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {userTypeData.distribution.map((item, index) => {
+                          const total = userTypeData.distribution.reduce(
+                            (sum, entry) => sum + entry.value,
+                            0
+                          );
+                          const percentage = total
+                            ? ((item.value / total) * 100).toFixed(1)
+                            : "0.0";
+
+                          return (
+                            <TableRow key={`user-type-${index}`}>
+                              <TableCell>{item.name}</TableCell>
+                              <TableCell className="text-right">
+                                {item.value}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {percentage}%
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+
+                    {userTypeData.insight && (
+                      <div className="mt-6">
+                        <Alert>
+                          <Lightbulb className="h-4 w-4" />
+                          <AlertTitle>Insight</AlertTitle>
+                          <AlertDescription>
+                            {userTypeData.insight}
+                          </AlertDescription>
+                        </Alert>
+                      </div>
+                    )}
+
+                    <div className="mt-6 space-y-4">
+                      <h4 className="text-sm font-medium">Key Observations</h4>
+                      <ul className="space-y-2 text-sm">
+                        {userTypeData.distribution &&
+                        userTypeData.distribution.length > 0 ? (
+                          <>
+                            <li className="flex items-start">
+                              <span className="bg-primary/10 p-1 rounded mr-2">
+                                <Users className="h-4 w-4 text-primary" />
+                              </span>
+                              <span>
+                                {(() => {
+                                  const sorted = [
+                                    ...userTypeData.distribution,
+                                  ].sort((a, b) => b.value - a.value);
+                                  const topType = sorted[0];
+                                  const total = sorted.reduce(
+                                    (sum, item) => sum + item.value,
+                                    0
+                                  );
+                                  const percentage = total
+                                    ? ((topType.value / total) * 100).toFixed(1)
+                                    : "0";
+
+                                  return `${topType.name} represents ${percentage}% of all respondents, making it the largest user group.`;
+                                })()}
+                              </span>
+                            </li>
+                            <li className="flex items-start">
+                              <span className="bg-primary/10 p-1 rounded mr-2">
+                                <TrendingUp className="h-4 w-4 text-primary" />
+                              </span>
+                              <span>
+                                Understanding the distribution helps tailor
+                                services to specific workforce needs.
+                              </span>
+                            </li>
+                          </>
+                        ) : (
+                          <li className="text-muted-foreground">
+                            No user type data available
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -854,83 +943,7 @@ export function OverviewTab({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-medium mb-4">
-                    Satisfaction by Visit Recency
-                  </h3>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={visitTimeData}
-                        margin={{
-                          top: 20,
-                          right: 30,
-                          left: 20,
-                          bottom: 5,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis domain={[0, 5]} />
-                        <Tooltip
-                          formatter={(value) => [
-                            typeof value === "number"
-                              ? value.toFixed(2)
-                              : value,
-                            "Rating",
-                          ]}
-                        />
-                        <Legend />
-                        <Bar
-                          dataKey="satisfaction"
-                          fill="#4b5563"
-                          name="Satisfaction Rating"
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium mb-4">
-                    Recommendation Rate by Visit Recency
-                  </h3>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={visitTimeData}
-                        margin={{
-                          top: 20,
-                          right: 30,
-                          left: 20,
-                          bottom: 5,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis domain={[0, 100]} />
-                        <Tooltip
-                          formatter={(value) => [
-                            typeof value === "number"
-                              ? value.toFixed(1) + "%"
-                              : value,
-                            "Recommendation Rate",
-                          ]}
-                        />
-                        <Legend />
-                        <Bar
-                          dataKey="recommendRate"
-                          fill="#6b7280"
-                          name="Recommendation Rate"
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-8">
+              <div className="mb-8">
                 <h3 className="text-lg font-medium mb-4">
                   Visit Recency Distribution
                 </h3>
@@ -1005,6 +1018,82 @@ export function OverviewTab({
                         </CardContent>
                       </Card>
                     ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-4">
+                    Satisfaction by Visit Recency
+                  </h3>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={visitTimeData}
+                        margin={{
+                          top: 20,
+                          right: 30,
+                          left: 20,
+                          bottom: 5,
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis domain={[0, 5]} />
+                        <Tooltip
+                          formatter={(value) => [
+                            typeof value === "number"
+                              ? value.toFixed(2)
+                              : value,
+                            "Rating",
+                          ]}
+                        />
+                        <Legend />
+                        <Bar
+                          dataKey="satisfaction"
+                          fill="#4b5563"
+                          name="Satisfaction Rating"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-medium mb-4">
+                    Recommendation Rate by Visit Recency
+                  </h3>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={visitTimeData}
+                        margin={{
+                          top: 20,
+                          right: 30,
+                          left: 20,
+                          bottom: 5,
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis domain={[0, 100]} />
+                        <Tooltip
+                          formatter={(value) => [
+                            typeof value === "number"
+                              ? value.toFixed(1) + "%"
+                              : value,
+                            "Recommendation Rate",
+                          ]}
+                        />
+                        <Legend />
+                        <Bar
+                          dataKey="recommendRate"
+                          fill="#6b7280"
+                          name="Recommendation Rate"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
             </CardContent>

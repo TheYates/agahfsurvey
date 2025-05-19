@@ -234,10 +234,19 @@ export default function SurveyForm({ locations = [] }: SurveyFormProps) {
     try {
       setIsSubmitting(true);
       // Prepare the locations array
-      const allLocations = [
+      let allLocations = [
         ...surveyData.locations,
         ...(surveyData.visitedOtherPlaces ? surveyData.otherLocations : []),
       ];
+
+      // Ensure Occupational Health is included for Medicals visits
+      if (surveyData.visitPurpose === "Medicals (Occupational Health)") {
+        // Add the OH location if it's not already in the array
+        const ohLocation = "Occupational Health Unit (Medicals)";
+        if (!allLocations.includes(ohLocation)) {
+          allLocations.push(ohLocation);
+        }
+      }
 
       // Call the server action to submit the survey
       const result = await submitSurvey({
