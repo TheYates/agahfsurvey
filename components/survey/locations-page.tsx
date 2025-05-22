@@ -26,6 +26,12 @@ export default function LocationsPage({
   canteenLocations = [],
   occupationalHealthLocations = [],
 }: LocationsPageProps) {
+  // Filter out Occupational Health Unit (Medicals) from occupationalHealthLocations
+  const filteredOccupationalHealthLocations =
+    occupationalHealthLocations.filter(
+      (location) => location !== "Occupational Health Unit (Medicals)"
+    );
+
   // Create location groups based on the data from the database
   const locationGroups = [
     {
@@ -38,7 +44,7 @@ export default function LocationsPage({
     },
     {
       title: "Other Services",
-      locations: [...canteenLocations, ...occupationalHealthLocations],
+      locations: [...canteenLocations, ...filteredOccupationalHealthLocations],
     },
   ].filter((group) => group.locations.length > 0);
 

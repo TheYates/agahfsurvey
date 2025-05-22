@@ -157,3 +157,33 @@ enum PatientType {
   NEW_PATIENT
   RETURNING_PATIENT
 }
+
+// Service Points models
+model ServicePoint {
+  id                     Int                    @id @default(autoincrement())
+  name                   String
+  is_active              Boolean                @default(true)
+  show_recommend_question Boolean                @default(true)
+  show_comments_box      Boolean                @default(true)
+  created_at             DateTime               @default(now()) @map("created_at")
+  updated_at             DateTime               @updatedAt @map("updated_at")
+  feedback               ServicePointFeedback[]
+
+  @@map("ServicePoints")
+}
+
+model ServicePointFeedback {
+  id              Int         @id @default(autoincrement())
+  service_point_id Int
+  rating          Int
+  recommend       Boolean?
+  comment         String?     @db.Text
+  created_at      DateTime    @default(now()) @map("created_at")
+  updated_at      DateTime    @updatedAt @map("updated_at")
+  
+  // Relations
+  service_point   ServicePoint @relation(fields: [service_point_id], references: [id], onDelete: Cascade)
+
+  @@index([service_point_id])
+  @@map("ServicePointFeedback")
+}

@@ -43,6 +43,16 @@ export type GeneralObservation = $Result.DefaultSelection<Prisma.$GeneralObserva
  * 
  */
 export type DepartmentConcern = $Result.DefaultSelection<Prisma.$DepartmentConcernPayload>
+/**
+ * Model ServicePoint
+ * 
+ */
+export type ServicePoint = $Result.DefaultSelection<Prisma.$ServicePointPayload>
+/**
+ * Model ServicePointFeedback
+ * 
+ */
+export type ServicePointFeedback = $Result.DefaultSelection<Prisma.$ServicePointFeedbackPayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -226,6 +236,26 @@ export class PrismaClient<
     * ```
     */
   get departmentConcern(): Prisma.DepartmentConcernDelegate<ExtArgs>;
+
+  /**
+   * `prisma.servicePoint`: Exposes CRUD operations for the **ServicePoint** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ServicePoints
+    * const servicePoints = await prisma.servicePoint.findMany()
+    * ```
+    */
+  get servicePoint(): Prisma.ServicePointDelegate<ExtArgs>;
+
+  /**
+   * `prisma.servicePointFeedback`: Exposes CRUD operations for the **ServicePointFeedback** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ServicePointFeedbacks
+    * const servicePointFeedbacks = await prisma.servicePointFeedback.findMany()
+    * ```
+    */
+  get servicePointFeedback(): Prisma.ServicePointFeedbackDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -672,7 +702,9 @@ export namespace Prisma {
     SubmissionLocation: 'SubmissionLocation',
     Rating: 'Rating',
     GeneralObservation: 'GeneralObservation',
-    DepartmentConcern: 'DepartmentConcern'
+    DepartmentConcern: 'DepartmentConcern',
+    ServicePoint: 'ServicePoint',
+    ServicePointFeedback: 'ServicePointFeedback'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -688,7 +720,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "surveySubmission" | "location" | "submissionLocation" | "rating" | "generalObservation" | "departmentConcern"
+      modelProps: "surveySubmission" | "location" | "submissionLocation" | "rating" | "generalObservation" | "departmentConcern" | "servicePoint" | "servicePointFeedback"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1112,6 +1144,146 @@ export namespace Prisma {
           }
         }
       }
+      ServicePoint: {
+        payload: Prisma.$ServicePointPayload<ExtArgs>
+        fields: Prisma.ServicePointFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ServicePointFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ServicePointFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointPayload>
+          }
+          findFirst: {
+            args: Prisma.ServicePointFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ServicePointFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointPayload>
+          }
+          findMany: {
+            args: Prisma.ServicePointFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointPayload>[]
+          }
+          create: {
+            args: Prisma.ServicePointCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointPayload>
+          }
+          createMany: {
+            args: Prisma.ServicePointCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.ServicePointCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointPayload>[]
+          }
+          delete: {
+            args: Prisma.ServicePointDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointPayload>
+          }
+          update: {
+            args: Prisma.ServicePointUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointPayload>
+          }
+          deleteMany: {
+            args: Prisma.ServicePointDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ServicePointUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.ServicePointUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointPayload>
+          }
+          aggregate: {
+            args: Prisma.ServicePointAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateServicePoint>
+          }
+          groupBy: {
+            args: Prisma.ServicePointGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ServicePointGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ServicePointCountArgs<ExtArgs>
+            result: $Utils.Optional<ServicePointCountAggregateOutputType> | number
+          }
+        }
+      }
+      ServicePointFeedback: {
+        payload: Prisma.$ServicePointFeedbackPayload<ExtArgs>
+        fields: Prisma.ServicePointFeedbackFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ServicePointFeedbackFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointFeedbackPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ServicePointFeedbackFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointFeedbackPayload>
+          }
+          findFirst: {
+            args: Prisma.ServicePointFeedbackFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointFeedbackPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ServicePointFeedbackFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointFeedbackPayload>
+          }
+          findMany: {
+            args: Prisma.ServicePointFeedbackFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointFeedbackPayload>[]
+          }
+          create: {
+            args: Prisma.ServicePointFeedbackCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointFeedbackPayload>
+          }
+          createMany: {
+            args: Prisma.ServicePointFeedbackCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.ServicePointFeedbackCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointFeedbackPayload>[]
+          }
+          delete: {
+            args: Prisma.ServicePointFeedbackDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointFeedbackPayload>
+          }
+          update: {
+            args: Prisma.ServicePointFeedbackUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointFeedbackPayload>
+          }
+          deleteMany: {
+            args: Prisma.ServicePointFeedbackDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ServicePointFeedbackUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.ServicePointFeedbackUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ServicePointFeedbackPayload>
+          }
+          aggregate: {
+            args: Prisma.ServicePointFeedbackAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateServicePointFeedback>
+          }
+          groupBy: {
+            args: Prisma.ServicePointFeedbackGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ServicePointFeedbackGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ServicePointFeedbackCountArgs<ExtArgs>
+            result: $Utils.Optional<ServicePointFeedbackCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -1363,6 +1535,37 @@ export namespace Prisma {
    */
   export type LocationCountOutputTypeCountDepartmentConcernsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: DepartmentConcernWhereInput
+  }
+
+
+  /**
+   * Count Type ServicePointCountOutputType
+   */
+
+  export type ServicePointCountOutputType = {
+    feedback: number
+  }
+
+  export type ServicePointCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    feedback?: boolean | ServicePointCountOutputTypeCountFeedbackArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * ServicePointCountOutputType without action
+   */
+  export type ServicePointCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePointCountOutputType
+     */
+    select?: ServicePointCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * ServicePointCountOutputType without action
+   */
+  export type ServicePointCountOutputTypeCountFeedbackArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ServicePointFeedbackWhereInput
   }
 
 
@@ -7542,6 +7745,2011 @@ export namespace Prisma {
 
 
   /**
+   * Model ServicePoint
+   */
+
+  export type AggregateServicePoint = {
+    _count: ServicePointCountAggregateOutputType | null
+    _avg: ServicePointAvgAggregateOutputType | null
+    _sum: ServicePointSumAggregateOutputType | null
+    _min: ServicePointMinAggregateOutputType | null
+    _max: ServicePointMaxAggregateOutputType | null
+  }
+
+  export type ServicePointAvgAggregateOutputType = {
+    id: number | null
+  }
+
+  export type ServicePointSumAggregateOutputType = {
+    id: number | null
+  }
+
+  export type ServicePointMinAggregateOutputType = {
+    id: number | null
+    name: string | null
+    is_active: boolean | null
+    show_recommend_question: boolean | null
+    show_comments_box: boolean | null
+    created_at: Date | null
+    updated_at: Date | null
+  }
+
+  export type ServicePointMaxAggregateOutputType = {
+    id: number | null
+    name: string | null
+    is_active: boolean | null
+    show_recommend_question: boolean | null
+    show_comments_box: boolean | null
+    created_at: Date | null
+    updated_at: Date | null
+  }
+
+  export type ServicePointCountAggregateOutputType = {
+    id: number
+    name: number
+    is_active: number
+    show_recommend_question: number
+    show_comments_box: number
+    created_at: number
+    updated_at: number
+    _all: number
+  }
+
+
+  export type ServicePointAvgAggregateInputType = {
+    id?: true
+  }
+
+  export type ServicePointSumAggregateInputType = {
+    id?: true
+  }
+
+  export type ServicePointMinAggregateInputType = {
+    id?: true
+    name?: true
+    is_active?: true
+    show_recommend_question?: true
+    show_comments_box?: true
+    created_at?: true
+    updated_at?: true
+  }
+
+  export type ServicePointMaxAggregateInputType = {
+    id?: true
+    name?: true
+    is_active?: true
+    show_recommend_question?: true
+    show_comments_box?: true
+    created_at?: true
+    updated_at?: true
+  }
+
+  export type ServicePointCountAggregateInputType = {
+    id?: true
+    name?: true
+    is_active?: true
+    show_recommend_question?: true
+    show_comments_box?: true
+    created_at?: true
+    updated_at?: true
+    _all?: true
+  }
+
+  export type ServicePointAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ServicePoint to aggregate.
+     */
+    where?: ServicePointWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ServicePoints to fetch.
+     */
+    orderBy?: ServicePointOrderByWithRelationInput | ServicePointOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ServicePointWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ServicePoints from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ServicePoints.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned ServicePoints
+    **/
+    _count?: true | ServicePointCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: ServicePointAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ServicePointSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ServicePointMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ServicePointMaxAggregateInputType
+  }
+
+  export type GetServicePointAggregateType<T extends ServicePointAggregateArgs> = {
+        [P in keyof T & keyof AggregateServicePoint]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateServicePoint[P]>
+      : GetScalarType<T[P], AggregateServicePoint[P]>
+  }
+
+
+
+
+  export type ServicePointGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ServicePointWhereInput
+    orderBy?: ServicePointOrderByWithAggregationInput | ServicePointOrderByWithAggregationInput[]
+    by: ServicePointScalarFieldEnum[] | ServicePointScalarFieldEnum
+    having?: ServicePointScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ServicePointCountAggregateInputType | true
+    _avg?: ServicePointAvgAggregateInputType
+    _sum?: ServicePointSumAggregateInputType
+    _min?: ServicePointMinAggregateInputType
+    _max?: ServicePointMaxAggregateInputType
+  }
+
+  export type ServicePointGroupByOutputType = {
+    id: number
+    name: string
+    is_active: boolean
+    show_recommend_question: boolean
+    show_comments_box: boolean
+    created_at: Date
+    updated_at: Date
+    _count: ServicePointCountAggregateOutputType | null
+    _avg: ServicePointAvgAggregateOutputType | null
+    _sum: ServicePointSumAggregateOutputType | null
+    _min: ServicePointMinAggregateOutputType | null
+    _max: ServicePointMaxAggregateOutputType | null
+  }
+
+  type GetServicePointGroupByPayload<T extends ServicePointGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ServicePointGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ServicePointGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ServicePointGroupByOutputType[P]>
+            : GetScalarType<T[P], ServicePointGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ServicePointSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    is_active?: boolean
+    show_recommend_question?: boolean
+    show_comments_box?: boolean
+    created_at?: boolean
+    updated_at?: boolean
+    feedback?: boolean | ServicePoint$feedbackArgs<ExtArgs>
+    _count?: boolean | ServicePointCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["servicePoint"]>
+
+  export type ServicePointSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    is_active?: boolean
+    show_recommend_question?: boolean
+    show_comments_box?: boolean
+    created_at?: boolean
+    updated_at?: boolean
+  }, ExtArgs["result"]["servicePoint"]>
+
+  export type ServicePointSelectScalar = {
+    id?: boolean
+    name?: boolean
+    is_active?: boolean
+    show_recommend_question?: boolean
+    show_comments_box?: boolean
+    created_at?: boolean
+    updated_at?: boolean
+  }
+
+  export type ServicePointInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    feedback?: boolean | ServicePoint$feedbackArgs<ExtArgs>
+    _count?: boolean | ServicePointCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type ServicePointIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+
+  export type $ServicePointPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "ServicePoint"
+    objects: {
+      feedback: Prisma.$ServicePointFeedbackPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: number
+      name: string
+      is_active: boolean
+      show_recommend_question: boolean
+      show_comments_box: boolean
+      created_at: Date
+      updated_at: Date
+    }, ExtArgs["result"]["servicePoint"]>
+    composites: {}
+  }
+
+  type ServicePointGetPayload<S extends boolean | null | undefined | ServicePointDefaultArgs> = $Result.GetResult<Prisma.$ServicePointPayload, S>
+
+  type ServicePointCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<ServicePointFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: ServicePointCountAggregateInputType | true
+    }
+
+  export interface ServicePointDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['ServicePoint'], meta: { name: 'ServicePoint' } }
+    /**
+     * Find zero or one ServicePoint that matches the filter.
+     * @param {ServicePointFindUniqueArgs} args - Arguments to find a ServicePoint
+     * @example
+     * // Get one ServicePoint
+     * const servicePoint = await prisma.servicePoint.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ServicePointFindUniqueArgs>(args: SelectSubset<T, ServicePointFindUniqueArgs<ExtArgs>>): Prisma__ServicePointClient<$Result.GetResult<Prisma.$ServicePointPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one ServicePoint that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {ServicePointFindUniqueOrThrowArgs} args - Arguments to find a ServicePoint
+     * @example
+     * // Get one ServicePoint
+     * const servicePoint = await prisma.servicePoint.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ServicePointFindUniqueOrThrowArgs>(args: SelectSubset<T, ServicePointFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ServicePointClient<$Result.GetResult<Prisma.$ServicePointPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first ServicePoint that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointFindFirstArgs} args - Arguments to find a ServicePoint
+     * @example
+     * // Get one ServicePoint
+     * const servicePoint = await prisma.servicePoint.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ServicePointFindFirstArgs>(args?: SelectSubset<T, ServicePointFindFirstArgs<ExtArgs>>): Prisma__ServicePointClient<$Result.GetResult<Prisma.$ServicePointPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first ServicePoint that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointFindFirstOrThrowArgs} args - Arguments to find a ServicePoint
+     * @example
+     * // Get one ServicePoint
+     * const servicePoint = await prisma.servicePoint.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ServicePointFindFirstOrThrowArgs>(args?: SelectSubset<T, ServicePointFindFirstOrThrowArgs<ExtArgs>>): Prisma__ServicePointClient<$Result.GetResult<Prisma.$ServicePointPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more ServicePoints that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all ServicePoints
+     * const servicePoints = await prisma.servicePoint.findMany()
+     * 
+     * // Get first 10 ServicePoints
+     * const servicePoints = await prisma.servicePoint.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const servicePointWithIdOnly = await prisma.servicePoint.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ServicePointFindManyArgs>(args?: SelectSubset<T, ServicePointFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ServicePointPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a ServicePoint.
+     * @param {ServicePointCreateArgs} args - Arguments to create a ServicePoint.
+     * @example
+     * // Create one ServicePoint
+     * const ServicePoint = await prisma.servicePoint.create({
+     *   data: {
+     *     // ... data to create a ServicePoint
+     *   }
+     * })
+     * 
+     */
+    create<T extends ServicePointCreateArgs>(args: SelectSubset<T, ServicePointCreateArgs<ExtArgs>>): Prisma__ServicePointClient<$Result.GetResult<Prisma.$ServicePointPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many ServicePoints.
+     * @param {ServicePointCreateManyArgs} args - Arguments to create many ServicePoints.
+     * @example
+     * // Create many ServicePoints
+     * const servicePoint = await prisma.servicePoint.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ServicePointCreateManyArgs>(args?: SelectSubset<T, ServicePointCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many ServicePoints and returns the data saved in the database.
+     * @param {ServicePointCreateManyAndReturnArgs} args - Arguments to create many ServicePoints.
+     * @example
+     * // Create many ServicePoints
+     * const servicePoint = await prisma.servicePoint.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many ServicePoints and only return the `id`
+     * const servicePointWithIdOnly = await prisma.servicePoint.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends ServicePointCreateManyAndReturnArgs>(args?: SelectSubset<T, ServicePointCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ServicePointPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a ServicePoint.
+     * @param {ServicePointDeleteArgs} args - Arguments to delete one ServicePoint.
+     * @example
+     * // Delete one ServicePoint
+     * const ServicePoint = await prisma.servicePoint.delete({
+     *   where: {
+     *     // ... filter to delete one ServicePoint
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ServicePointDeleteArgs>(args: SelectSubset<T, ServicePointDeleteArgs<ExtArgs>>): Prisma__ServicePointClient<$Result.GetResult<Prisma.$ServicePointPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one ServicePoint.
+     * @param {ServicePointUpdateArgs} args - Arguments to update one ServicePoint.
+     * @example
+     * // Update one ServicePoint
+     * const servicePoint = await prisma.servicePoint.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ServicePointUpdateArgs>(args: SelectSubset<T, ServicePointUpdateArgs<ExtArgs>>): Prisma__ServicePointClient<$Result.GetResult<Prisma.$ServicePointPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more ServicePoints.
+     * @param {ServicePointDeleteManyArgs} args - Arguments to filter ServicePoints to delete.
+     * @example
+     * // Delete a few ServicePoints
+     * const { count } = await prisma.servicePoint.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ServicePointDeleteManyArgs>(args?: SelectSubset<T, ServicePointDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ServicePoints.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many ServicePoints
+     * const servicePoint = await prisma.servicePoint.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ServicePointUpdateManyArgs>(args: SelectSubset<T, ServicePointUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one ServicePoint.
+     * @param {ServicePointUpsertArgs} args - Arguments to update or create a ServicePoint.
+     * @example
+     * // Update or create a ServicePoint
+     * const servicePoint = await prisma.servicePoint.upsert({
+     *   create: {
+     *     // ... data to create a ServicePoint
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the ServicePoint we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ServicePointUpsertArgs>(args: SelectSubset<T, ServicePointUpsertArgs<ExtArgs>>): Prisma__ServicePointClient<$Result.GetResult<Prisma.$ServicePointPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of ServicePoints.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointCountArgs} args - Arguments to filter ServicePoints to count.
+     * @example
+     * // Count the number of ServicePoints
+     * const count = await prisma.servicePoint.count({
+     *   where: {
+     *     // ... the filter for the ServicePoints we want to count
+     *   }
+     * })
+    **/
+    count<T extends ServicePointCountArgs>(
+      args?: Subset<T, ServicePointCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ServicePointCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a ServicePoint.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ServicePointAggregateArgs>(args: Subset<T, ServicePointAggregateArgs>): Prisma.PrismaPromise<GetServicePointAggregateType<T>>
+
+    /**
+     * Group by ServicePoint.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ServicePointGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ServicePointGroupByArgs['orderBy'] }
+        : { orderBy?: ServicePointGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ServicePointGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetServicePointGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the ServicePoint model
+   */
+  readonly fields: ServicePointFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for ServicePoint.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ServicePointClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    feedback<T extends ServicePoint$feedbackArgs<ExtArgs> = {}>(args?: Subset<T, ServicePoint$feedbackArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ServicePointFeedbackPayload<ExtArgs>, T, "findMany"> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the ServicePoint model
+   */ 
+  interface ServicePointFieldRefs {
+    readonly id: FieldRef<"ServicePoint", 'Int'>
+    readonly name: FieldRef<"ServicePoint", 'String'>
+    readonly is_active: FieldRef<"ServicePoint", 'Boolean'>
+    readonly show_recommend_question: FieldRef<"ServicePoint", 'Boolean'>
+    readonly show_comments_box: FieldRef<"ServicePoint", 'Boolean'>
+    readonly created_at: FieldRef<"ServicePoint", 'DateTime'>
+    readonly updated_at: FieldRef<"ServicePoint", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * ServicePoint findUnique
+   */
+  export type ServicePointFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePoint
+     */
+    select?: ServicePointSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointInclude<ExtArgs> | null
+    /**
+     * Filter, which ServicePoint to fetch.
+     */
+    where: ServicePointWhereUniqueInput
+  }
+
+  /**
+   * ServicePoint findUniqueOrThrow
+   */
+  export type ServicePointFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePoint
+     */
+    select?: ServicePointSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointInclude<ExtArgs> | null
+    /**
+     * Filter, which ServicePoint to fetch.
+     */
+    where: ServicePointWhereUniqueInput
+  }
+
+  /**
+   * ServicePoint findFirst
+   */
+  export type ServicePointFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePoint
+     */
+    select?: ServicePointSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointInclude<ExtArgs> | null
+    /**
+     * Filter, which ServicePoint to fetch.
+     */
+    where?: ServicePointWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ServicePoints to fetch.
+     */
+    orderBy?: ServicePointOrderByWithRelationInput | ServicePointOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ServicePoints.
+     */
+    cursor?: ServicePointWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ServicePoints from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ServicePoints.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ServicePoints.
+     */
+    distinct?: ServicePointScalarFieldEnum | ServicePointScalarFieldEnum[]
+  }
+
+  /**
+   * ServicePoint findFirstOrThrow
+   */
+  export type ServicePointFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePoint
+     */
+    select?: ServicePointSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointInclude<ExtArgs> | null
+    /**
+     * Filter, which ServicePoint to fetch.
+     */
+    where?: ServicePointWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ServicePoints to fetch.
+     */
+    orderBy?: ServicePointOrderByWithRelationInput | ServicePointOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ServicePoints.
+     */
+    cursor?: ServicePointWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ServicePoints from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ServicePoints.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ServicePoints.
+     */
+    distinct?: ServicePointScalarFieldEnum | ServicePointScalarFieldEnum[]
+  }
+
+  /**
+   * ServicePoint findMany
+   */
+  export type ServicePointFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePoint
+     */
+    select?: ServicePointSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointInclude<ExtArgs> | null
+    /**
+     * Filter, which ServicePoints to fetch.
+     */
+    where?: ServicePointWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ServicePoints to fetch.
+     */
+    orderBy?: ServicePointOrderByWithRelationInput | ServicePointOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing ServicePoints.
+     */
+    cursor?: ServicePointWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ServicePoints from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ServicePoints.
+     */
+    skip?: number
+    distinct?: ServicePointScalarFieldEnum | ServicePointScalarFieldEnum[]
+  }
+
+  /**
+   * ServicePoint create
+   */
+  export type ServicePointCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePoint
+     */
+    select?: ServicePointSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointInclude<ExtArgs> | null
+    /**
+     * The data needed to create a ServicePoint.
+     */
+    data: XOR<ServicePointCreateInput, ServicePointUncheckedCreateInput>
+  }
+
+  /**
+   * ServicePoint createMany
+   */
+  export type ServicePointCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many ServicePoints.
+     */
+    data: ServicePointCreateManyInput | ServicePointCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ServicePoint createManyAndReturn
+   */
+  export type ServicePointCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePoint
+     */
+    select?: ServicePointSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many ServicePoints.
+     */
+    data: ServicePointCreateManyInput | ServicePointCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ServicePoint update
+   */
+  export type ServicePointUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePoint
+     */
+    select?: ServicePointSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointInclude<ExtArgs> | null
+    /**
+     * The data needed to update a ServicePoint.
+     */
+    data: XOR<ServicePointUpdateInput, ServicePointUncheckedUpdateInput>
+    /**
+     * Choose, which ServicePoint to update.
+     */
+    where: ServicePointWhereUniqueInput
+  }
+
+  /**
+   * ServicePoint updateMany
+   */
+  export type ServicePointUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update ServicePoints.
+     */
+    data: XOR<ServicePointUpdateManyMutationInput, ServicePointUncheckedUpdateManyInput>
+    /**
+     * Filter which ServicePoints to update
+     */
+    where?: ServicePointWhereInput
+  }
+
+  /**
+   * ServicePoint upsert
+   */
+  export type ServicePointUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePoint
+     */
+    select?: ServicePointSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointInclude<ExtArgs> | null
+    /**
+     * The filter to search for the ServicePoint to update in case it exists.
+     */
+    where: ServicePointWhereUniqueInput
+    /**
+     * In case the ServicePoint found by the `where` argument doesn't exist, create a new ServicePoint with this data.
+     */
+    create: XOR<ServicePointCreateInput, ServicePointUncheckedCreateInput>
+    /**
+     * In case the ServicePoint was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ServicePointUpdateInput, ServicePointUncheckedUpdateInput>
+  }
+
+  /**
+   * ServicePoint delete
+   */
+  export type ServicePointDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePoint
+     */
+    select?: ServicePointSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointInclude<ExtArgs> | null
+    /**
+     * Filter which ServicePoint to delete.
+     */
+    where: ServicePointWhereUniqueInput
+  }
+
+  /**
+   * ServicePoint deleteMany
+   */
+  export type ServicePointDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ServicePoints to delete
+     */
+    where?: ServicePointWhereInput
+  }
+
+  /**
+   * ServicePoint.feedback
+   */
+  export type ServicePoint$feedbackArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePointFeedback
+     */
+    select?: ServicePointFeedbackSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointFeedbackInclude<ExtArgs> | null
+    where?: ServicePointFeedbackWhereInput
+    orderBy?: ServicePointFeedbackOrderByWithRelationInput | ServicePointFeedbackOrderByWithRelationInput[]
+    cursor?: ServicePointFeedbackWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ServicePointFeedbackScalarFieldEnum | ServicePointFeedbackScalarFieldEnum[]
+  }
+
+  /**
+   * ServicePoint without action
+   */
+  export type ServicePointDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePoint
+     */
+    select?: ServicePointSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model ServicePointFeedback
+   */
+
+  export type AggregateServicePointFeedback = {
+    _count: ServicePointFeedbackCountAggregateOutputType | null
+    _avg: ServicePointFeedbackAvgAggregateOutputType | null
+    _sum: ServicePointFeedbackSumAggregateOutputType | null
+    _min: ServicePointFeedbackMinAggregateOutputType | null
+    _max: ServicePointFeedbackMaxAggregateOutputType | null
+  }
+
+  export type ServicePointFeedbackAvgAggregateOutputType = {
+    id: number | null
+    service_point_id: number | null
+    rating: number | null
+  }
+
+  export type ServicePointFeedbackSumAggregateOutputType = {
+    id: number | null
+    service_point_id: number | null
+    rating: number | null
+  }
+
+  export type ServicePointFeedbackMinAggregateOutputType = {
+    id: number | null
+    service_point_id: number | null
+    rating: number | null
+    recommend: boolean | null
+    comment: string | null
+    created_at: Date | null
+    updated_at: Date | null
+  }
+
+  export type ServicePointFeedbackMaxAggregateOutputType = {
+    id: number | null
+    service_point_id: number | null
+    rating: number | null
+    recommend: boolean | null
+    comment: string | null
+    created_at: Date | null
+    updated_at: Date | null
+  }
+
+  export type ServicePointFeedbackCountAggregateOutputType = {
+    id: number
+    service_point_id: number
+    rating: number
+    recommend: number
+    comment: number
+    created_at: number
+    updated_at: number
+    _all: number
+  }
+
+
+  export type ServicePointFeedbackAvgAggregateInputType = {
+    id?: true
+    service_point_id?: true
+    rating?: true
+  }
+
+  export type ServicePointFeedbackSumAggregateInputType = {
+    id?: true
+    service_point_id?: true
+    rating?: true
+  }
+
+  export type ServicePointFeedbackMinAggregateInputType = {
+    id?: true
+    service_point_id?: true
+    rating?: true
+    recommend?: true
+    comment?: true
+    created_at?: true
+    updated_at?: true
+  }
+
+  export type ServicePointFeedbackMaxAggregateInputType = {
+    id?: true
+    service_point_id?: true
+    rating?: true
+    recommend?: true
+    comment?: true
+    created_at?: true
+    updated_at?: true
+  }
+
+  export type ServicePointFeedbackCountAggregateInputType = {
+    id?: true
+    service_point_id?: true
+    rating?: true
+    recommend?: true
+    comment?: true
+    created_at?: true
+    updated_at?: true
+    _all?: true
+  }
+
+  export type ServicePointFeedbackAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ServicePointFeedback to aggregate.
+     */
+    where?: ServicePointFeedbackWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ServicePointFeedbacks to fetch.
+     */
+    orderBy?: ServicePointFeedbackOrderByWithRelationInput | ServicePointFeedbackOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ServicePointFeedbackWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ServicePointFeedbacks from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ServicePointFeedbacks.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned ServicePointFeedbacks
+    **/
+    _count?: true | ServicePointFeedbackCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: ServicePointFeedbackAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ServicePointFeedbackSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ServicePointFeedbackMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ServicePointFeedbackMaxAggregateInputType
+  }
+
+  export type GetServicePointFeedbackAggregateType<T extends ServicePointFeedbackAggregateArgs> = {
+        [P in keyof T & keyof AggregateServicePointFeedback]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateServicePointFeedback[P]>
+      : GetScalarType<T[P], AggregateServicePointFeedback[P]>
+  }
+
+
+
+
+  export type ServicePointFeedbackGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ServicePointFeedbackWhereInput
+    orderBy?: ServicePointFeedbackOrderByWithAggregationInput | ServicePointFeedbackOrderByWithAggregationInput[]
+    by: ServicePointFeedbackScalarFieldEnum[] | ServicePointFeedbackScalarFieldEnum
+    having?: ServicePointFeedbackScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ServicePointFeedbackCountAggregateInputType | true
+    _avg?: ServicePointFeedbackAvgAggregateInputType
+    _sum?: ServicePointFeedbackSumAggregateInputType
+    _min?: ServicePointFeedbackMinAggregateInputType
+    _max?: ServicePointFeedbackMaxAggregateInputType
+  }
+
+  export type ServicePointFeedbackGroupByOutputType = {
+    id: number
+    service_point_id: number
+    rating: number
+    recommend: boolean | null
+    comment: string | null
+    created_at: Date
+    updated_at: Date
+    _count: ServicePointFeedbackCountAggregateOutputType | null
+    _avg: ServicePointFeedbackAvgAggregateOutputType | null
+    _sum: ServicePointFeedbackSumAggregateOutputType | null
+    _min: ServicePointFeedbackMinAggregateOutputType | null
+    _max: ServicePointFeedbackMaxAggregateOutputType | null
+  }
+
+  type GetServicePointFeedbackGroupByPayload<T extends ServicePointFeedbackGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ServicePointFeedbackGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ServicePointFeedbackGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ServicePointFeedbackGroupByOutputType[P]>
+            : GetScalarType<T[P], ServicePointFeedbackGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ServicePointFeedbackSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    service_point_id?: boolean
+    rating?: boolean
+    recommend?: boolean
+    comment?: boolean
+    created_at?: boolean
+    updated_at?: boolean
+    service_point?: boolean | ServicePointDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["servicePointFeedback"]>
+
+  export type ServicePointFeedbackSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    service_point_id?: boolean
+    rating?: boolean
+    recommend?: boolean
+    comment?: boolean
+    created_at?: boolean
+    updated_at?: boolean
+    service_point?: boolean | ServicePointDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["servicePointFeedback"]>
+
+  export type ServicePointFeedbackSelectScalar = {
+    id?: boolean
+    service_point_id?: boolean
+    rating?: boolean
+    recommend?: boolean
+    comment?: boolean
+    created_at?: boolean
+    updated_at?: boolean
+  }
+
+  export type ServicePointFeedbackInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    service_point?: boolean | ServicePointDefaultArgs<ExtArgs>
+  }
+  export type ServicePointFeedbackIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    service_point?: boolean | ServicePointDefaultArgs<ExtArgs>
+  }
+
+  export type $ServicePointFeedbackPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "ServicePointFeedback"
+    objects: {
+      service_point: Prisma.$ServicePointPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: number
+      service_point_id: number
+      rating: number
+      recommend: boolean | null
+      comment: string | null
+      created_at: Date
+      updated_at: Date
+    }, ExtArgs["result"]["servicePointFeedback"]>
+    composites: {}
+  }
+
+  type ServicePointFeedbackGetPayload<S extends boolean | null | undefined | ServicePointFeedbackDefaultArgs> = $Result.GetResult<Prisma.$ServicePointFeedbackPayload, S>
+
+  type ServicePointFeedbackCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<ServicePointFeedbackFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: ServicePointFeedbackCountAggregateInputType | true
+    }
+
+  export interface ServicePointFeedbackDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['ServicePointFeedback'], meta: { name: 'ServicePointFeedback' } }
+    /**
+     * Find zero or one ServicePointFeedback that matches the filter.
+     * @param {ServicePointFeedbackFindUniqueArgs} args - Arguments to find a ServicePointFeedback
+     * @example
+     * // Get one ServicePointFeedback
+     * const servicePointFeedback = await prisma.servicePointFeedback.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ServicePointFeedbackFindUniqueArgs>(args: SelectSubset<T, ServicePointFeedbackFindUniqueArgs<ExtArgs>>): Prisma__ServicePointFeedbackClient<$Result.GetResult<Prisma.$ServicePointFeedbackPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one ServicePointFeedback that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {ServicePointFeedbackFindUniqueOrThrowArgs} args - Arguments to find a ServicePointFeedback
+     * @example
+     * // Get one ServicePointFeedback
+     * const servicePointFeedback = await prisma.servicePointFeedback.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ServicePointFeedbackFindUniqueOrThrowArgs>(args: SelectSubset<T, ServicePointFeedbackFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ServicePointFeedbackClient<$Result.GetResult<Prisma.$ServicePointFeedbackPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first ServicePointFeedback that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointFeedbackFindFirstArgs} args - Arguments to find a ServicePointFeedback
+     * @example
+     * // Get one ServicePointFeedback
+     * const servicePointFeedback = await prisma.servicePointFeedback.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ServicePointFeedbackFindFirstArgs>(args?: SelectSubset<T, ServicePointFeedbackFindFirstArgs<ExtArgs>>): Prisma__ServicePointFeedbackClient<$Result.GetResult<Prisma.$ServicePointFeedbackPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first ServicePointFeedback that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointFeedbackFindFirstOrThrowArgs} args - Arguments to find a ServicePointFeedback
+     * @example
+     * // Get one ServicePointFeedback
+     * const servicePointFeedback = await prisma.servicePointFeedback.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ServicePointFeedbackFindFirstOrThrowArgs>(args?: SelectSubset<T, ServicePointFeedbackFindFirstOrThrowArgs<ExtArgs>>): Prisma__ServicePointFeedbackClient<$Result.GetResult<Prisma.$ServicePointFeedbackPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more ServicePointFeedbacks that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointFeedbackFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all ServicePointFeedbacks
+     * const servicePointFeedbacks = await prisma.servicePointFeedback.findMany()
+     * 
+     * // Get first 10 ServicePointFeedbacks
+     * const servicePointFeedbacks = await prisma.servicePointFeedback.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const servicePointFeedbackWithIdOnly = await prisma.servicePointFeedback.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ServicePointFeedbackFindManyArgs>(args?: SelectSubset<T, ServicePointFeedbackFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ServicePointFeedbackPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a ServicePointFeedback.
+     * @param {ServicePointFeedbackCreateArgs} args - Arguments to create a ServicePointFeedback.
+     * @example
+     * // Create one ServicePointFeedback
+     * const ServicePointFeedback = await prisma.servicePointFeedback.create({
+     *   data: {
+     *     // ... data to create a ServicePointFeedback
+     *   }
+     * })
+     * 
+     */
+    create<T extends ServicePointFeedbackCreateArgs>(args: SelectSubset<T, ServicePointFeedbackCreateArgs<ExtArgs>>): Prisma__ServicePointFeedbackClient<$Result.GetResult<Prisma.$ServicePointFeedbackPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many ServicePointFeedbacks.
+     * @param {ServicePointFeedbackCreateManyArgs} args - Arguments to create many ServicePointFeedbacks.
+     * @example
+     * // Create many ServicePointFeedbacks
+     * const servicePointFeedback = await prisma.servicePointFeedback.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ServicePointFeedbackCreateManyArgs>(args?: SelectSubset<T, ServicePointFeedbackCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many ServicePointFeedbacks and returns the data saved in the database.
+     * @param {ServicePointFeedbackCreateManyAndReturnArgs} args - Arguments to create many ServicePointFeedbacks.
+     * @example
+     * // Create many ServicePointFeedbacks
+     * const servicePointFeedback = await prisma.servicePointFeedback.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many ServicePointFeedbacks and only return the `id`
+     * const servicePointFeedbackWithIdOnly = await prisma.servicePointFeedback.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends ServicePointFeedbackCreateManyAndReturnArgs>(args?: SelectSubset<T, ServicePointFeedbackCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ServicePointFeedbackPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a ServicePointFeedback.
+     * @param {ServicePointFeedbackDeleteArgs} args - Arguments to delete one ServicePointFeedback.
+     * @example
+     * // Delete one ServicePointFeedback
+     * const ServicePointFeedback = await prisma.servicePointFeedback.delete({
+     *   where: {
+     *     // ... filter to delete one ServicePointFeedback
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ServicePointFeedbackDeleteArgs>(args: SelectSubset<T, ServicePointFeedbackDeleteArgs<ExtArgs>>): Prisma__ServicePointFeedbackClient<$Result.GetResult<Prisma.$ServicePointFeedbackPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one ServicePointFeedback.
+     * @param {ServicePointFeedbackUpdateArgs} args - Arguments to update one ServicePointFeedback.
+     * @example
+     * // Update one ServicePointFeedback
+     * const servicePointFeedback = await prisma.servicePointFeedback.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ServicePointFeedbackUpdateArgs>(args: SelectSubset<T, ServicePointFeedbackUpdateArgs<ExtArgs>>): Prisma__ServicePointFeedbackClient<$Result.GetResult<Prisma.$ServicePointFeedbackPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more ServicePointFeedbacks.
+     * @param {ServicePointFeedbackDeleteManyArgs} args - Arguments to filter ServicePointFeedbacks to delete.
+     * @example
+     * // Delete a few ServicePointFeedbacks
+     * const { count } = await prisma.servicePointFeedback.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ServicePointFeedbackDeleteManyArgs>(args?: SelectSubset<T, ServicePointFeedbackDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more ServicePointFeedbacks.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointFeedbackUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many ServicePointFeedbacks
+     * const servicePointFeedback = await prisma.servicePointFeedback.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ServicePointFeedbackUpdateManyArgs>(args: SelectSubset<T, ServicePointFeedbackUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one ServicePointFeedback.
+     * @param {ServicePointFeedbackUpsertArgs} args - Arguments to update or create a ServicePointFeedback.
+     * @example
+     * // Update or create a ServicePointFeedback
+     * const servicePointFeedback = await prisma.servicePointFeedback.upsert({
+     *   create: {
+     *     // ... data to create a ServicePointFeedback
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the ServicePointFeedback we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ServicePointFeedbackUpsertArgs>(args: SelectSubset<T, ServicePointFeedbackUpsertArgs<ExtArgs>>): Prisma__ServicePointFeedbackClient<$Result.GetResult<Prisma.$ServicePointFeedbackPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of ServicePointFeedbacks.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointFeedbackCountArgs} args - Arguments to filter ServicePointFeedbacks to count.
+     * @example
+     * // Count the number of ServicePointFeedbacks
+     * const count = await prisma.servicePointFeedback.count({
+     *   where: {
+     *     // ... the filter for the ServicePointFeedbacks we want to count
+     *   }
+     * })
+    **/
+    count<T extends ServicePointFeedbackCountArgs>(
+      args?: Subset<T, ServicePointFeedbackCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ServicePointFeedbackCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a ServicePointFeedback.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointFeedbackAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ServicePointFeedbackAggregateArgs>(args: Subset<T, ServicePointFeedbackAggregateArgs>): Prisma.PrismaPromise<GetServicePointFeedbackAggregateType<T>>
+
+    /**
+     * Group by ServicePointFeedback.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ServicePointFeedbackGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ServicePointFeedbackGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ServicePointFeedbackGroupByArgs['orderBy'] }
+        : { orderBy?: ServicePointFeedbackGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ServicePointFeedbackGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetServicePointFeedbackGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the ServicePointFeedback model
+   */
+  readonly fields: ServicePointFeedbackFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for ServicePointFeedback.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ServicePointFeedbackClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    service_point<T extends ServicePointDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ServicePointDefaultArgs<ExtArgs>>): Prisma__ServicePointClient<$Result.GetResult<Prisma.$ServicePointPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the ServicePointFeedback model
+   */ 
+  interface ServicePointFeedbackFieldRefs {
+    readonly id: FieldRef<"ServicePointFeedback", 'Int'>
+    readonly service_point_id: FieldRef<"ServicePointFeedback", 'Int'>
+    readonly rating: FieldRef<"ServicePointFeedback", 'Int'>
+    readonly recommend: FieldRef<"ServicePointFeedback", 'Boolean'>
+    readonly comment: FieldRef<"ServicePointFeedback", 'String'>
+    readonly created_at: FieldRef<"ServicePointFeedback", 'DateTime'>
+    readonly updated_at: FieldRef<"ServicePointFeedback", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * ServicePointFeedback findUnique
+   */
+  export type ServicePointFeedbackFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePointFeedback
+     */
+    select?: ServicePointFeedbackSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointFeedbackInclude<ExtArgs> | null
+    /**
+     * Filter, which ServicePointFeedback to fetch.
+     */
+    where: ServicePointFeedbackWhereUniqueInput
+  }
+
+  /**
+   * ServicePointFeedback findUniqueOrThrow
+   */
+  export type ServicePointFeedbackFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePointFeedback
+     */
+    select?: ServicePointFeedbackSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointFeedbackInclude<ExtArgs> | null
+    /**
+     * Filter, which ServicePointFeedback to fetch.
+     */
+    where: ServicePointFeedbackWhereUniqueInput
+  }
+
+  /**
+   * ServicePointFeedback findFirst
+   */
+  export type ServicePointFeedbackFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePointFeedback
+     */
+    select?: ServicePointFeedbackSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointFeedbackInclude<ExtArgs> | null
+    /**
+     * Filter, which ServicePointFeedback to fetch.
+     */
+    where?: ServicePointFeedbackWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ServicePointFeedbacks to fetch.
+     */
+    orderBy?: ServicePointFeedbackOrderByWithRelationInput | ServicePointFeedbackOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ServicePointFeedbacks.
+     */
+    cursor?: ServicePointFeedbackWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ServicePointFeedbacks from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ServicePointFeedbacks.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ServicePointFeedbacks.
+     */
+    distinct?: ServicePointFeedbackScalarFieldEnum | ServicePointFeedbackScalarFieldEnum[]
+  }
+
+  /**
+   * ServicePointFeedback findFirstOrThrow
+   */
+  export type ServicePointFeedbackFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePointFeedback
+     */
+    select?: ServicePointFeedbackSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointFeedbackInclude<ExtArgs> | null
+    /**
+     * Filter, which ServicePointFeedback to fetch.
+     */
+    where?: ServicePointFeedbackWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ServicePointFeedbacks to fetch.
+     */
+    orderBy?: ServicePointFeedbackOrderByWithRelationInput | ServicePointFeedbackOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for ServicePointFeedbacks.
+     */
+    cursor?: ServicePointFeedbackWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ServicePointFeedbacks from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ServicePointFeedbacks.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of ServicePointFeedbacks.
+     */
+    distinct?: ServicePointFeedbackScalarFieldEnum | ServicePointFeedbackScalarFieldEnum[]
+  }
+
+  /**
+   * ServicePointFeedback findMany
+   */
+  export type ServicePointFeedbackFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePointFeedback
+     */
+    select?: ServicePointFeedbackSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointFeedbackInclude<ExtArgs> | null
+    /**
+     * Filter, which ServicePointFeedbacks to fetch.
+     */
+    where?: ServicePointFeedbackWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of ServicePointFeedbacks to fetch.
+     */
+    orderBy?: ServicePointFeedbackOrderByWithRelationInput | ServicePointFeedbackOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing ServicePointFeedbacks.
+     */
+    cursor?: ServicePointFeedbackWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` ServicePointFeedbacks from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` ServicePointFeedbacks.
+     */
+    skip?: number
+    distinct?: ServicePointFeedbackScalarFieldEnum | ServicePointFeedbackScalarFieldEnum[]
+  }
+
+  /**
+   * ServicePointFeedback create
+   */
+  export type ServicePointFeedbackCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePointFeedback
+     */
+    select?: ServicePointFeedbackSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointFeedbackInclude<ExtArgs> | null
+    /**
+     * The data needed to create a ServicePointFeedback.
+     */
+    data: XOR<ServicePointFeedbackCreateInput, ServicePointFeedbackUncheckedCreateInput>
+  }
+
+  /**
+   * ServicePointFeedback createMany
+   */
+  export type ServicePointFeedbackCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many ServicePointFeedbacks.
+     */
+    data: ServicePointFeedbackCreateManyInput | ServicePointFeedbackCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * ServicePointFeedback createManyAndReturn
+   */
+  export type ServicePointFeedbackCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePointFeedback
+     */
+    select?: ServicePointFeedbackSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many ServicePointFeedbacks.
+     */
+    data: ServicePointFeedbackCreateManyInput | ServicePointFeedbackCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointFeedbackIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * ServicePointFeedback update
+   */
+  export type ServicePointFeedbackUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePointFeedback
+     */
+    select?: ServicePointFeedbackSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointFeedbackInclude<ExtArgs> | null
+    /**
+     * The data needed to update a ServicePointFeedback.
+     */
+    data: XOR<ServicePointFeedbackUpdateInput, ServicePointFeedbackUncheckedUpdateInput>
+    /**
+     * Choose, which ServicePointFeedback to update.
+     */
+    where: ServicePointFeedbackWhereUniqueInput
+  }
+
+  /**
+   * ServicePointFeedback updateMany
+   */
+  export type ServicePointFeedbackUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update ServicePointFeedbacks.
+     */
+    data: XOR<ServicePointFeedbackUpdateManyMutationInput, ServicePointFeedbackUncheckedUpdateManyInput>
+    /**
+     * Filter which ServicePointFeedbacks to update
+     */
+    where?: ServicePointFeedbackWhereInput
+  }
+
+  /**
+   * ServicePointFeedback upsert
+   */
+  export type ServicePointFeedbackUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePointFeedback
+     */
+    select?: ServicePointFeedbackSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointFeedbackInclude<ExtArgs> | null
+    /**
+     * The filter to search for the ServicePointFeedback to update in case it exists.
+     */
+    where: ServicePointFeedbackWhereUniqueInput
+    /**
+     * In case the ServicePointFeedback found by the `where` argument doesn't exist, create a new ServicePointFeedback with this data.
+     */
+    create: XOR<ServicePointFeedbackCreateInput, ServicePointFeedbackUncheckedCreateInput>
+    /**
+     * In case the ServicePointFeedback was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ServicePointFeedbackUpdateInput, ServicePointFeedbackUncheckedUpdateInput>
+  }
+
+  /**
+   * ServicePointFeedback delete
+   */
+  export type ServicePointFeedbackDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePointFeedback
+     */
+    select?: ServicePointFeedbackSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointFeedbackInclude<ExtArgs> | null
+    /**
+     * Filter which ServicePointFeedback to delete.
+     */
+    where: ServicePointFeedbackWhereUniqueInput
+  }
+
+  /**
+   * ServicePointFeedback deleteMany
+   */
+  export type ServicePointFeedbackDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which ServicePointFeedbacks to delete
+     */
+    where?: ServicePointFeedbackWhereInput
+  }
+
+  /**
+   * ServicePointFeedback without action
+   */
+  export type ServicePointFeedbackDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ServicePointFeedback
+     */
+    select?: ServicePointFeedbackSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ServicePointFeedbackInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -7638,6 +9846,32 @@ export namespace Prisma {
   };
 
   export type DepartmentConcernScalarFieldEnum = (typeof DepartmentConcernScalarFieldEnum)[keyof typeof DepartmentConcernScalarFieldEnum]
+
+
+  export const ServicePointScalarFieldEnum: {
+    id: 'id',
+    name: 'name',
+    is_active: 'is_active',
+    show_recommend_question: 'show_recommend_question',
+    show_comments_box: 'show_comments_box',
+    created_at: 'created_at',
+    updated_at: 'updated_at'
+  };
+
+  export type ServicePointScalarFieldEnum = (typeof ServicePointScalarFieldEnum)[keyof typeof ServicePointScalarFieldEnum]
+
+
+  export const ServicePointFeedbackScalarFieldEnum: {
+    id: 'id',
+    service_point_id: 'service_point_id',
+    rating: 'rating',
+    recommend: 'recommend',
+    comment: 'comment',
+    created_at: 'created_at',
+    updated_at: 'updated_at'
+  };
+
+  export type ServicePointFeedbackScalarFieldEnum = (typeof ServicePointFeedbackScalarFieldEnum)[keyof typeof ServicePointFeedbackScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -8194,6 +10428,140 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"DepartmentConcern"> | Date | string
   }
 
+  export type ServicePointWhereInput = {
+    AND?: ServicePointWhereInput | ServicePointWhereInput[]
+    OR?: ServicePointWhereInput[]
+    NOT?: ServicePointWhereInput | ServicePointWhereInput[]
+    id?: IntFilter<"ServicePoint"> | number
+    name?: StringFilter<"ServicePoint"> | string
+    is_active?: BoolFilter<"ServicePoint"> | boolean
+    show_recommend_question?: BoolFilter<"ServicePoint"> | boolean
+    show_comments_box?: BoolFilter<"ServicePoint"> | boolean
+    created_at?: DateTimeFilter<"ServicePoint"> | Date | string
+    updated_at?: DateTimeFilter<"ServicePoint"> | Date | string
+    feedback?: ServicePointFeedbackListRelationFilter
+  }
+
+  export type ServicePointOrderByWithRelationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    is_active?: SortOrder
+    show_recommend_question?: SortOrder
+    show_comments_box?: SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+    feedback?: ServicePointFeedbackOrderByRelationAggregateInput
+  }
+
+  export type ServicePointWhereUniqueInput = Prisma.AtLeast<{
+    id?: number
+    AND?: ServicePointWhereInput | ServicePointWhereInput[]
+    OR?: ServicePointWhereInput[]
+    NOT?: ServicePointWhereInput | ServicePointWhereInput[]
+    name?: StringFilter<"ServicePoint"> | string
+    is_active?: BoolFilter<"ServicePoint"> | boolean
+    show_recommend_question?: BoolFilter<"ServicePoint"> | boolean
+    show_comments_box?: BoolFilter<"ServicePoint"> | boolean
+    created_at?: DateTimeFilter<"ServicePoint"> | Date | string
+    updated_at?: DateTimeFilter<"ServicePoint"> | Date | string
+    feedback?: ServicePointFeedbackListRelationFilter
+  }, "id">
+
+  export type ServicePointOrderByWithAggregationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    is_active?: SortOrder
+    show_recommend_question?: SortOrder
+    show_comments_box?: SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+    _count?: ServicePointCountOrderByAggregateInput
+    _avg?: ServicePointAvgOrderByAggregateInput
+    _max?: ServicePointMaxOrderByAggregateInput
+    _min?: ServicePointMinOrderByAggregateInput
+    _sum?: ServicePointSumOrderByAggregateInput
+  }
+
+  export type ServicePointScalarWhereWithAggregatesInput = {
+    AND?: ServicePointScalarWhereWithAggregatesInput | ServicePointScalarWhereWithAggregatesInput[]
+    OR?: ServicePointScalarWhereWithAggregatesInput[]
+    NOT?: ServicePointScalarWhereWithAggregatesInput | ServicePointScalarWhereWithAggregatesInput[]
+    id?: IntWithAggregatesFilter<"ServicePoint"> | number
+    name?: StringWithAggregatesFilter<"ServicePoint"> | string
+    is_active?: BoolWithAggregatesFilter<"ServicePoint"> | boolean
+    show_recommend_question?: BoolWithAggregatesFilter<"ServicePoint"> | boolean
+    show_comments_box?: BoolWithAggregatesFilter<"ServicePoint"> | boolean
+    created_at?: DateTimeWithAggregatesFilter<"ServicePoint"> | Date | string
+    updated_at?: DateTimeWithAggregatesFilter<"ServicePoint"> | Date | string
+  }
+
+  export type ServicePointFeedbackWhereInput = {
+    AND?: ServicePointFeedbackWhereInput | ServicePointFeedbackWhereInput[]
+    OR?: ServicePointFeedbackWhereInput[]
+    NOT?: ServicePointFeedbackWhereInput | ServicePointFeedbackWhereInput[]
+    id?: IntFilter<"ServicePointFeedback"> | number
+    service_point_id?: IntFilter<"ServicePointFeedback"> | number
+    rating?: IntFilter<"ServicePointFeedback"> | number
+    recommend?: BoolNullableFilter<"ServicePointFeedback"> | boolean | null
+    comment?: StringNullableFilter<"ServicePointFeedback"> | string | null
+    created_at?: DateTimeFilter<"ServicePointFeedback"> | Date | string
+    updated_at?: DateTimeFilter<"ServicePointFeedback"> | Date | string
+    service_point?: XOR<ServicePointRelationFilter, ServicePointWhereInput>
+  }
+
+  export type ServicePointFeedbackOrderByWithRelationInput = {
+    id?: SortOrder
+    service_point_id?: SortOrder
+    rating?: SortOrder
+    recommend?: SortOrderInput | SortOrder
+    comment?: SortOrderInput | SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+    service_point?: ServicePointOrderByWithRelationInput
+  }
+
+  export type ServicePointFeedbackWhereUniqueInput = Prisma.AtLeast<{
+    id?: number
+    AND?: ServicePointFeedbackWhereInput | ServicePointFeedbackWhereInput[]
+    OR?: ServicePointFeedbackWhereInput[]
+    NOT?: ServicePointFeedbackWhereInput | ServicePointFeedbackWhereInput[]
+    service_point_id?: IntFilter<"ServicePointFeedback"> | number
+    rating?: IntFilter<"ServicePointFeedback"> | number
+    recommend?: BoolNullableFilter<"ServicePointFeedback"> | boolean | null
+    comment?: StringNullableFilter<"ServicePointFeedback"> | string | null
+    created_at?: DateTimeFilter<"ServicePointFeedback"> | Date | string
+    updated_at?: DateTimeFilter<"ServicePointFeedback"> | Date | string
+    service_point?: XOR<ServicePointRelationFilter, ServicePointWhereInput>
+  }, "id">
+
+  export type ServicePointFeedbackOrderByWithAggregationInput = {
+    id?: SortOrder
+    service_point_id?: SortOrder
+    rating?: SortOrder
+    recommend?: SortOrderInput | SortOrder
+    comment?: SortOrderInput | SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+    _count?: ServicePointFeedbackCountOrderByAggregateInput
+    _avg?: ServicePointFeedbackAvgOrderByAggregateInput
+    _max?: ServicePointFeedbackMaxOrderByAggregateInput
+    _min?: ServicePointFeedbackMinOrderByAggregateInput
+    _sum?: ServicePointFeedbackSumOrderByAggregateInput
+  }
+
+  export type ServicePointFeedbackScalarWhereWithAggregatesInput = {
+    AND?: ServicePointFeedbackScalarWhereWithAggregatesInput | ServicePointFeedbackScalarWhereWithAggregatesInput[]
+    OR?: ServicePointFeedbackScalarWhereWithAggregatesInput[]
+    NOT?: ServicePointFeedbackScalarWhereWithAggregatesInput | ServicePointFeedbackScalarWhereWithAggregatesInput[]
+    id?: IntWithAggregatesFilter<"ServicePointFeedback"> | number
+    service_point_id?: IntWithAggregatesFilter<"ServicePointFeedback"> | number
+    rating?: IntWithAggregatesFilter<"ServicePointFeedback"> | number
+    recommend?: BoolNullableWithAggregatesFilter<"ServicePointFeedback"> | boolean | null
+    comment?: StringNullableWithAggregatesFilter<"ServicePointFeedback"> | string | null
+    created_at?: DateTimeWithAggregatesFilter<"ServicePointFeedback"> | Date | string
+    updated_at?: DateTimeWithAggregatesFilter<"ServicePointFeedback"> | Date | string
+  }
+
   export type SurveySubmissionCreateInput = {
     id?: string
     visitTime: string
@@ -8669,6 +11037,143 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type ServicePointCreateInput = {
+    name: string
+    is_active?: boolean
+    show_recommend_question?: boolean
+    show_comments_box?: boolean
+    created_at?: Date | string
+    updated_at?: Date | string
+    feedback?: ServicePointFeedbackCreateNestedManyWithoutService_pointInput
+  }
+
+  export type ServicePointUncheckedCreateInput = {
+    id?: number
+    name: string
+    is_active?: boolean
+    show_recommend_question?: boolean
+    show_comments_box?: boolean
+    created_at?: Date | string
+    updated_at?: Date | string
+    feedback?: ServicePointFeedbackUncheckedCreateNestedManyWithoutService_pointInput
+  }
+
+  export type ServicePointUpdateInput = {
+    name?: StringFieldUpdateOperationsInput | string
+    is_active?: BoolFieldUpdateOperationsInput | boolean
+    show_recommend_question?: BoolFieldUpdateOperationsInput | boolean
+    show_comments_box?: BoolFieldUpdateOperationsInput | boolean
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    feedback?: ServicePointFeedbackUpdateManyWithoutService_pointNestedInput
+  }
+
+  export type ServicePointUncheckedUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    is_active?: BoolFieldUpdateOperationsInput | boolean
+    show_recommend_question?: BoolFieldUpdateOperationsInput | boolean
+    show_comments_box?: BoolFieldUpdateOperationsInput | boolean
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    feedback?: ServicePointFeedbackUncheckedUpdateManyWithoutService_pointNestedInput
+  }
+
+  export type ServicePointCreateManyInput = {
+    id?: number
+    name: string
+    is_active?: boolean
+    show_recommend_question?: boolean
+    show_comments_box?: boolean
+    created_at?: Date | string
+    updated_at?: Date | string
+  }
+
+  export type ServicePointUpdateManyMutationInput = {
+    name?: StringFieldUpdateOperationsInput | string
+    is_active?: BoolFieldUpdateOperationsInput | boolean
+    show_recommend_question?: BoolFieldUpdateOperationsInput | boolean
+    show_comments_box?: BoolFieldUpdateOperationsInput | boolean
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ServicePointUncheckedUpdateManyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    is_active?: BoolFieldUpdateOperationsInput | boolean
+    show_recommend_question?: BoolFieldUpdateOperationsInput | boolean
+    show_comments_box?: BoolFieldUpdateOperationsInput | boolean
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ServicePointFeedbackCreateInput = {
+    rating: number
+    recommend?: boolean | null
+    comment?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+    service_point: ServicePointCreateNestedOneWithoutFeedbackInput
+  }
+
+  export type ServicePointFeedbackUncheckedCreateInput = {
+    id?: number
+    service_point_id: number
+    rating: number
+    recommend?: boolean | null
+    comment?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+  }
+
+  export type ServicePointFeedbackUpdateInput = {
+    rating?: IntFieldUpdateOperationsInput | number
+    recommend?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    service_point?: ServicePointUpdateOneRequiredWithoutFeedbackNestedInput
+  }
+
+  export type ServicePointFeedbackUncheckedUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    service_point_id?: IntFieldUpdateOperationsInput | number
+    rating?: IntFieldUpdateOperationsInput | number
+    recommend?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ServicePointFeedbackCreateManyInput = {
+    id?: number
+    service_point_id: number
+    rating: number
+    recommend?: boolean | null
+    comment?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+  }
+
+  export type ServicePointFeedbackUpdateManyMutationInput = {
+    rating?: IntFieldUpdateOperationsInput | number
+    recommend?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ServicePointFeedbackUncheckedUpdateManyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    service_point_id?: IntFieldUpdateOperationsInput | number
+    rating?: IntFieldUpdateOperationsInput | number
+    recommend?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -9110,6 +11615,101 @@ export namespace Prisma {
     locationId?: SortOrder
   }
 
+  export type ServicePointFeedbackListRelationFilter = {
+    every?: ServicePointFeedbackWhereInput
+    some?: ServicePointFeedbackWhereInput
+    none?: ServicePointFeedbackWhereInput
+  }
+
+  export type ServicePointFeedbackOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type ServicePointCountOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    is_active?: SortOrder
+    show_recommend_question?: SortOrder
+    show_comments_box?: SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+  }
+
+  export type ServicePointAvgOrderByAggregateInput = {
+    id?: SortOrder
+  }
+
+  export type ServicePointMaxOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    is_active?: SortOrder
+    show_recommend_question?: SortOrder
+    show_comments_box?: SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+  }
+
+  export type ServicePointMinOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    is_active?: SortOrder
+    show_recommend_question?: SortOrder
+    show_comments_box?: SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+  }
+
+  export type ServicePointSumOrderByAggregateInput = {
+    id?: SortOrder
+  }
+
+  export type ServicePointRelationFilter = {
+    is?: ServicePointWhereInput
+    isNot?: ServicePointWhereInput
+  }
+
+  export type ServicePointFeedbackCountOrderByAggregateInput = {
+    id?: SortOrder
+    service_point_id?: SortOrder
+    rating?: SortOrder
+    recommend?: SortOrder
+    comment?: SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+  }
+
+  export type ServicePointFeedbackAvgOrderByAggregateInput = {
+    id?: SortOrder
+    service_point_id?: SortOrder
+    rating?: SortOrder
+  }
+
+  export type ServicePointFeedbackMaxOrderByAggregateInput = {
+    id?: SortOrder
+    service_point_id?: SortOrder
+    rating?: SortOrder
+    recommend?: SortOrder
+    comment?: SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+  }
+
+  export type ServicePointFeedbackMinOrderByAggregateInput = {
+    id?: SortOrder
+    service_point_id?: SortOrder
+    rating?: SortOrder
+    recommend?: SortOrder
+    comment?: SortOrder
+    created_at?: SortOrder
+    updated_at?: SortOrder
+  }
+
+  export type ServicePointFeedbackSumOrderByAggregateInput = {
+    id?: SortOrder
+    service_point_id?: SortOrder
+    rating?: SortOrder
+  }
+
   export type SubmissionLocationCreateNestedManyWithoutSubmissionInput = {
     create?: XOR<SubmissionLocationCreateWithoutSubmissionInput, SubmissionLocationUncheckedCreateWithoutSubmissionInput> | SubmissionLocationCreateWithoutSubmissionInput[] | SubmissionLocationUncheckedCreateWithoutSubmissionInput[]
     connectOrCreate?: SubmissionLocationCreateOrConnectWithoutSubmissionInput | SubmissionLocationCreateOrConnectWithoutSubmissionInput[]
@@ -9518,6 +12118,62 @@ export namespace Prisma {
     upsert?: LocationUpsertWithoutDepartmentConcernsInput
     connect?: LocationWhereUniqueInput
     update?: XOR<XOR<LocationUpdateToOneWithWhereWithoutDepartmentConcernsInput, LocationUpdateWithoutDepartmentConcernsInput>, LocationUncheckedUpdateWithoutDepartmentConcernsInput>
+  }
+
+  export type ServicePointFeedbackCreateNestedManyWithoutService_pointInput = {
+    create?: XOR<ServicePointFeedbackCreateWithoutService_pointInput, ServicePointFeedbackUncheckedCreateWithoutService_pointInput> | ServicePointFeedbackCreateWithoutService_pointInput[] | ServicePointFeedbackUncheckedCreateWithoutService_pointInput[]
+    connectOrCreate?: ServicePointFeedbackCreateOrConnectWithoutService_pointInput | ServicePointFeedbackCreateOrConnectWithoutService_pointInput[]
+    createMany?: ServicePointFeedbackCreateManyService_pointInputEnvelope
+    connect?: ServicePointFeedbackWhereUniqueInput | ServicePointFeedbackWhereUniqueInput[]
+  }
+
+  export type ServicePointFeedbackUncheckedCreateNestedManyWithoutService_pointInput = {
+    create?: XOR<ServicePointFeedbackCreateWithoutService_pointInput, ServicePointFeedbackUncheckedCreateWithoutService_pointInput> | ServicePointFeedbackCreateWithoutService_pointInput[] | ServicePointFeedbackUncheckedCreateWithoutService_pointInput[]
+    connectOrCreate?: ServicePointFeedbackCreateOrConnectWithoutService_pointInput | ServicePointFeedbackCreateOrConnectWithoutService_pointInput[]
+    createMany?: ServicePointFeedbackCreateManyService_pointInputEnvelope
+    connect?: ServicePointFeedbackWhereUniqueInput | ServicePointFeedbackWhereUniqueInput[]
+  }
+
+  export type ServicePointFeedbackUpdateManyWithoutService_pointNestedInput = {
+    create?: XOR<ServicePointFeedbackCreateWithoutService_pointInput, ServicePointFeedbackUncheckedCreateWithoutService_pointInput> | ServicePointFeedbackCreateWithoutService_pointInput[] | ServicePointFeedbackUncheckedCreateWithoutService_pointInput[]
+    connectOrCreate?: ServicePointFeedbackCreateOrConnectWithoutService_pointInput | ServicePointFeedbackCreateOrConnectWithoutService_pointInput[]
+    upsert?: ServicePointFeedbackUpsertWithWhereUniqueWithoutService_pointInput | ServicePointFeedbackUpsertWithWhereUniqueWithoutService_pointInput[]
+    createMany?: ServicePointFeedbackCreateManyService_pointInputEnvelope
+    set?: ServicePointFeedbackWhereUniqueInput | ServicePointFeedbackWhereUniqueInput[]
+    disconnect?: ServicePointFeedbackWhereUniqueInput | ServicePointFeedbackWhereUniqueInput[]
+    delete?: ServicePointFeedbackWhereUniqueInput | ServicePointFeedbackWhereUniqueInput[]
+    connect?: ServicePointFeedbackWhereUniqueInput | ServicePointFeedbackWhereUniqueInput[]
+    update?: ServicePointFeedbackUpdateWithWhereUniqueWithoutService_pointInput | ServicePointFeedbackUpdateWithWhereUniqueWithoutService_pointInput[]
+    updateMany?: ServicePointFeedbackUpdateManyWithWhereWithoutService_pointInput | ServicePointFeedbackUpdateManyWithWhereWithoutService_pointInput[]
+    deleteMany?: ServicePointFeedbackScalarWhereInput | ServicePointFeedbackScalarWhereInput[]
+  }
+
+  export type ServicePointFeedbackUncheckedUpdateManyWithoutService_pointNestedInput = {
+    create?: XOR<ServicePointFeedbackCreateWithoutService_pointInput, ServicePointFeedbackUncheckedCreateWithoutService_pointInput> | ServicePointFeedbackCreateWithoutService_pointInput[] | ServicePointFeedbackUncheckedCreateWithoutService_pointInput[]
+    connectOrCreate?: ServicePointFeedbackCreateOrConnectWithoutService_pointInput | ServicePointFeedbackCreateOrConnectWithoutService_pointInput[]
+    upsert?: ServicePointFeedbackUpsertWithWhereUniqueWithoutService_pointInput | ServicePointFeedbackUpsertWithWhereUniqueWithoutService_pointInput[]
+    createMany?: ServicePointFeedbackCreateManyService_pointInputEnvelope
+    set?: ServicePointFeedbackWhereUniqueInput | ServicePointFeedbackWhereUniqueInput[]
+    disconnect?: ServicePointFeedbackWhereUniqueInput | ServicePointFeedbackWhereUniqueInput[]
+    delete?: ServicePointFeedbackWhereUniqueInput | ServicePointFeedbackWhereUniqueInput[]
+    connect?: ServicePointFeedbackWhereUniqueInput | ServicePointFeedbackWhereUniqueInput[]
+    update?: ServicePointFeedbackUpdateWithWhereUniqueWithoutService_pointInput | ServicePointFeedbackUpdateWithWhereUniqueWithoutService_pointInput[]
+    updateMany?: ServicePointFeedbackUpdateManyWithWhereWithoutService_pointInput | ServicePointFeedbackUpdateManyWithWhereWithoutService_pointInput[]
+    deleteMany?: ServicePointFeedbackScalarWhereInput | ServicePointFeedbackScalarWhereInput[]
+  }
+
+  export type ServicePointCreateNestedOneWithoutFeedbackInput = {
+    create?: XOR<ServicePointCreateWithoutFeedbackInput, ServicePointUncheckedCreateWithoutFeedbackInput>
+    connectOrCreate?: ServicePointCreateOrConnectWithoutFeedbackInput
+    connect?: ServicePointWhereUniqueInput
+  }
+
+  export type ServicePointUpdateOneRequiredWithoutFeedbackNestedInput = {
+    create?: XOR<ServicePointCreateWithoutFeedbackInput, ServicePointUncheckedCreateWithoutFeedbackInput>
+    connectOrCreate?: ServicePointCreateOrConnectWithoutFeedbackInput
+    upsert?: ServicePointUpsertWithoutFeedbackInput
+    connect?: ServicePointWhereUniqueInput
+    update?: XOR<XOR<ServicePointUpdateToOneWithWhereWithoutFeedbackInput, ServicePointUpdateWithoutFeedbackInput>, ServicePointUncheckedUpdateWithoutFeedbackInput>
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -10563,6 +13219,116 @@ export namespace Prisma {
     ratings?: RatingUncheckedUpdateManyWithoutLocationNestedInput
   }
 
+  export type ServicePointFeedbackCreateWithoutService_pointInput = {
+    rating: number
+    recommend?: boolean | null
+    comment?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+  }
+
+  export type ServicePointFeedbackUncheckedCreateWithoutService_pointInput = {
+    id?: number
+    rating: number
+    recommend?: boolean | null
+    comment?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+  }
+
+  export type ServicePointFeedbackCreateOrConnectWithoutService_pointInput = {
+    where: ServicePointFeedbackWhereUniqueInput
+    create: XOR<ServicePointFeedbackCreateWithoutService_pointInput, ServicePointFeedbackUncheckedCreateWithoutService_pointInput>
+  }
+
+  export type ServicePointFeedbackCreateManyService_pointInputEnvelope = {
+    data: ServicePointFeedbackCreateManyService_pointInput | ServicePointFeedbackCreateManyService_pointInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type ServicePointFeedbackUpsertWithWhereUniqueWithoutService_pointInput = {
+    where: ServicePointFeedbackWhereUniqueInput
+    update: XOR<ServicePointFeedbackUpdateWithoutService_pointInput, ServicePointFeedbackUncheckedUpdateWithoutService_pointInput>
+    create: XOR<ServicePointFeedbackCreateWithoutService_pointInput, ServicePointFeedbackUncheckedCreateWithoutService_pointInput>
+  }
+
+  export type ServicePointFeedbackUpdateWithWhereUniqueWithoutService_pointInput = {
+    where: ServicePointFeedbackWhereUniqueInput
+    data: XOR<ServicePointFeedbackUpdateWithoutService_pointInput, ServicePointFeedbackUncheckedUpdateWithoutService_pointInput>
+  }
+
+  export type ServicePointFeedbackUpdateManyWithWhereWithoutService_pointInput = {
+    where: ServicePointFeedbackScalarWhereInput
+    data: XOR<ServicePointFeedbackUpdateManyMutationInput, ServicePointFeedbackUncheckedUpdateManyWithoutService_pointInput>
+  }
+
+  export type ServicePointFeedbackScalarWhereInput = {
+    AND?: ServicePointFeedbackScalarWhereInput | ServicePointFeedbackScalarWhereInput[]
+    OR?: ServicePointFeedbackScalarWhereInput[]
+    NOT?: ServicePointFeedbackScalarWhereInput | ServicePointFeedbackScalarWhereInput[]
+    id?: IntFilter<"ServicePointFeedback"> | number
+    service_point_id?: IntFilter<"ServicePointFeedback"> | number
+    rating?: IntFilter<"ServicePointFeedback"> | number
+    recommend?: BoolNullableFilter<"ServicePointFeedback"> | boolean | null
+    comment?: StringNullableFilter<"ServicePointFeedback"> | string | null
+    created_at?: DateTimeFilter<"ServicePointFeedback"> | Date | string
+    updated_at?: DateTimeFilter<"ServicePointFeedback"> | Date | string
+  }
+
+  export type ServicePointCreateWithoutFeedbackInput = {
+    name: string
+    is_active?: boolean
+    show_recommend_question?: boolean
+    show_comments_box?: boolean
+    created_at?: Date | string
+    updated_at?: Date | string
+  }
+
+  export type ServicePointUncheckedCreateWithoutFeedbackInput = {
+    id?: number
+    name: string
+    is_active?: boolean
+    show_recommend_question?: boolean
+    show_comments_box?: boolean
+    created_at?: Date | string
+    updated_at?: Date | string
+  }
+
+  export type ServicePointCreateOrConnectWithoutFeedbackInput = {
+    where: ServicePointWhereUniqueInput
+    create: XOR<ServicePointCreateWithoutFeedbackInput, ServicePointUncheckedCreateWithoutFeedbackInput>
+  }
+
+  export type ServicePointUpsertWithoutFeedbackInput = {
+    update: XOR<ServicePointUpdateWithoutFeedbackInput, ServicePointUncheckedUpdateWithoutFeedbackInput>
+    create: XOR<ServicePointCreateWithoutFeedbackInput, ServicePointUncheckedCreateWithoutFeedbackInput>
+    where?: ServicePointWhereInput
+  }
+
+  export type ServicePointUpdateToOneWithWhereWithoutFeedbackInput = {
+    where?: ServicePointWhereInput
+    data: XOR<ServicePointUpdateWithoutFeedbackInput, ServicePointUncheckedUpdateWithoutFeedbackInput>
+  }
+
+  export type ServicePointUpdateWithoutFeedbackInput = {
+    name?: StringFieldUpdateOperationsInput | string
+    is_active?: BoolFieldUpdateOperationsInput | boolean
+    show_recommend_question?: BoolFieldUpdateOperationsInput | boolean
+    show_comments_box?: BoolFieldUpdateOperationsInput | boolean
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ServicePointUncheckedUpdateWithoutFeedbackInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    is_active?: BoolFieldUpdateOperationsInput | boolean
+    show_recommend_question?: BoolFieldUpdateOperationsInput | boolean
+    show_comments_box?: BoolFieldUpdateOperationsInput | boolean
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type SubmissionLocationCreateManySubmissionInput = {
     id?: number
     locationId: number
@@ -10805,6 +13571,41 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type ServicePointFeedbackCreateManyService_pointInput = {
+    id?: number
+    rating: number
+    recommend?: boolean | null
+    comment?: string | null
+    created_at?: Date | string
+    updated_at?: Date | string
+  }
+
+  export type ServicePointFeedbackUpdateWithoutService_pointInput = {
+    rating?: IntFieldUpdateOperationsInput | number
+    recommend?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ServicePointFeedbackUncheckedUpdateWithoutService_pointInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    rating?: IntFieldUpdateOperationsInput | number
+    recommend?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ServicePointFeedbackUncheckedUpdateManyWithoutService_pointInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    rating?: IntFieldUpdateOperationsInput | number
+    recommend?: NullableBoolFieldUpdateOperationsInput | boolean | null
+    comment?: NullableStringFieldUpdateOperationsInput | string | null
+    created_at?: DateTimeFieldUpdateOperationsInput | Date | string
+    updated_at?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
 
 
   /**
@@ -10818,6 +13619,10 @@ export namespace Prisma {
      * @deprecated Use LocationCountOutputTypeDefaultArgs instead
      */
     export type LocationCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = LocationCountOutputTypeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use ServicePointCountOutputTypeDefaultArgs instead
+     */
+    export type ServicePointCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = ServicePointCountOutputTypeDefaultArgs<ExtArgs>
     /**
      * @deprecated Use SurveySubmissionDefaultArgs instead
      */
@@ -10842,6 +13647,14 @@ export namespace Prisma {
      * @deprecated Use DepartmentConcernDefaultArgs instead
      */
     export type DepartmentConcernArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = DepartmentConcernDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use ServicePointDefaultArgs instead
+     */
+    export type ServicePointArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = ServicePointDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use ServicePointFeedbackDefaultArgs instead
+     */
+    export type ServicePointFeedbackArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = ServicePointFeedbackDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany

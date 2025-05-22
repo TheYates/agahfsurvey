@@ -584,7 +584,7 @@ export default function SurveyForm({ locations = [] }: SurveyFormProps) {
               )}
             </span>
           </div>
-          <Progress value={calculateProgress()} className="h-2" />
+          {/* <Progress value={calculateProgress()} className="h-2" /> */}
         </div>
 
         {renderStep()}

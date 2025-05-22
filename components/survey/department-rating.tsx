@@ -60,11 +60,10 @@ export default function DepartmentRating({
   };
 
   const isComplete = () => {
-    // We'll still log the completion status but won't require all fields
+    // Check if all required (asterisked) fields are filled
     const ratings = surveyData.departmentRatings[location] || {};
-    const complete = ratingCategories.some((category) => ratings[category.id]);
-
-    // Return true to always enable the Next button, or require at least one rating
+    // All rating categories are required (have asterisks)
+    const complete = ratingCategories.every((category) => ratings[category.id]);
     return complete;
   };
 

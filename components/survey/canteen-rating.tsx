@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CHART_COLORS } from "@/app/constants/chart-colors";
 
 interface CanteenRatingProps {
   surveyData: any;
@@ -60,12 +61,20 @@ export default function CanteenRating({
   };
 
   const isComplete = () => {
-    // We'll still log the completion status but won't require all fields
+    // Check if all required (asterisked) fields are filled
     const ratings = surveyData.departmentRatings[location] || {};
-    const complete = ratingCategories.some((category) => ratings[category.id]);
-
-    // Return true to always enable the Next button, or require at least one rating
+    // All rating categories are required (have asterisks)
+    const complete = ratingCategories.every((category) => ratings[category.id]);
     return complete;
+  };
+
+  // Example for styling rating indicators
+  const getRatingColor = (rating: string) => {
+    if (rating === "Excellent") return CHART_COLORS.teal;
+    if (rating === "Very Good") return CHART_COLORS.mint;
+    if (rating === "Good") return CHART_COLORS.lightBlue;
+    if (rating === "Fair") return CHART_COLORS.cream;
+    return CHART_COLORS.red; // Poor
   };
 
   return (

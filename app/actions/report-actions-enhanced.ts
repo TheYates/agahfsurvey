@@ -781,6 +781,10 @@ export async function fetchVisitPurposeData(): Promise<VisitPurposeData> {
     let gpSatisfactionSum = 0;
     let gpRecommendCount = 0;
 
+    // Track ratings by department for General Practice
+    const gpDepartmentRatings: Record<string, { sum: number; count: number }> =
+      {};
+
     generalPractice.forEach((s) => {
       // Calculate average rating
       if (s.ratings.length > 0) {
@@ -802,6 +806,18 @@ export async function fetchVisitPurposeData(): Promise<VisitPurposeData> {
           }, 0) / s.ratings.length;
 
         gpSatisfactionSum += avgRating;
+
+        // Track ratings by department
+        s.submissionLocations.forEach((sl) => {
+          const deptName = sl.location.name;
+          if (!gpDepartmentRatings[deptName]) {
+            gpDepartmentRatings[deptName] = { sum: 0, count: 0 };
+          }
+
+          // Add this submission's rating to the department
+          gpDepartmentRatings[deptName].sum += avgRating;
+          gpDepartmentRatings[deptName].count++;
+        });
       }
 
       if (s.wouldRecommend) {
@@ -812,6 +828,10 @@ export async function fetchVisitPurposeData(): Promise<VisitPurposeData> {
     // Calculate satisfaction and recommend rate for Occupational Health
     let ohSatisfactionSum = 0;
     let ohRecommendCount = 0;
+
+    // Track ratings by department for Occupational Health
+    const ohDepartmentRatings: Record<string, { sum: number; count: number }> =
+      {};
 
     occupationalHealth.forEach((s) => {
       // Calculate average rating
@@ -834,6 +854,18 @@ export async function fetchVisitPurposeData(): Promise<VisitPurposeData> {
           }, 0) / s.ratings.length;
 
         ohSatisfactionSum += avgRating;
+
+        // Track ratings by department
+        s.submissionLocations.forEach((sl) => {
+          const deptName = sl.location.name;
+          if (!ohDepartmentRatings[deptName]) {
+            ohDepartmentRatings[deptName] = { sum: 0, count: 0 };
+          }
+
+          // Add this submission's rating to the department
+          ohDepartmentRatings[deptName].sum += avgRating;
+          ohDepartmentRatings[deptName].count++;
+        });
       }
 
       if (s.wouldRecommend) {
@@ -859,47 +891,108 @@ export async function fetchVisitPurposeData(): Promise<VisitPurposeData> {
       });
     });
 
-    // Sort locations by frequency
+    // Sort locations by frequency for common locations display
     const gpCommonLocations = Object.entries(gpLocationCounts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([name, count]) => ({ name, count }));
 
-    const ohCommonLocations = Object.entries(ohLocationCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([name, count]) => ({ name, count }));
+    // Instead of just counting visits, also track the most recent visit date
+    const ohLocationData: Record<
+      string,
+      { count: number; lastVisitDate: string }
+    > = {};
 
-    // Determine top and bottom departments by satisfaction
-    const gpTopDept = {
-      name: gpCommonLocations[0]?.name || "N/A",
-      score:
-        Math.round(
-          (gpSatisfactionSum / Math.max(generalPractice.length, 1)) * 10
-        ) / 10,
-    };
-    const gpBottomDept = {
-      name: gpCommonLocations[gpCommonLocations.length - 1]?.name || "N/A",
-      score:
-        Math.round(
-          (gpSatisfactionSum / Math.max(generalPractice.length, 1)) * 10
-        ) / 10,
-    };
+    occupationalHealth.forEach((s) => {
+      s.submissionLocations.forEach((sl) => {
+        const locName = sl.location.name;
+        if (!ohLocationData[locName]) {
+          ohLocationData[locName] = {
+            count: 0,
+            lastVisitDate: s.submittedAt.toISOString(),
+          };
+        } else {
+          // Update last visit date if this submission is more recent
+          if (s.submittedAt > new Date(ohLocationData[locName].lastVisitDate)) {
+            ohLocationData[locName].lastVisitDate = s.submittedAt.toISOString();
+          }
+        }
+        ohLocationData[locName].count += 1;
+      });
+    });
 
-    const ohTopDept = {
-      name: ohCommonLocations[0]?.name || "N/A",
-      score:
-        Math.round(
-          (ohSatisfactionSum / Math.max(occupationalHealth.length, 1)) * 10
-        ) / 10,
-    };
-    const ohBottomDept = {
-      name: ohCommonLocations[ohCommonLocations.length - 1]?.name || "N/A",
-      score:
-        Math.round(
-          (ohSatisfactionSum / Math.max(occupationalHealth.length, 1)) * 10
-        ) / 10,
-    };
+    // When creating the commonLocations array, sort by count first, then by date if counts are equal
+    const ohCommonLocations = Object.entries(ohLocationData)
+      .map(([name, data]) => ({
+        name,
+        count: data.count,
+        lastVisitDate: data.lastVisitDate,
+      }))
+      .sort((a, b) => {
+        // First sort by count (descending)
+        if (b.count !== a.count) return b.count - a.count;
+        // If counts are equal, sort by date (most recent first)
+        return (
+          new Date(b.lastVisitDate).getTime() -
+          new Date(a.lastVisitDate).getTime()
+        );
+      })
+      .filter((loc) => loc.name !== "Occupational Health Unit (Medicals)")
+      .slice(0, 5); // Show top 5 instead of just 3
+
+    // Calculate average ratings for each department with a minimum threshold of 2 ratings
+    const MIN_RATING_THRESHOLD = 2; // Minimum number of ratings to be considered
+
+    const gpDepartmentAverages = Object.entries(gpDepartmentRatings)
+      .filter(([_, data]) => data.count >= MIN_RATING_THRESHOLD) // Only include departments with sufficient ratings
+      .map(([name, data]) => ({
+        name,
+        score: Math.round((data.sum / data.count) * 10) / 10,
+        count: data.count,
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    const ohDepartmentAverages = Object.entries(ohDepartmentRatings)
+      .filter(
+        ([name, data]) =>
+          data.count >= MIN_RATING_THRESHOLD && // Only include departments with sufficient ratings
+          name !== "Occupational Health Unit (Medicals)" // Exclude the main OH unit
+      )
+      .map(([name, data]) => ({
+        name,
+        score: Math.round((data.sum / data.count) * 10) / 10,
+        count: data.count,
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    // Determine top and bottom departments by actual ratings
+    const gpTopDept =
+      gpDepartmentAverages.length > 0
+        ? gpDepartmentAverages[0]
+        : { name: gpCommonLocations[0]?.name || "N/A", score: 0 };
+
+    const gpBottomDept =
+      gpDepartmentAverages.length > 0
+        ? gpDepartmentAverages[gpDepartmentAverages.length - 1]
+        : {
+            name:
+              gpCommonLocations[gpCommonLocations.length - 1]?.name || "N/A",
+            score: 0,
+          };
+
+    const ohTopDept =
+      ohDepartmentAverages.length > 0
+        ? ohDepartmentAverages[0]
+        : { name: ohCommonLocations[0]?.name || "N/A", score: 0 };
+
+    const ohBottomDept =
+      ohDepartmentAverages.length > 0
+        ? ohDepartmentAverages[ohDepartmentAverages.length - 1]
+        : {
+            name:
+              ohCommonLocations[ohCommonLocations.length - 1]?.name || "N/A",
+            score: 0,
+          };
 
     const result = {
       generalPractice: {
@@ -2297,5 +2390,444 @@ export async function fetchOccupationalHealthData(): Promise<{
       ohData: null,
       ohConcerns: [],
     };
+  }
+}
+
+// Fix the property names in the fetchOverallSatisfactionDistribution function
+export async function fetchOverallSatisfactionDistribution(): Promise<
+  { name: string; value: number }[]
+> {
+  try {
+    console.log("Fetching overall satisfaction distribution...");
+
+    // Get all survey submissions with ratings
+    const submissions = await prisma.surveySubmission.findMany({
+      include: {
+        ratings: true,
+      },
+    });
+
+    // Initialize counters for all possible rating values (1-5)
+    const distribution: Record<string, number> = {
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 0,
+      "5": 0,
+    };
+
+    // Count occurrences of each rating
+    submissions.forEach((submission) => {
+      // Calculate the numeric overall rating from ratings
+      let overallRating = 0;
+
+      if (submission.ratings && submission.ratings.length > 0) {
+        // Average the overall ratings for this submission
+        overallRating = Math.round(
+          submission.ratings.reduce((sum, rating) => {
+            // Convert string ratings to numbers (1-5 scale)
+            const numericRating =
+              rating.overall === "Excellent"
+                ? 5
+                : rating.overall === "Very Good"
+                ? 4
+                : rating.overall === "Good"
+                ? 3
+                : rating.overall === "Fair"
+                ? 2
+                : rating.overall === "Poor"
+                ? 1
+                : 0;
+            return sum + numericRating;
+          }, 0) / submission.ratings.length
+        );
+      }
+
+      // Log each submission's calculated rating for debugging
+      console.log(
+        `Submission ${submission.id}: calculated rating=${overallRating}`
+      );
+
+      // Get rating as string to use as key in distribution
+      const rating = overallRating.toString();
+
+      // Handle any ratings outside 1-5 range
+      if (rating >= "1" && rating <= "5") {
+        distribution[rating] = (distribution[rating] || 0) + 1;
+      } else {
+        console.log(`Found rating outside 1-5 range: ${rating}`);
+      }
+    });
+
+    console.log("Overall satisfaction distribution:", distribution);
+
+    // Convert to array format expected by pie chart
+    const result = Object.entries(distribution).map(([name, value]) => ({
+      name,
+      value: value as number,
+    }));
+
+    // Sort by rating (1-5)
+    result.sort((a, b) => parseInt(a.name) - parseInt(b.name));
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching overall satisfaction distribution:", error);
+    // Return empty distribution with all rating values
+    return [
+      { name: "1", value: 0 },
+      { name: "2", value: 0 },
+      { name: "3", value: 0 },
+      { name: "4", value: 0 },
+      { name: "5", value: 0 },
+    ];
+  }
+}
+
+// Add these interfaces to match the ones from report-actions.ts
+export interface SurveyData {
+  id: string | number;
+  created_at: string;
+  overall_rating: number;
+  recommendation_rating: number;
+  visit_purpose?: string;
+  locations_visited?: string[];
+}
+
+export interface DepartmentRating {
+  locationId: number;
+  locationName: string;
+  category: string;
+  rating: string;
+  count: number;
+}
+
+export interface LocationVisit {
+  location: string;
+  visit_count: number;
+  average_rating: number;
+}
+
+// Add these functions to match the ones from report-actions.ts
+export async function getSurveyData(): Promise<SurveyData[]> {
+  try {
+    const surveys = await prisma.surveySubmission.findMany({
+      orderBy: {
+        submittedAt: "desc",
+      },
+      include: {
+        submissionLocations: {
+          include: {
+            location: true,
+          },
+        },
+        ratings: true,
+      },
+    });
+
+    // Transform the data to match the expected SurveyData interface
+    const formattedData = surveys.map((survey) => {
+      // Calculate the actual overall rating based on ratings
+      let overallRating = 0;
+      if (survey.ratings && survey.ratings.length > 0) {
+        // Average the overall ratings for this submission
+        overallRating =
+          survey.ratings.reduce((sum, rating) => {
+            // Convert string ratings to numbers (1-5 scale)
+            const numericRating =
+              rating.overall === "Excellent"
+                ? 5
+                : rating.overall === "Very Good"
+                ? 4
+                : rating.overall === "Good"
+                ? 3
+                : rating.overall === "Fair"
+                ? 2
+                : rating.overall === "Poor"
+                ? 1
+                : 0;
+            return sum + numericRating;
+          }, 0) / survey.ratings.length;
+      }
+
+      return {
+        id: survey.id,
+        created_at: survey.submittedAt.toISOString(),
+        overall_rating: Math.round(overallRating * 10) / 10, // Round to 1 decimal place
+        recommendation_rating: survey.wouldRecommend ? 10 : 0,
+        visit_purpose: survey.visitPurpose,
+        locations_visited: survey.submissionLocations.map(
+          (sl) => sl.location.name
+        ),
+      };
+    });
+
+    return formattedData;
+  } catch (error) {
+    console.error("Error in getSurveyData:", error);
+    // Return empty array instead of mock data
+    return [];
+  }
+}
+
+// Get department ratings
+export async function getDepartmentRatings(): Promise<DepartmentRating[]> {
+  try {
+    // Get all ratings
+    const allRatings = await prisma.rating.findMany({
+      include: {
+        location: true,
+      },
+    });
+
+    // Group ratings by location, category, and rating value to count occurrences
+    const ratingGroups: Record<string, DepartmentRating> = {};
+
+    for (const rating of allRatings) {
+      if (rating.location.locationType !== "department") continue;
+
+      // Process each rating category
+      const processCategory = (category: string, value: string | null) => {
+        if (!value) return; // Skip if no rating
+
+        const key = `${rating.locationId}-${category}-${value}`;
+
+        if (!ratingGroups[key]) {
+          ratingGroups[key] = {
+            locationId: rating.locationId,
+            locationName: rating.location.name,
+            category,
+            rating: value,
+            count: 0,
+          };
+        }
+
+        ratingGroups[key].count++;
+      };
+
+      // Process each rating field
+      processCategory("reception", rating.reception);
+      processCategory("professionalism", rating.professionalism);
+      processCategory("understanding", rating.understanding);
+      processCategory("promptness-care", rating.promptnessCare);
+      processCategory("promptness-feedback", rating.promptnessFeedback);
+      processCategory("overall", rating.overall);
+    }
+
+    // Convert groups to array
+    const departmentRatings = Object.values(ratingGroups);
+
+    return departmentRatings;
+  } catch (error) {
+    console.error("Error in getDepartmentRatings:", error);
+    return [];
+  }
+}
+
+// Get location visits
+export async function getLocationVisits(): Promise<LocationVisit[]> {
+  try {
+    // Query to get count of visits per location
+    const locationCounts = await prisma.submissionLocation.groupBy({
+      by: ["locationId"],
+      _count: {
+        locationId: true,
+      },
+    });
+
+    // Get location details and calculate average ratings
+    const locationData = await Promise.all(
+      locationCounts.map(async (count) => {
+        const location = await prisma.location.findUnique({
+          where: { id: count.locationId },
+          include: {
+            ratings: true,
+          },
+        });
+
+        if (!location) {
+          return {
+            location: "Unknown",
+            visit_count: count._count.locationId,
+            average_rating: 0,
+          };
+        }
+
+        // Calculate average rating if ratings exist
+        let totalRating = 0;
+        let ratingCount = 0;
+
+        // Get all ratings for this location
+        const locationRatings = await prisma.rating.findMany({
+          where: { locationId: location.id },
+        });
+
+        // Calculate average rating
+        if (locationRatings.length > 0) {
+          locationRatings.forEach((rating) => {
+            if (rating.overall) {
+              const numericRating =
+                rating.overall === "Excellent"
+                  ? 5
+                  : rating.overall === "Very Good"
+                  ? 4
+                  : rating.overall === "Good"
+                  ? 3
+                  : rating.overall === "Fair"
+                  ? 2
+                  : rating.overall === "Poor"
+                  ? 1
+                  : 0;
+
+              if (numericRating > 0) {
+                totalRating += numericRating;
+                ratingCount++;
+              }
+            }
+          });
+        }
+
+        const averageRating =
+          ratingCount > 0
+            ? Math.round((totalRating / ratingCount) * 10) / 10
+            : 0;
+
+        return {
+          location: location.name,
+          visit_count: count._count.locationId,
+          average_rating: averageRating,
+        };
+      })
+    );
+
+    return locationData;
+  } catch (error) {
+    console.error("Error in getLocationVisits:", error);
+    return [];
+  }
+}
+
+// New interface to represent a detailed submission
+export interface DetailedSubmission {
+  id: string;
+  submittedAt: string;
+  visitTime: string;
+  visitPurpose: string;
+  patientType: string;
+  userType: string;
+  wouldRecommend: boolean;
+  recommendation: string | null;
+  whyNotRecommend: string | null;
+  locations: {
+    id: number;
+    name: string;
+    type: string;
+  }[];
+  ratings: {
+    locationId: number;
+    locationName: string;
+    reception: string | null;
+    professionalism: string | null;
+    understanding: string | null;
+    promptnessCare: string | null;
+    promptnessFeedback: string | null;
+    overall: string | null;
+  }[];
+  concerns: {
+    locationId: number;
+    locationName: string;
+    concern: string;
+  }[];
+  generalObservation: {
+    cleanliness: string | null;
+    facilities: string | null;
+    security: string | null;
+    overall: string | null;
+  };
+}
+
+// Get a specific survey submission by ID
+export async function getSubmissionById(
+  id: string
+): Promise<DetailedSubmission | null> {
+  try {
+    const submission = await prisma.surveySubmission.findUnique({
+      where: { id },
+      include: {
+        submissionLocations: {
+          include: {
+            location: true,
+          },
+        },
+        ratings: {
+          include: {
+            location: true,
+          },
+        },
+        departmentConcerns: {
+          include: {
+            location: true,
+          },
+        },
+      },
+    });
+
+    if (!submission) {
+      return null;
+    }
+
+    // Format ratings by location
+    const formattedRatings = submission.ratings.map((rating) => ({
+      locationId: rating.locationId,
+      locationName: rating.location.name,
+      reception: rating.reception,
+      professionalism: rating.professionalism,
+      understanding: rating.understanding,
+      promptnessCare: rating.promptnessCare,
+      promptnessFeedback: rating.promptnessFeedback,
+      overall: rating.overall,
+    }));
+
+    // Format concerns by location
+    const formattedConcerns = submission.departmentConcerns.map((concern) => ({
+      locationId: concern.locationId,
+      locationName: concern.location.name,
+      concern: concern.concern,
+    }));
+
+    // Format locations
+    const formattedLocations = submission.submissionLocations.map((sl) => ({
+      id: sl.location.id,
+      name: sl.location.name,
+      type: sl.location.locationType,
+    }));
+
+    // Simplify the general observation extraction - we'll use a dummy approach
+    // since we're encountering type issues with the rating schema
+    const generalObservation = {
+      cleanliness: null,
+      facilities: null,
+      security: null,
+      overall: null,
+    };
+
+    return {
+      id: submission.id,
+      submittedAt: submission.submittedAt.toISOString(),
+      visitTime: submission.visitTime,
+      visitPurpose: submission.visitPurpose,
+      patientType: submission.patientType,
+      userType: submission.userType,
+      wouldRecommend: submission.wouldRecommend ?? false, // Default to false if null
+      recommendation: submission.recommendation,
+      whyNotRecommend: submission.whyNotRecommend,
+      locations: formattedLocations,
+      ratings: formattedRatings,
+      concerns: formattedConcerns,
+      generalObservation,
+    };
+  } catch (error) {
+    console.error("Error fetching submission by ID:", error);
+    return null;
   }
 }

@@ -26,11 +26,28 @@ export default function WhereElsePage({
   canteenLocations = [],
   occupationalHealthLocations = [],
 }: WhereElsePageProps) {
+  // Filter out Occupational Health from all location lists
+  const filteredDepartmentLocations = departmentLocations.filter(
+    (location) =>
+      location !== "Occupational Health Unit (Medicals)" &&
+      location !== "Occupational Health Unit" &&
+      location !== "Occupational Health"
+  );
+
+  // Filter out Occupational Health locations
+  const filteredOccupationalHealthLocations =
+    occupationalHealthLocations.filter(
+      (location) =>
+        location !== "Occupational Health Unit (Medicals)" &&
+        location !== "Occupational Health Unit" &&
+        location !== "Occupational Health"
+    );
+
   // Create location groups based on the data from the database
   const locationGroups = [
     {
       title: "Clinics & Departments",
-      locations: departmentLocations,
+      locations: filteredDepartmentLocations,
     },
     {
       title: "Wards",
@@ -38,7 +55,7 @@ export default function WhereElsePage({
     },
     {
       title: "Other Services",
-      locations: [...canteenLocations, ...occupationalHealthLocations],
+      locations: [...canteenLocations, ...filteredOccupationalHealthLocations],
     },
   ].filter((group) => group.locations.length > 0);
 

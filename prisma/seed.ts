@@ -1,4 +1,5 @@
 import { PrismaClient } from "../lib/generated/prisma";
+import { seedServicePointsData } from "./seed-service-points";
 
 const prisma = new PrismaClient();
 
@@ -77,6 +78,9 @@ async function main() {
       },
     });
   }
+
+  // Seed service points data
+  await seedServicePointsData();
 
   console.log("Seeding completed!");
 }

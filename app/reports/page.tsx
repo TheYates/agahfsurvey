@@ -15,18 +15,19 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend as ChartLegend,
+  ArcElement,
+  PieController,
+} from "chart.js";
+import { Chart, Bar, Pie } from "react-chartjs-2";
 import {
   Table,
   TableBody,
@@ -51,18 +52,40 @@ import {
   Map,
   TrendingUp,
   BarChart3,
+  FileText,
 } from "lucide-react";
 import {
+  fetchOverallSatisfactionDistribution,
   getSurveyData,
   getLocationVisits,
   getDepartmentRatings,
-  SurveyData,
   LocationVisit,
+  SurveyData,
   DepartmentRating,
-} from "../actions/report-actions";
+} from "../actions/report-actions-enhanced";
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Title,
+  ChartTooltip,
+  ChartLegend,
+  ArcElement,
+  PieController
+);
 
 // Colors for charts
-const COLORS = ["#2a8d46", "#4caf50", "#8bc34a", "#cddc39", "#ffeb3b"];
+const COLORS = [
+  "#4caf50", // dark teal
+  "#22c5bf", // light teal
+  "#e8e5c0", // beige
+  "#f6a050", // orange
+  "#e84e3c", // red
+];
 
 export default function ReportsPage() {
   const { isAuthenticated } = useAuth();
@@ -81,6 +104,30 @@ export default function ReportsPage() {
   const [totalResponses, setTotalResponses] = useState(0);
   const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [actualAvgRating, setActualAvgRating] = useState<number | null>(null);
+  const [weeklyResponses, setWeeklyResponses] = useState(0);
+  const [recommendationRateChange, setRecommendationRateChange] = useState<
+    number | null
+  >(null);
+  const [previousSatisfaction, setPreviousSatisfaction] = useState<
+    string | null
+  >(null);
+  const [satisfactionByLocation, setSatisfactionByLocation] = useState<
+    {
+      name: string;
+      excellent: number;
+      veryGood: number;
+      good: number;
+      fair: number;
+      poor: number;
+    }[]
+  >([]);
+
+  // Log satisfaction data when it changes
+  useEffect(() => {
+    if (satisfactionData.length > 0) {
+    }
+  }, [satisfactionData]);
 
   useEffect(() => {
     setIsAuthChecked(true);
@@ -101,26 +148,28 @@ export default function ReportsPage() {
         const surveyData = await getSurveyData();
         const locationVisits = await getLocationVisits();
         const departmentRatings = await getDepartmentRatings();
+        // Get satisfaction distribution from enhanced API
+        const satisfactionDistribution =
+          await fetchOverallSatisfactionDistribution();
 
         if (surveyData?.length > 0) {
           // Show only the 5 most recent submissions for the table
           setSubmissions(surveyData.slice(0, 5));
           setTotalResponses(surveyData.length);
 
-          // Calculate satisfaction distribution
-          const distribution: Record<string, number> = {};
-          surveyData.forEach((survey: SurveyData) => {
-            const rating = survey.overall_rating.toString();
-            distribution[rating] = (distribution[rating] || 0) + 1;
-          });
+          // Calculate responses this week
+          const oneWeekAgo = new Date();
+          oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-          const satisfactionChartData = Object.entries(distribution).map(
-            ([name, value]) => ({
-              name,
-              value: value as number,
-            })
-          );
-          setSatisfactionData(satisfactionChartData);
+          const responsesThisWeek = surveyData.filter((survey: SurveyData) => {
+            const surveyDate = new Date(survey.created_at);
+            return surveyDate >= oneWeekAgo;
+          }).length;
+
+          setWeeklyResponses(responsesThisWeek);
+
+          // Use the enhanced satisfaction distribution data
+          setSatisfactionData(satisfactionDistribution);
 
           // Process location data if available
           if (locationVisits?.length > 0) {
@@ -129,7 +178,7 @@ export default function ReportsPage() {
                 (a: LocationVisit, b: LocationVisit) =>
                   b.visit_count - a.visit_count
               )
-              .slice(0, 7) // Top 7 locations
+              .slice(0, 5) // Top 5 locations
               .map((location: LocationVisit) => ({
                 name: location.location,
                 count: location.visit_count,
@@ -148,6 +197,64 @@ export default function ReportsPage() {
             (totalRecommendations / surveyData.length) * 10
           );
 
+          // Calculate recommendation rate change compared to last month
+          const currentDate = new Date();
+          const lastMonthDate = new Date();
+          lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+
+          // Current month data
+          const currentMonthData = surveyData.filter((survey: SurveyData) => {
+            const surveyDate = new Date(survey.created_at);
+            return (
+              surveyDate.getMonth() === currentDate.getMonth() &&
+              surveyDate.getFullYear() === currentDate.getFullYear()
+            );
+          });
+
+          // Last month data
+          const lastMonthData = surveyData.filter((survey: SurveyData) => {
+            const surveyDate = new Date(survey.created_at);
+            return (
+              surveyDate.getMonth() === lastMonthDate.getMonth() &&
+              surveyDate.getFullYear() === lastMonthDate.getFullYear()
+            );
+          });
+
+          // Calculate current month recommendation rate
+          const currentMonthRecommendations = currentMonthData.reduce(
+            (total: number, survey: SurveyData) => {
+              return total + (survey.recommendation_rating || 0);
+            },
+            0
+          );
+
+          const currentMonthRate =
+            currentMonthData.length > 0
+              ? (currentMonthRecommendations / currentMonthData.length) * 10
+              : 0;
+
+          // Calculate last month recommendation rate
+          const lastMonthRecommendations = lastMonthData.reduce(
+            (total: number, survey: SurveyData) => {
+              return total + (survey.recommendation_rating || 0);
+            },
+            0
+          );
+
+          const lastMonthRate =
+            lastMonthData.length > 0
+              ? (lastMonthRecommendations / lastMonthData.length) * 10
+              : 0;
+
+          // Calculate the change
+          if (lastMonthRate > 0) {
+            const change = currentMonthRate - lastMonthRate;
+            setRecommendationRateChange(change);
+          } else {
+            // If no data for last month
+            setRecommendationRateChange(null);
+          }
+
           // Calculate average satisfaction
           const totalSatisfaction = surveyData.reduce(
             (total: number, survey: SurveyData) => {
@@ -156,6 +263,7 @@ export default function ReportsPage() {
             0
           );
           const avgRating = totalSatisfaction / surveyData.length;
+          setActualAvgRating(avgRating);
 
           // Convert numeric rating to text
           let ratingText = "Good";
@@ -166,9 +274,99 @@ export default function ReportsPage() {
           else ratingText = "Poor";
 
           setAverageSatisfaction(ratingText);
+
+          // Calculate previous month's average satisfaction
+          const lastMonthSatisfaction = lastMonthData.reduce(
+            (total: number, survey: SurveyData) => {
+              return total + survey.overall_rating;
+            },
+            0
+          );
+
+          if (lastMonthData.length > 0) {
+            const lastMonthAvgRating =
+              lastMonthSatisfaction / lastMonthData.length;
+
+            // Convert numeric rating to text
+            let lastMonthRatingText = "Good";
+            if (lastMonthAvgRating >= 4.5) lastMonthRatingText = "Excellent";
+            else if (lastMonthAvgRating >= 3.5)
+              lastMonthRatingText = "Very Good";
+            else if (lastMonthAvgRating >= 2.5) lastMonthRatingText = "Good";
+            else if (lastMonthAvgRating >= 1.5) lastMonthRatingText = "Fair";
+            else lastMonthRatingText = "Poor";
+
+            setPreviousSatisfaction(lastMonthRatingText);
+          } else {
+            setPreviousSatisfaction(null);
+          }
+        }
+
+        // Process department ratings data for location satisfaction
+        if (departmentRatings?.length > 0) {
+          const locationSatisfaction: Record<
+            string,
+            {
+              excellent: number;
+              veryGood: number;
+              good: number;
+              fair: number;
+              poor: number;
+            }
+          > = {};
+
+          departmentRatings.forEach((rating: DepartmentRating) => {
+            // Only process overall category ratings
+            if (rating.category === "overall") {
+              if (!locationSatisfaction[rating.locationName]) {
+                locationSatisfaction[rating.locationName] = {
+                  excellent: 0,
+                  veryGood: 0,
+                  good: 0,
+                  fair: 0,
+                  poor: 0,
+                };
+              }
+
+              // Increment the appropriate rating category based on the exact rating
+              if (rating.rating === "Excellent" || rating.rating === "5") {
+                locationSatisfaction[rating.locationName].excellent +=
+                  rating.count;
+              } else if (
+                rating.rating === "Very Good" ||
+                rating.rating === "4"
+              ) {
+                locationSatisfaction[rating.locationName].veryGood +=
+                  rating.count;
+              } else if (rating.rating === "Good" || rating.rating === "3") {
+                locationSatisfaction[rating.locationName].good += rating.count;
+              } else if (rating.rating === "Fair" || rating.rating === "2") {
+                locationSatisfaction[rating.locationName].fair += rating.count;
+              } else if (rating.rating === "Poor" || rating.rating === "1") {
+                locationSatisfaction[rating.locationName].poor += rating.count;
+              }
+            }
+          });
+
+          // Update the sort logic to include all five categories
+          const satisfactionChartData = Object.entries(locationSatisfaction)
+            .map(([name, ratings]) => ({
+              name,
+              ...ratings,
+            }))
+            .sort((a, b) => {
+              // Sort by highest total ratings
+              const totalA =
+                a.excellent + a.veryGood + a.good + a.fair + a.poor;
+              const totalB =
+                b.excellent + b.veryGood + b.good + b.fair + b.poor;
+              return totalB - totalA;
+            })
+            .slice(0, 5); // Limit to top 5 locations
+
+          setSatisfactionByLocation(satisfactionChartData);
         }
       } catch (error) {
-        console.error("Error fetching report data:", error);
       } finally {
         setIsLoading(false);
       }
@@ -251,7 +449,7 @@ export default function ReportsPage() {
             <CardContent>
               <div className="text-2xl font-bold">{totalResponses}</div>
               <p className="text-xs text-muted-foreground">
-                +12% from last month
+                {weeklyResponses} responses this week
               </p>
             </CardContent>
           </Card>
@@ -267,7 +465,14 @@ export default function ReportsPage() {
                 {recommendationRate.toFixed(1)}%
               </div>
               <p className="text-xs text-muted-foreground">
-                +3% from last month
+                {recommendationRateChange !== null ? (
+                  <>
+                    {recommendationRateChange > 0 ? "+" : ""}
+                    {recommendationRateChange.toFixed(1)}% from last month
+                  </>
+                ) : (
+                  "No prior month data"
+                )}
               </p>
             </CardContent>
           </Card>
@@ -280,8 +485,21 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{averageSatisfaction}</div>
+              {actualAvgRating !== null && (
+                <div className="text-sm text-muted-foreground">
+                  {/* Avg: {actualAvgRating.toFixed(2)} / 5 */}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
-                Improved from "Good"
+                {previousSatisfaction
+                  ? averageSatisfaction === previousSatisfaction
+                    ? `Same as last month (${previousSatisfaction})`
+                    : `${
+                        averageSatisfaction > previousSatisfaction
+                          ? "Improved"
+                          : "Decreased"
+                      } from "${previousSatisfaction}"`
+                  : "No prior month data"}
               </p>
             </CardContent>
           </Card>
@@ -289,36 +507,36 @@ export default function ReportsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Link
-            href="/reports/advanced-analysis"
+            href="/reports/service-points"
             className="col-span-1 md:col-span-1"
           >
             <Card className="h-full transition-all hover:shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp size={18} />
-                  Advanced Analysis
+                  <Map size={18} />
+                  Service Points
                 </CardTitle>
                 <CardDescription>
-                  In-depth analysis of survey data
+                  Manage service locations and departments
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  Explore detailed trends, correlations, and demographic
-                  breakdowns of survey responses.
+                  View and analyze performance across all service points,
+                  departments, and healthcare facilities.
                 </p>
                 <Button className="mt-4" size="sm">
-                  View Analysis
+                  View Service Points
                 </Button>
               </CardContent>
             </Card>
           </Link>
 
           <Link
-            href="/reports/enhanced-analysis"
+            href="/reports/survey-reports"
             className="col-span-1 md:col-span-1"
           >
-            <Card className="h-full transition-all hover:shadow-md bg-green-50">
+            <Card className="h-full transition-all hover:shadow-md text-green-500">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 size={18} />
@@ -338,24 +556,25 @@ export default function ReportsPage() {
             </Card>
           </Link>
 
-          <Link href="/reports/heatmap" className="col-span-1 md:col-span-1">
+          <Link
+            href="/reports/submissions"
+            className="col-span-1 md:col-span-1"
+          >
             <Card className="h-full transition-all hover:shadow-md">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Map size={18} />
-                  Satisfaction Heatmap
+                  <FileText size={18} />
+                  Survey Submissions
                 </CardTitle>
-                <CardDescription>
-                  Visual representation of ratings
-                </CardDescription>
+                <CardDescription>Individual survey details</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  View a color-coded heatmap of satisfaction ratings by
-                  department and category.
+                  Browse and analyze individual survey submissions with detailed
+                  response information.
                 </p>
                 <Button className="mt-4" size="sm">
-                  View Heatmap
+                  View Submissions
                 </Button>
               </CardContent>
             </Card>
@@ -381,10 +600,16 @@ export default function ReportsPage() {
         </div>
 
         <Tabs defaultValue="overview" className="mb-8">
-          <TabsList className="mb-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="locations">Locations</TabsTrigger>
-            <TabsTrigger value="responses">Responses</TabsTrigger>
+          <TabsList className="mb-4 w-full">
+            <TabsTrigger className="w-full" value="overview">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger className="w-full" value="locations">
+              Locations
+            </TabsTrigger>
+            <TabsTrigger className="w-full" value="responses">
+              Responses
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -398,39 +623,106 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={satisfactionData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) =>
-                            `${name}: ${(percent * 100).toFixed(0)}%`
-                          }
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {satisfactionData.map((entry, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={
-                                [
-                                  "#4b5563",
-                                  "#6b7280",
-                                  "#9ca3af",
-                                  "#d1d5db",
-                                  "#e5e7eb",
-                                ][index % 5]
-                              }
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <Pie
+                      data={{
+                        labels: satisfactionData
+                          .slice()
+                          .reverse()
+                          .map((item) => {
+                            // Map rating numbers to descriptive text
+                            switch (item.name) {
+                              case "1":
+                                return "Poor";
+                              case "2":
+                                return "Fair";
+                              case "3":
+                                return "Good";
+                              case "4":
+                                return "Very Good";
+                              case "5":
+                                return "Excellent";
+                              default:
+                                return item.name;
+                            }
+                          }),
+                        datasets: [
+                          {
+                            label: "Satisfaction Rating",
+                            data: satisfactionData
+                              .slice()
+                              .reverse()
+                              .map((item) => item.value),
+                            backgroundColor: satisfactionData
+                              .slice()
+                              .reverse()
+                              .map((item) => {
+                                // Match colors to sentiment
+                                switch (item.name) {
+                                  case "1":
+                                    return COLORS[4]; // Poor = red
+                                  case "2":
+                                    return COLORS[3]; // Fair = orange
+                                  case "3":
+                                    return COLORS[2]; // Good = beige
+                                  case "4":
+                                    return COLORS[1]; // Very Good = light teal
+                                  case "5":
+                                    return COLORS[0]; // Excellent = dark teal
+                                  default:
+                                    return "#cccccc"; // Default gray
+                                }
+                              }),
+                            borderColor: satisfactionData
+                              .slice()
+                              .reverse()
+                              .map((item) => {
+                                // Match colors to sentiment
+                                switch (item.name) {
+                                  case "1":
+                                    return COLORS[4]; // Poor = red
+                                  case "2":
+                                    return COLORS[3]; // Fair = orange
+                                  case "3":
+                                    return COLORS[2]; // Good = beige
+                                  case "4":
+                                    return COLORS[1]; // Very Good = light teal
+                                  case "5":
+                                    return COLORS[0]; // Excellent = dark teal
+                                  default:
+                                    return "#cccccc"; // Default gray
+                                }
+                              }),
+                            borderWidth: 1,
+                          },
+                        ],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            position: "bottom" as const,
+                          },
+                          tooltip: {
+                            callbacks: {
+                              label: function (context: any) {
+                                const label = context.label || "";
+                                const value = context.raw || 0;
+                                const dataset = context.dataset;
+                                const total = dataset.data.reduce(
+                                  (a: number, b: number) => a + b,
+                                  0
+                                );
+                                const percentage = Math.round(
+                                  (value / total) * 100
+                                );
+                                return `${label}: ${value} (${percentage}%)`;
+                              },
+                            },
+                          },
+                        },
+                      }}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -444,24 +736,46 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={locationData}
-                        margin={{
-                          top: 5,
-                          right: 30,
-                          left: 20,
-                          bottom: 5,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="count" fill="#4b5563" />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <Bar
+                      data={{
+                        labels: locationData.map((item) => item.name),
+                        datasets: [
+                          {
+                            label: "Visit Count",
+                            data: locationData.map((item) => item.count),
+                            backgroundColor: locationData.map(
+                              (_, index) => COLORS[index % COLORS.length]
+                            ),
+                            borderColor: locationData.map(
+                              (_, index) => COLORS[index % COLORS.length]
+                            ),
+                            borderWidth: 1,
+                          },
+                        ],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            position: "bottom" as const,
+                          },
+                        },
+                        scales: {
+                          x: {
+                            grid: {
+                              display: false,
+                            },
+                          },
+                          y: {
+                            beginAtZero: true,
+                            grid: {
+                              display: true,
+                            },
+                          },
+                        },
+                      }}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -479,40 +793,95 @@ export default function ReportsPage() {
                   <div className="flex justify-center py-10">
                     <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
-                ) : locationData.length === 0 ? (
+                ) : satisfactionByLocation.length === 0 ? (
                   <div className="text-center py-10 text-muted-foreground">
-                    No location data available
+                    No location satisfaction data available
                   </div>
                 ) : (
                   <div className="h-96">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        layout="vertical"
-                        data={locationData.map((loc) => ({
-                          name: loc.name,
-                          visits: loc.count,
-                        }))}
-                        margin={{
-                          top: 20,
-                          right: 30,
-                          left: 100,
-                          bottom: 5,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" />
-                        <YAxis dataKey="name" type="category" />
-                        <Tooltip
-                          formatter={(value) => [`${value} visits`, "Visits"]}
-                        />
-                        <Legend />
-                        <Bar
-                          dataKey="visits"
-                          fill="#4b5563"
-                          name="Visit Count"
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <Bar
+                      data={{
+                        labels: satisfactionByLocation.map((loc) => loc.name),
+                        datasets: [
+                          {
+                            label: "Excellent",
+                            data: satisfactionByLocation.map(
+                              (loc) => loc.excellent
+                            ),
+                            backgroundColor: COLORS[1], // light teal
+                            borderColor: COLORS[1],
+                            borderWidth: 1,
+                          },
+                          {
+                            label: "Very Good",
+                            data: satisfactionByLocation.map(
+                              (loc) => loc.veryGood
+                            ),
+                            backgroundColor: COLORS[0], // dark teal
+                            borderColor: COLORS[0],
+                            borderWidth: 1,
+                          },
+                          {
+                            label: "Good",
+                            data: satisfactionByLocation.map((loc) => loc.good),
+                            backgroundColor: COLORS[2], // beige
+                            borderColor: COLORS[2],
+                            borderWidth: 1,
+                          },
+                          {
+                            label: "Fair",
+                            data: satisfactionByLocation.map((loc) => loc.fair),
+                            backgroundColor: COLORS[3], // orange
+                            borderColor: COLORS[3],
+                            borderWidth: 1,
+                          },
+                          {
+                            label: "Poor",
+                            data: satisfactionByLocation.map((loc) => loc.poor),
+                            backgroundColor: COLORS[4], // red
+                            borderColor: COLORS[4],
+                            borderWidth: 1,
+                          },
+                        ],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: "y" as const,
+                        scales: {
+                          x: {
+                            stacked: true,
+                            beginAtZero: true,
+                            title: {
+                              display: true,
+                              text: "Number of Ratings",
+                            },
+                            grid: {
+                              display: true,
+                            },
+                          },
+                          y: {
+                            stacked: true,
+                            grid: {
+                              display: false,
+                            },
+                          },
+                        },
+                        plugins: {
+                          legend: {
+                            position: "bottom" as const,
+                          },
+                          tooltip: {
+                            callbacks: {
+                              label: function (context: any) {
+                                const label = context.dataset.label || "";
+                                return `${label}: ${context.raw}`;
+                              },
+                            },
+                          },
+                        },
+                      }}
+                    />
                   </div>
                 )}
               </CardContent>
@@ -536,7 +905,6 @@ export default function ReportsPage() {
                       <TableHead>Date</TableHead>
                       <TableHead>Visit Purpose</TableHead>
                       <TableHead>Locations</TableHead>
-                      <TableHead>Overall</TableHead>
                       <TableHead>Recommend</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -544,14 +912,10 @@ export default function ReportsPage() {
                     {submissions.map((survey) => (
                       <TableRow key={survey.id}>
                         <TableCell className="font-medium">
-                          {survey.id}
+                          {String(survey.id).substring(0, 8)}
                         </TableCell>
                         <TableCell>
-                          {
-                            new Date(survey.created_at)
-                              .toISOString()
-                              .split("T")[0]
-                          }
+                          {new Date(survey.created_at).toLocaleString()}
                         </TableCell>
                         <TableCell>
                           {survey.visit_purpose || "General"}
@@ -560,7 +924,6 @@ export default function ReportsPage() {
                           {survey.locations_visited?.join(", ") ||
                             "Not specified"}
                         </TableCell>
-                        <TableCell>{survey.overall_rating}</TableCell>
                         <TableCell>
                           {survey.recommendation_rating > 7 ? "Yes" : "No"}
                         </TableCell>
