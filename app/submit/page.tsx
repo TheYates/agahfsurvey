@@ -84,14 +84,36 @@ export default function SurveySubmissionPage() {
     setIsSubmitting(true);
 
     try {
-      // This is a simplified version - in a real app, you'd need to collect all the required data
-      const result = await submitSurvey(formData as SurveyFormData);
+      // Get the location name from the primary location ID
+      const primaryLocationId = formData.primaryLocation;
+      const allLocations = [
+        ...departmentLocations,
+        ...wardLocations,
+        ...canteenLocations,
+        ...occupationalHealthLocations,
+      ];
+      const primaryLocationObj = allLocations.find(
+        (loc) => loc.id === primaryLocationId
+      );
 
-      if (result.success) {
-        alert("Survey submitted successfully!");
-        router.push("/thank-you");
+      if (primaryLocationObj) {
+        // Create a new formData object with the primary location added to the locations array
+        const updatedFormData = {
+          ...formData,
+          locations: [...(formData.locations || []), primaryLocationObj.name],
+        };
+
+        // This is a simplified version - in a real app, you'd need to collect all the required data
+        const result = await submitSurvey(updatedFormData as SurveyFormData);
+
+        if (result.success) {
+          alert("Survey submitted successfully!");
+          router.push("/thank-you");
+        } else {
+          alert(`Failed to submit survey: ${result.error}`);
+        }
       } else {
-        alert(`Failed to submit survey: ${result.error}`);
+        alert("Selected location not found.");
       }
     } catch (error) {
       console.error("Error submitting survey:", error);
