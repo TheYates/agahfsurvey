@@ -10,8 +10,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Connection for migrations when using connection pooling
 }
 
 // Survey submission model
@@ -160,13 +161,14 @@ enum PatientType {
 
 // Service Points models
 model ServicePoint {
-  id         Int                    @id @default(autoincrement())
-  name       String
-  location   String
-  is_active  Boolean                @default(true)
-  created_at DateTime               @default(now()) @map("created_at")
-  updated_at DateTime               @updatedAt @map("updated_at")
-  feedback   ServicePointFeedback[]
+  id                      Int                    @id @default(autoincrement())
+  name                    String
+  is_active               Boolean                @default(true)
+  show_recommend_question Boolean                @default(true)
+  show_comments_box       Boolean                @default(true)
+  created_at              DateTime               @default(now()) @map("created_at")
+  updated_at              DateTime               @updatedAt @map("updated_at")
+  feedback                ServicePointFeedback[]
 
   @@map("ServicePoints")
 }

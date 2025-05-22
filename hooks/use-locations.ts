@@ -1,45 +1,59 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { createClient } from "@/lib/supabase/client"
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 type Location = {
-  id: number
-  name: string
-  location_type: string
-}
+  id: number;
+  name: string;
+  location_type: string;
+};
 
 export function useLocations() {
-  const [locations, setLocations] = useState<Location[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const supabase = createClient()
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchLocations() {
       try {
-        const { data, error } = await supabase.from("locations").select("*").order("name")
+        // Skip fetch during SSR/build time if we're not in a browser environment
+        if (typeof window === "undefined") {
+          setLoading(false);
+          return;
+        }
 
-        if (error) throw error
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("locations")
+          .select("*")
+          .order("name");
 
-        setLocations(data || [])
+        if (error) throw error;
+
+        setLocations(data || []);
       } catch (err) {
-        setError("Failed to load locations")
-        console.error(err)
+        setError("Failed to load locations");
+        console.error(err);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchLocations()
-  }, [])
+    fetchLocations();
+  }, []);
 
   // Group locations by type
-  const departmentLocations = locations.filter((loc) => loc.location_type === "department")
-  const wardLocations = locations.filter((loc) => loc.location_type === "ward")
-  const canteenLocations = locations.filter((loc) => loc.location_type === "canteen")
-  const occupationalHealthLocations = locations.filter((loc) => loc.location_type === "occupational_health")
+  const departmentLocations = locations.filter(
+    (loc) => loc.location_type === "department"
+  );
+  const wardLocations = locations.filter((loc) => loc.location_type === "ward");
+  const canteenLocations = locations.filter(
+    (loc) => loc.location_type === "canteen"
+  );
+  const occupationalHealthLocations = locations.filter(
+    (loc) => loc.location_type === "occupational_health"
+  );
 
   return {
     locations,
@@ -49,5 +63,5 @@ export function useLocations() {
     occupationalHealthLocations,
     loading,
     error,
-  }
+  };
 }

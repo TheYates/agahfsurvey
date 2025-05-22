@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { PrismaClient } from "@/lib/generated/prisma";
 
 // Type for survey submission data
-type SurveyFormData = {
+export type SurveyFormData = {
   visitTime: string;
   visitPurpose: string;
   locations: string[];
@@ -18,11 +18,12 @@ type SurveyFormData = {
     security?: string;
     overall?: string;
   };
-  wouldRecommend: string;
+  wouldRecommend: boolean;
   whyNotRecommend: string;
   recommendation: string;
   userType: string;
   patientType: string;
+  primaryLocation?: number;
 };
 
 /**
@@ -38,9 +39,9 @@ export async function submitSurvey(data: SurveyFormData) {
           visitTime: data.visitTime,
           visitPurpose: data.visitPurpose,
           visitedOtherPlaces: data.visitedOtherPlaces,
-          wouldRecommend: data.wouldRecommend === "Yes",
+          wouldRecommend: data.wouldRecommend,
           whyNotRecommend:
-            data.wouldRecommend === "No" ? data.whyNotRecommend : null,
+            data.wouldRecommend === false ? data.whyNotRecommend : null,
           recommendation: data.recommendation || null,
           userType: data.userType,
           patientType: data.patientType,
