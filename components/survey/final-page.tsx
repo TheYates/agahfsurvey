@@ -1,61 +1,78 @@
-"use client"
+"use client";
 
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface FinalPageProps {
-  surveyData: any
-  updateSurveyData: (field: string, value: any) => void
-  onBack: () => void
-  onSubmit: () => void
+  surveyData: any;
+  updateSurveyData: (field: string, value: any) => void;
+  onBack: () => void;
+  onSubmit: () => void;
 }
 
-export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubmit }: FinalPageProps) {
+export default function FinalPage({
+  surveyData,
+  updateSurveyData,
+  onBack,
+  onSubmit,
+}: FinalPageProps) {
   const generalCategories = [
     { id: "cleanliness", label: "Cleanliness/serenity" },
     { id: "facilities", label: "Facilities" },
     { id: "security", label: "Security" },
     { id: "overall", label: "Overall impression" },
-  ]
+  ];
 
-  const ratingOptions = ["Excellent", "Very Good", "Good", "Fair", "Poor"]
+  const ratingOptions = ["Excellent", "Very Good", "Good", "Fair", "Poor"];
 
   const handleGeneralRatingChange = (category: string, value: string) => {
     updateSurveyData("generalObservation", {
       ...surveyData.generalObservation,
       [category]: value,
-    })
-  }
+    });
+  };
 
   const isComplete = () => {
     // Check if all general ratings are complete
-    const generalComplete = generalCategories.every((category) => surveyData.generalObservation[category.id])
+    const generalComplete = generalCategories.every(
+      (category) => surveyData.generalObservation[category.id]
+    );
 
-    // Check if recommendation is selected
-    const recommendationComplete = surveyData.wouldRecommend !== ""
+    // Check if recommendation is selected (wouldRecommend is now a boolean, so it's always set)
+    const recommendationComplete =
+      typeof surveyData.wouldRecommend === "boolean";
 
-    // If "No" is selected for recommendation, check if reason is provided
+    // If "false" is selected for recommendation, check if reason is provided
     const reasonComplete =
-      surveyData.wouldRecommend !== "No" ||
-      (surveyData.wouldRecommend === "No" && surveyData.whyNotRecommend.trim() !== "")
+      surveyData.wouldRecommend === true ||
+      (surveyData.wouldRecommend === false &&
+        surveyData.whyNotRecommend.trim() !== "");
 
     // Check if user type is selected
-    const userTypeComplete = surveyData.userType !== ""
+    const userTypeComplete = surveyData.userType !== "";
 
     // Check if patient type is selected
-    const patientTypeComplete = surveyData.patientType !== ""
+    const patientTypeComplete = surveyData.patientType !== "";
 
-    return generalComplete && recommendationComplete && reasonComplete && userTypeComplete && patientTypeComplete
-  }
+    return (
+      generalComplete &&
+      recommendationComplete &&
+      reasonComplete &&
+      userTypeComplete &&
+      patientTypeComplete
+    );
+  };
 
   return (
     <div className="space-y-8">
       <Card className="border-none shadow-none">
         <CardHeader className="px-0 pt-0">
-          <CardTitle className="text-xl font-bold text-primary">General Observation</CardTitle>
+          <CardTitle className="text-xl font-bold text-primary">
+            General Observation
+          </CardTitle>
         </CardHeader>
         <CardContent className="px-0 pb-0">
           <div className="space-y-6">
@@ -65,7 +82,10 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
                   <tr>
                     <th className="text-left font-medium text-sm py-2 w-1/3"></th>
                     {ratingOptions.map((option) => (
-                      <th key={option} className="text-center font-medium text-sm py-2">
+                      <th
+                        key={option}
+                        className="text-center font-medium text-sm py-2"
+                      >
                         {option}
                       </th>
                     ))}
@@ -80,8 +100,12 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
                       {ratingOptions.map((option) => (
                         <td key={option} className="text-center py-3">
                           <RadioGroup
-                            value={surveyData.generalObservation[category.id] || ""}
-                            onValueChange={(value) => handleGeneralRatingChange(category.id, value)}
+                            value={
+                              surveyData.generalObservation[category.id] || ""
+                            }
+                            onValueChange={(value) =>
+                              handleGeneralRatingChange(category.id, value)
+                            }
                             className="flex justify-center"
                           >
                             <RadioGroupItem
@@ -103,22 +127,27 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
 
       <Card className="border-none shadow-none">
         <CardHeader className="px-0 pt-0">
-          <CardTitle className="text-xl font-bold text-primary">Conclusion/Recommendation</CardTitle>
+          <CardTitle className="text-xl font-bold text-primary">
+            Conclusion/Recommendation
+          </CardTitle>
         </CardHeader>
         <CardContent className="px-0 pb-0">
           <div className="space-y-6">
             <div className="space-y-4">
               <Label htmlFor="recommend" className="text-base font-medium">
-                Would You Recommend The Hospital To Others? <span className="text-red-500">*</span>
+                Would You Recommend The Hospital To Others?{" "}
+                <span className="text-red-500">*</span>
               </Label>
               <RadioGroup
-                value={surveyData.wouldRecommend}
-                onValueChange={(value) => updateSurveyData("wouldRecommend", value)}
+                value={surveyData.wouldRecommend ? "true" : "false"}
+                onValueChange={(value) =>
+                  updateSurveyData("wouldRecommend", value === "true")
+                }
                 className="flex space-x-4"
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem
-                    value="Yes"
+                    value="true"
                     id="recommend-yes"
                     className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                   />
@@ -126,7 +155,7 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem
-                    value="No"
+                    value="false"
                     id="recommend-no"
                     className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                   />
@@ -135,15 +164,21 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
               </RadioGroup>
             </div>
 
-            {surveyData.wouldRecommend === "No" && (
+            {surveyData.wouldRecommend === false && (
               <div className="space-y-2 bg-muted/30 p-4 rounded-md">
-                <Label htmlFor="why-not-recommend" className="text-base font-medium">
-                  If No, Please Tell Us Why: <span className="text-red-500">*</span>
+                <Label
+                  htmlFor="why-not-recommend"
+                  className="text-base font-medium"
+                >
+                  If No, Please Tell Us Why:{" "}
+                  <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
                   id="why-not-recommend"
                   value={surveyData.whyNotRecommend}
-                  onChange={(e) => updateSurveyData("whyNotRecommend", e.target.value)}
+                  onChange={(e) =>
+                    updateSurveyData("whyNotRecommend", e.target.value)
+                  }
                   rows={3}
                   className="resize-none"
                 />
@@ -152,12 +187,15 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
 
             <div className="space-y-2">
               <Label htmlFor="recommendation" className="text-base font-medium">
-                If You Have Any Recommendation To Help Us Improve The Services We Offer, Please Tell Us About It:
+                If You Have Any Recommendation To Help Us Improve The Services
+                We Offer, Please Tell Us About It:
               </Label>
               <Textarea
                 id="recommendation"
                 value={surveyData.recommendation}
-                onChange={(e) => updateSurveyData("recommendation", e.target.value)}
+                onChange={(e) =>
+                  updateSurveyData("recommendation", e.target.value)
+                }
                 rows={3}
                 className="resize-none"
               />
@@ -168,7 +206,9 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
 
       <Card className="border-none shadow-none">
         <CardHeader className="px-0 pt-0">
-          <CardTitle className="text-xl font-bold text-primary">Some Information About You</CardTitle>
+          <CardTitle className="text-xl font-bold text-primary">
+            Some Information About You
+          </CardTitle>
         </CardHeader>
         <CardContent className="px-0 pb-0">
           <div className="space-y-6">
@@ -187,7 +227,10 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
                     id="agag-employee"
                     className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                   />
-                  <Label htmlFor="agag-employee" className="w-full cursor-pointer">
+                  <Label
+                    htmlFor="agag-employee"
+                    className="w-full cursor-pointer"
+                  >
                     AGAG Employee
                   </Label>
                 </div>
@@ -197,7 +240,10 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
                     id="agag-dependant"
                     className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                   />
-                  <Label htmlFor="agag-dependant" className="w-full cursor-pointer">
+                  <Label
+                    htmlFor="agag-dependant"
+                    className="w-full cursor-pointer"
+                  >
                     AGAG/Contractor Dependant
                   </Label>
                 </div>
@@ -207,7 +253,10 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
                     id="corporate-employee"
                     className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                   />
-                  <Label htmlFor="corporate-employee" className="w-full cursor-pointer">
+                  <Label
+                    htmlFor="corporate-employee"
+                    className="w-full cursor-pointer"
+                  >
                     Other Corporate Employee
                   </Label>
                 </div>
@@ -217,7 +266,10 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
                     id="contractor-employee"
                     className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                   />
-                  <Label htmlFor="contractor-employee" className="w-full cursor-pointer">
+                  <Label
+                    htmlFor="contractor-employee"
+                    className="w-full cursor-pointer"
+                  >
                     Contractor Employee
                   </Label>
                 </div>
@@ -230,7 +282,9 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
               </Label>
               <RadioGroup
                 value={surveyData.patientType}
-                onValueChange={(value) => updateSurveyData("patientType", value)}
+                onValueChange={(value) =>
+                  updateSurveyData("patientType", value)
+                }
                 className="flex space-x-4"
               >
                 <div className="flex items-center space-x-2 bg-muted/30 p-3 rounded-md hover:bg-muted/50 transition-colors">
@@ -239,7 +293,10 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
                     id="new-patient"
                     className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                   />
-                  <Label htmlFor="new-patient" className="w-full cursor-pointer">
+                  <Label
+                    htmlFor="new-patient"
+                    className="w-full cursor-pointer"
+                  >
                     New Patient
                   </Label>
                 </div>
@@ -249,7 +306,10 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
                     id="returning-patient"
                     className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                   />
-                  <Label htmlFor="returning-patient" className="w-full cursor-pointer">
+                  <Label
+                    htmlFor="returning-patient"
+                    className="w-full cursor-pointer"
+                  >
                     Returning Patient
                   </Label>
                 </div>
@@ -263,10 +323,14 @@ export default function FinalPage({ surveyData, updateSurveyData, onBack, onSubm
         <Button variant="outline" onClick={onBack}>
           Back
         </Button>
-        <Button onClick={onSubmit} disabled={!isComplete()} className="bg-green-600 hover:bg-green-700">
+        <Button
+          onClick={onSubmit}
+          disabled={!isComplete()}
+          className="bg-green-600 hover:bg-green-700"
+        >
           Submit
         </Button>
       </div>
     </div>
-  )
+  );
 }

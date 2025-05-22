@@ -37,7 +37,7 @@ interface SurveyData {
   visitedOtherPlaces: boolean;
   otherLocations: string[];
   generalObservation: Record<string, string>;
-  wouldRecommend: string;
+  wouldRecommend: boolean;
   whyNotRecommend: string;
   recommendation: string;
   userType: string;
@@ -62,8 +62,13 @@ export default function SurveyForm({ locations = [] }: SurveyFormProps) {
     departmentConcerns: {},
     visitedOtherPlaces: false,
     otherLocations: [],
-    generalObservation: {},
-    wouldRecommend: "",
+    generalObservation: {
+      cleanliness: "",
+      facilities: "",
+      security: "",
+      overall: "",
+    },
+    wouldRecommend: true,
     whyNotRecommend: "",
     recommendation: "",
     userType: "",

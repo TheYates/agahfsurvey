@@ -10,7 +10,6 @@ import { useRouter } from "next/navigation";
 import { useLocations } from "@/hooks/use-locations";
 import {
   submitSurvey,
-  testDatabaseConnection,
   type SurveyFormData,
 } from "@/app/actions/survey-actions";
 import { Button } from "@/components/ui/button";
@@ -85,63 +84,20 @@ export default function SurveySubmissionPage() {
     setIsSubmitting(true);
 
     try {
-      // Get the location name from the primary location ID
-      const primaryLocationId = formData.primaryLocation;
-      const allLocations = [
-        ...departmentLocations,
-        ...wardLocations,
-        ...canteenLocations,
-        ...occupationalHealthLocations,
-      ];
-      const primaryLocationObj = allLocations.find(
-        (loc) => loc.id === primaryLocationId
-      );
+      // This is a simplified version - in a real app, you'd need to collect all the required data
+      const result = await submitSurvey(formData as SurveyFormData);
 
-      console.log("All locations:", allLocations);
-      console.log("Selected primary location ID:", primaryLocationId);
-      console.log("Found primary location object:", primaryLocationObj);
-
-      if (primaryLocationObj) {
-        // Create a new formData object with the primary location added to the locations array
-        const updatedFormData = {
-          ...formData,
-          locations: [...(formData.locations || []), primaryLocationObj.name],
-        };
-
-        console.log("Submitting form data:", updatedFormData);
-        // This is a simplified version - in a real app, you'd need to collect all the required data
-        const result = await submitSurvey(updatedFormData as SurveyFormData);
-        console.log("Submission result:", result);
-
-        if (result.success) {
-          alert("Survey submitted successfully!");
-          router.push("/thank-you");
-        } else {
-          alert(`Failed to submit survey: ${result.error}`);
-        }
+      if (result.success) {
+        alert("Survey submitted successfully!");
+        router.push("/thank-you");
       } else {
-        alert("Selected location not found.");
+        alert(`Failed to submit survey: ${result.error}`);
       }
     } catch (error) {
       console.error("Error submitting survey:", error);
       alert("An error occurred while submitting the survey");
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const testConnection = async () => {
-    try {
-      const result = await testDatabaseConnection();
-      console.log("Database connection test result:", result);
-      alert(
-        result.success
-          ? `Connection successful! Found ${result.count} locations.`
-          : `Connection failed: ${result.error}`
-      );
-    } catch (error) {
-      console.error("Test failed:", error);
-      alert("Test failed, see console for details");
     }
   };
 
@@ -497,14 +453,6 @@ export default function SurveySubmissionPage() {
               )}
             </Button>
           </form>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={testConnection}
-            className="mt-4 mr-4"
-          >
-            Test DB Connection
-          </Button>
         </CardContent>
       </Card>
     </div>
