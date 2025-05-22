@@ -31,9 +31,12 @@ export type SurveyFormData = {
  */
 export async function submitSurvey(data: SurveyFormData) {
   try {
+    console.log("Submitting survey with data:", JSON.stringify(data, null, 2));
+
     // Start a transaction to ensure all related records are created together
     const result = await prisma.$transaction(async (tx) => {
       // 1. Create the survey submission
+      console.log("Creating survey submission...");
       const submission = await tx.surveySubmission.create({
         data: {
           visitTime: data.visitTime,
@@ -47,8 +50,10 @@ export async function submitSurvey(data: SurveyFormData) {
           patientType: data.patientType,
         },
       });
+      console.log("Created submission:", submission.id);
 
       // 2. Create general observations
+      console.log("Creating general observations...");
       await tx.generalObservation.create({
         data: {
           submissionId: submission.id,
@@ -60,8 +65,10 @@ export async function submitSurvey(data: SurveyFormData) {
       });
 
       // 3. Find or create locations and add them to the submission
+      console.log("Processing locations:", data.locations);
       for (const locationName of data.locations) {
         // Find the location to get its ID and type
+        console.log(`Looking up location: ${locationName}`);
         const location = await tx.location.findFirst({
           where: {
             name: locationName,
@@ -72,6 +79,8 @@ export async function submitSurvey(data: SurveyFormData) {
           console.error(`Location not found: ${locationName}`);
           continue;
         }
+
+        console.log(`Found location: ${location.id} - ${location.name}`);
 
         // Create the relationship between submission and location
         await tx.submissionLocation.create({
@@ -153,7 +162,10 @@ export async function submitSurvey(data: SurveyFormData) {
     console.error("Error submitting survey:", error);
     return {
       success: false,
-      error: "Failed to submit survey. Please try again.",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to submit survey. Please try again.",
     };
   }
 }
@@ -201,5 +213,22 @@ export async function getRecentSurveys(limit = 10) {
   } catch (error) {
     console.error("Error fetching recent surveys:", error);
     return [];
+  }
+}
+
+/**
+ * Simple function to test database connection
+ */
+export async function testDatabaseConnection() {
+  try {
+    // Try a simple query
+    const locationCount = await prisma.location.count();
+    return { success: true, count: locationCount };
+  } catch (error) {
+    console.error("Database connection test failed:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
