@@ -187,9 +187,18 @@ export async function fetchServicePoints() {
 
 export async function getServicePoint(id: number) {
   try {
-    return await getServicePointById(id);
+    console.log("Attempting DB connection for service point", id);
+    const result = await getServicePointById(id);
+    console.log("DB connection successful, result:", JSON.stringify(result));
+    return result;
   } catch (error) {
-    console.error(`Error fetching service point ${id}:`, error);
+    console.error("DB connection failed with error:", error);
+    // Check if the error has a message property
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+    console.log("Falling back to default data for service point", id);
     return fallbackServicePoints.find((sp) => sp.id === id) || null;
   }
 }

@@ -8,11 +8,27 @@ import {
 let prisma: PrismaClient;
 
 if (process.env.NODE_ENV === "production") {
+  console.log("Production environment detected for PrismaClient");
+  console.log(
+    "DATABASE_URL format:",
+    process.env.DATABASE_URL
+      ? process.env.DATABASE_URL.substring(0, 20) + "..."
+      : "Not set"
+  );
+  console.log(
+    "DIRECT_URL format:",
+    process.env.DIRECT_URL
+      ? process.env.DIRECT_URL.substring(0, 20) + "..."
+      : "Not set"
+  );
   prisma = new PrismaClient();
+  console.log("PrismaClient initialized in production mode");
 } else {
   // Ensure we don't create multiple instances in development
+  console.log("Development environment detected for PrismaClient");
   if (!(global as any).prisma) {
     (global as any).prisma = new PrismaClient();
+    console.log("PrismaClient initialized in development mode");
   }
   prisma = (global as any).prisma;
 }
@@ -55,10 +71,31 @@ export async function getServicePoints(): Promise<ServicePoint[]> {
 export async function getServicePointById(
   id: number
 ): Promise<ServicePoint | null> {
-  const servicePoint = await prisma.servicePoint.findUnique({
-    where: { id },
-  });
-  return servicePoint ? adaptPrismaServicePoint(servicePoint) : null;
+  try {
+    console.log(`getServicePointById: Fetching service point with ID ${id}`);
+    console.log(
+      `Using database schema: ${
+        process.env.DATABASE_URL?.includes("schema=") ? "Yes" : "No"
+      }`
+    );
+
+    const servicePoint = await prisma.servicePoint.findUnique({
+      where: { id },
+    });
+
+    console.log(
+      `getServicePointById result:`,
+      servicePoint ? JSON.stringify(servicePoint) : "null"
+    );
+    return servicePoint ? adaptPrismaServicePoint(servicePoint) : null;
+  } catch (error) {
+    console.error(`Error in getServicePointById(${id}):`, error);
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+    throw error; // Re-throw to be caught by the calling function
+  }
 }
 
 export async function createServicePoint(
