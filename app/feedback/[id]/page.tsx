@@ -11,6 +11,8 @@ interface DebugInfo {
   id?: number;
   servicePointResult?: any;
   error?: string;
+  serverActionCalled?: boolean;
+  serverActionCompleted?: boolean;
 }
 
 export default function FeedbackPage({ params }: { params: { id: string } }) {
@@ -31,14 +33,21 @@ export default function FeedbackPage({ params }: { params: { id: string } }) {
           return;
         }
 
-        console.log("Calling server action for ID:", id);
+        console.log("[CLIENT] Calling server action for ID:", id);
+        setDebugInfo((prev) => ({ ...prev, serverActionCalled: true }));
+
         // Use the server action to fetch the service point directly
         const result = await getServicePointDirectly(id);
-        console.log("Server action result:", result);
 
-        setDebugInfo((prev) => ({ ...prev, servicePointResult: result }));
+        console.log("[CLIENT] Server action result:", result);
+        setDebugInfo((prev) => ({
+          ...prev,
+          serverActionCompleted: true,
+          servicePointResult: result,
+        }));
 
         if (!result) {
+          console.error(`[CLIENT] Service point with ID ${id} not found`);
           setError(`Service point with ID ${id} not found`);
           setLoading(false);
           return;
@@ -47,7 +56,7 @@ export default function FeedbackPage({ params }: { params: { id: string } }) {
         setServicePoint(result);
         setLoading(false);
       } catch (err) {
-        console.error("Error in loadServicePoint:", err);
+        console.error("[CLIENT] Error in loadServicePoint:", err);
         setError(
           `Failed to load service point: ${
             err instanceof Error ? err.message : String(err)
@@ -88,12 +97,21 @@ export default function FeedbackPage({ params }: { params: { id: string } }) {
           <div className="bg-black p-4 rounded overflow-auto max-h-80 text-green-400 font-mono text-sm">
             <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
           </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 bg-white text-black px-4 py-2 rounded hover:bg-gray-200"
-          >
-            Reload Page
-          </button>
+          <div className="mt-4 flex space-x-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-white text-black px-4 py-2 rounded hover:bg-gray-200"
+            >
+              Reload Page
+            </button>
+            <a
+              href="/api/debug/direct-sql"
+              target="_blank"
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              View Debug Data
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -123,8 +141,8 @@ export default function FeedbackPage({ params }: { params: { id: string } }) {
         <QuickFeedback
           servicePointId={servicePoint.id}
           servicePointName={servicePoint.name}
-          showRecommendQuestion={servicePoint.show_recommend_question}
-          showCommentsBox={servicePoint.show_comments_box}
+          showRecommendQuestion={servicePoint.showRecommendQuestion || false}
+          showCommentsBox={servicePoint.showCommentsBox || false}
         />
 
         <div className="mt-6 sm:mt-8 text-center text-xs sm:text-sm text-muted-foreground">
