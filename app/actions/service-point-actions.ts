@@ -38,7 +38,7 @@ export interface ServicePointFeedback {
 const fallbackServicePoints: ServicePoint[] = [
   {
     id: 1,
-    name: "Main Reception",
+    name: "[FALLBACK] Main Reception",
     is_active: true,
     show_recommend_question: true,
     show_comments_box: true,
@@ -46,15 +46,15 @@ const fallbackServicePoints: ServicePoint[] = [
   },
   {
     id: 2,
-    name: "Pediatric Ward",
+    name: "[FALLBACK] Consulting Room 1",
     is_active: true,
-    show_recommend_question: true,
-    show_comments_box: true,
+    show_recommend_question: false,
+    show_comments_box: false,
     created_at: new Date().toISOString(),
   },
   {
     id: 3,
-    name: "Emergency Room",
+    name: "[FALLBACK] Emergency Room",
     is_active: true,
     show_recommend_question: true,
     show_comments_box: true,
@@ -187,18 +187,27 @@ export async function fetchServicePoints() {
 
 export async function getServicePoint(id: number) {
   try {
-    console.log("Attempting DB connection for service point", id);
+    console.log("Attempting to fetch service point", id, "from the database");
     const result = await getServicePointById(id);
-    console.log("DB connection successful, result:", JSON.stringify(result));
-    return result;
-  } catch (error) {
-    console.error("DB connection failed with error:", error);
-    // Check if the error has a message property
-    if (error instanceof Error) {
-      console.error("Error message:", error.message);
-      console.error("Error stack:", error.stack);
+    console.log(
+      "Retrieved service point result:",
+      result ? "Found" : "Not found"
+    );
+
+    if (result) {
+      return result;
+    } else {
+      console.log(
+        `Service point ID ${id} not found in database, using fallback`
+      );
+      return fallbackServicePoints.find((sp) => sp.id === id) || null;
     }
-    console.log("Falling back to default data for service point", id);
+  } catch (error) {
+    console.error("Error fetching service point:", error);
+    if (error instanceof Error) {
+      console.error("Error details:", error.message);
+    }
+    console.log(`Using fallback data for service point ${id}`);
     return fallbackServicePoints.find((sp) => sp.id === id) || null;
   }
 }

@@ -6,6 +6,17 @@ import { PrismaClient } from "../lib/generated/prisma";
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
+// Add logging for database initialization and connection information
+console.log("Initializing PrismaClient...");
+console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(
+  `DATABASE_URL format: ${
+    process.env.DATABASE_URL
+      ? process.env.DATABASE_URL.substring(0, 20) + "..."
+      : "Not set"
+  }`
+);
+
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
@@ -16,5 +27,7 @@ export const prisma =
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+console.log("PrismaClient initialized");
 
 export default prisma;

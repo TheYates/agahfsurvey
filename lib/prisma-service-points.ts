@@ -3,35 +3,7 @@ import {
   ServicePoint,
   ServicePointFeedback,
 } from "@/app/actions/service-point-actions";
-
-// Create a single PrismaClient instance for the whole app
-let prisma: PrismaClient;
-
-if (process.env.NODE_ENV === "production") {
-  console.log("Production environment detected for PrismaClient");
-  console.log(
-    "DATABASE_URL format:",
-    process.env.DATABASE_URL
-      ? process.env.DATABASE_URL.substring(0, 20) + "..."
-      : "Not set"
-  );
-  console.log(
-    "DIRECT_URL format:",
-    process.env.DIRECT_URL
-      ? process.env.DIRECT_URL.substring(0, 20) + "..."
-      : "Not set"
-  );
-  prisma = new PrismaClient();
-  console.log("PrismaClient initialized in production mode");
-} else {
-  // Ensure we don't create multiple instances in development
-  console.log("Development environment detected for PrismaClient");
-  if (!(global as any).prisma) {
-    (global as any).prisma = new PrismaClient();
-    console.log("PrismaClient initialized in development mode");
-  }
-  prisma = (global as any).prisma;
-}
+import { prisma } from "@/lib/db";
 
 // Adapters to convert between Prisma and our app models
 function adaptPrismaServicePoint(prismaServicePoint: any): ServicePoint {
