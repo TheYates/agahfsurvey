@@ -7,15 +7,23 @@ import { QuickFeedback } from "@/components/quick-feedback";
 import { Loader2 } from "lucide-react";
 import { getServicePointDirectly } from "@/app/actions/service-point-db-actions";
 
+interface DebugInfo {
+  id?: number;
+  servicePointResult?: any;
+  error?: string;
+}
+
 export default function FeedbackPage({ params }: { params: { id: string } }) {
   const [servicePoint, setServicePoint] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<DebugInfo>({});
 
   useEffect(() => {
     async function loadServicePoint() {
       try {
         const id = parseInt(params.id, 10);
+        setDebugInfo((prev) => ({ ...prev, id }));
 
         if (isNaN(id)) {
           setError("Invalid service point ID");
@@ -23,8 +31,12 @@ export default function FeedbackPage({ params }: { params: { id: string } }) {
           return;
         }
 
+        console.log("Calling server action for ID:", id);
         // Use the server action to fetch the service point directly
         const result = await getServicePointDirectly(id);
+        console.log("Server action result:", result);
+
+        setDebugInfo((prev) => ({ ...prev, servicePointResult: result }));
 
         if (!result) {
           setError(`Service point with ID ${id} not found`);
@@ -36,7 +48,15 @@ export default function FeedbackPage({ params }: { params: { id: string } }) {
         setLoading(false);
       } catch (err) {
         console.error("Error in loadServicePoint:", err);
-        setError("Failed to load service point");
+        setError(
+          `Failed to load service point: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        );
+        setDebugInfo((prev) => ({
+          ...prev,
+          error: err instanceof Error ? err.message : String(err),
+        }));
         setLoading(false);
       }
     }
@@ -56,8 +76,27 @@ export default function FeedbackPage({ params }: { params: { id: string } }) {
     );
   }
 
+  // Show debug info instead of 404 to help diagnose the issue
   if (error || !servicePoint) {
-    return notFound();
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 text-white">
+        <div className="bg-red-800 p-6 rounded-lg max-w-lg w-full">
+          <h1 className="text-2xl font-bold mb-4">
+            Error Loading Service Point
+          </h1>
+          {error && <p className="mb-4">{error}</p>}
+          <div className="bg-black p-4 rounded overflow-auto max-h-80 text-green-400 font-mono text-sm">
+            <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 bg-white text-black px-4 py-2 rounded hover:bg-gray-200"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
