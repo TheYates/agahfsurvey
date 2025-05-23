@@ -1,18 +1,22 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
+// DEBUG: Force regeneration of client - added for troubleshooting service points
 
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../lib/generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../lib/generated/prisma"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // Connection for migrations when using connection pooling
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // When deploying to production, set this variable
+  // directUrl = env("DIRECT_URL") 
+  schemas  = ["surveys"]
 }
 
 // Survey submission model
@@ -35,6 +39,8 @@ model SurveySubmission {
   ratings             Rating[]
   generalObservations GeneralObservation?
   departmentConcerns  DepartmentConcern[]
+
+  @@schema("surveys")
 }
 
 // Location model
@@ -51,6 +57,7 @@ model Location {
   departmentConcerns  DepartmentConcern[]
 
   @@index([name])
+  @@schema("surveys")
 }
 
 // Junction table for many-to-many relationship between submissions and locations
@@ -67,6 +74,7 @@ model SubmissionLocation {
 
   @@index([submissionId])
   @@index([locationId])
+  @@schema("surveys")
 }
 
 // Consolidated rating model with all possible rating fields
@@ -100,6 +108,7 @@ model Rating {
 
   @@index([submissionId])
   @@index([locationId])
+  @@schema("surveys")
 }
 
 // General observation model with specific question columns
@@ -116,6 +125,7 @@ model GeneralObservation {
   submission SurveySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@index([submissionId])
+  @@schema("surveys")
 }
 
 // Department concern model
@@ -132,6 +142,7 @@ model DepartmentConcern {
 
   @@index([submissionId])
   @@index([locationId])
+  @@schema("surveys")
 }
 
 // Enums
@@ -140,11 +151,15 @@ enum VisitTime {
   ONE_TWO_MONTHS
   THREE_SIX_MONTHS
   MORE_THAN_SIX_MONTHS
+
+  @@schema("surveys")
 }
 
 enum VisitPurpose {
   GENERAL_PRACTICE
   OCCUPATIONAL_HEALTH
+
+  @@schema("surveys")
 }
 
 enum UserType {
@@ -152,11 +167,15 @@ enum UserType {
   AGAG_CONTRACTOR_DEPENDANT
   OTHER_CORPORATE_EMPLOYEE
   CONTRACTOR_EMPLOYEE
+
+  @@schema("surveys")
 }
 
 enum PatientType {
   NEW_PATIENT
   RETURNING_PATIENT
+
+  @@schema("surveys")
 }
 
 // Service Points models
@@ -171,6 +190,7 @@ model ServicePoint {
   feedback                ServicePointFeedback[]
 
   @@map("ServicePoints")
+  @@schema("surveys")
 }
 
 model ServicePointFeedback {
@@ -187,4 +207,5 @@ model ServicePointFeedback {
 
   @@index([service_point_id])
   @@map("ServicePointFeedback")
+  @@schema("surveys")
 }

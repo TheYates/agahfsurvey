@@ -5,25 +5,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { QuickFeedback } from "@/components/quick-feedback";
 import { Loader2 } from "lucide-react";
-
-// Create a server action to fetch the service point
-async function getServicePointDirectly(id: number) {
-  "use server";
-
-  const { prisma } = await import("@/lib/db");
-
-  try {
-    const servicePoint = await prisma.servicePoint.findUnique({
-      where: { id },
-    });
-
-    console.log("ServicePoint fetched directly:", servicePoint);
-    return servicePoint;
-  } catch (error) {
-    console.error(`Error fetching service point ${id}:`, error);
-    return null;
-  }
-}
+import { getServicePointDirectly } from "@/app/actions/service-point-db-actions";
 
 export default function FeedbackPage({ params }: { params: { id: string } }) {
   const [servicePoint, setServicePoint] = useState<any>(null);
