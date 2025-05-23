@@ -1,65 +1,66 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { QuickFeedback } from "@/components/quick-feedback";
-import { getServicePoint } from "@/app/actions/service-point-actions";
-import { ServicePoint } from "@/app/actions/service-point-actions";
 import { Loader2 } from "lucide-react";
 
-export default function FeedbackPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  // Unwrap params at the top level of the component, outside of any try/catch
-  const resolvedParams = use(params);
+// Create a server action to fetch the service point
+async function getServicePointDirectly(id: number) {
+  "use server";
 
-  const [servicePoint, setServicePoint] = useState<ServicePoint | null>(null);
+  const { prisma } = await import("@/lib/db");
+
+  try {
+    const servicePoint = await prisma.servicePoint.findUnique({
+      where: { id },
+    });
+
+    console.log("ServicePoint fetched directly:", servicePoint);
+    return servicePoint;
+  } catch (error) {
+    console.error(`Error fetching service point ${id}:`, error);
+    return null;
+  }
+}
+
+export default function FeedbackPage({ params }: { params: { id: string } }) {
+  const [servicePoint, setServicePoint] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [servicePointId, setServicePointId] = useState<number | null>(null);
 
-  // Extract the ID once when the component mounts
   useEffect(() => {
-    if (resolvedParams?.id) {
-      const id = parseInt(resolvedParams.id, 10);
-      if (!isNaN(id)) {
-        setServicePointId(id);
-      } else {
-        setError("Invalid service point ID");
-        setLoading(false);
-      }
-    }
-  }, [resolvedParams]);
-
-  // Fetch the service point data when ID is available
-  useEffect(() => {
-    if (servicePointId === null) return;
-
-    const fetchServicePoint = async () => {
+    async function loadServicePoint() {
       try {
-        setLoading(true);
-        const servicePointData = await getServicePoint(servicePointId);
+        const id = parseInt(params.id, 10);
 
-        if (!servicePointData) {
-          setError("Service point not found");
+        if (isNaN(id)) {
+          setError("Invalid service point ID");
           setLoading(false);
           return;
         }
 
-        setServicePoint(servicePointData);
+        // Use the server action to fetch the service point directly
+        const result = await getServicePointDirectly(id);
+
+        if (!result) {
+          setError(`Service point with ID ${id} not found`);
+          setLoading(false);
+          return;
+        }
+
+        setServicePoint(result);
         setLoading(false);
       } catch (err) {
-        console.error("Error fetching service point:", err);
+        console.error("Error in loadServicePoint:", err);
         setError("Failed to load service point");
         setLoading(false);
       }
-    };
+    }
 
-    fetchServicePoint();
-  }, [servicePointId]);
+    loadServicePoint();
+  }, [params.id]);
 
   if (loading) {
     return (

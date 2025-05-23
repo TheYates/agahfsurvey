@@ -1,41 +1,35 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const id = parseInt(params.id, 10);
+
+  if (isNaN(id)) {
+    return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  }
+
   try {
-    const id = params.id;
+    console.log(`API: Fetching service point with ID ${id}`);
+    // Direct database query bypassing the action
+    const servicePoint = await prisma.servicePoint.findUnique({
+      where: { id },
+    });
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    console.log("API result:", servicePoint);
 
-    const { data, error } = await supabase
-      .from("service_points")
-      .select("id, name, location_type")
-      .eq("id", id)
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    if (!data) {
+    if (!servicePoint) {
       return NextResponse.json(
         { error: "Service point not found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(servicePoint);
   } catch (error) {
-    console.error("Error fetching service point:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    console.error("API error:", error);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 }
