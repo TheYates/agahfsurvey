@@ -46,11 +46,33 @@ export async function getServicePointById(
   try {
     console.log(`getServicePointById: Fetching service point with ID ${id}`);
     console.log(
-      `Using database schema: ${
-        process.env.DATABASE_URL?.includes("schema=") ? "Yes" : "No"
-      }`
+      "DATABASE_URL:",
+      process.env.DATABASE_URL
+        ? `${process.env.DATABASE_URL.substring(0, 30)}...`
+        : "Not set"
+    );
+    console.log(
+      "Current models available in prisma client:",
+      Object.keys(prisma)
     );
 
+    // Safe check for the ServicePoint model
+    if (!prisma.servicePoint) {
+      console.error("ServicePoint model not found in Prisma client");
+      throw new Error(
+        "ServicePoint model not found - schema may not be generated correctly"
+      );
+    }
+
+    // First, try to check if ServicePoints table exists by counting
+    try {
+      const count = await prisma.servicePoint.count();
+      console.log(`Total ServicePoints in database: ${count}`);
+    } catch (countError) {
+      console.error("Error counting ServicePoints:", countError);
+    }
+
+    // Now try to find the specific record
     const servicePoint = await prisma.servicePoint.findUnique({
       where: { id },
     });
