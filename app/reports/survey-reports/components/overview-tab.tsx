@@ -219,10 +219,6 @@ export function OverviewTab({
   userTypeData,
   locations,
 }: OverviewTabProps) {
-  console.log("patientTypeData:", patientTypeData);
-  console.log("visitPurposeData:", visitPurposeData);
-  console.log("visitTimeData:", visitTimeData);
-
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -316,26 +312,6 @@ export function OverviewTab({
 
   const { best: topDepartment, worst: bottomDepartment } =
     getBestAndWorstDepartments();
-
-  console.log("Overview Tab - Generic top/bottom departments:", {
-    topDepartment,
-    bottomDepartment,
-  });
-  console.log("Visit Purpose comparison data:", {
-    generalPractice: visitPurposeData?.generalPractice
-      ? {
-          topDepartment: visitPurposeData.generalPractice.topDepartment,
-          bottomDepartment: visitPurposeData.generalPractice.bottomDepartment,
-        }
-      : "N/A",
-    occupationalHealth: visitPurposeData?.occupationalHealth
-      ? {
-          topDepartment: visitPurposeData.occupationalHealth.topDepartment,
-          bottomDepartment:
-            visitPurposeData.occupationalHealth.bottomDepartment,
-        }
-      : "N/A",
-  });
 
   return (
     <div className="space-y-6">

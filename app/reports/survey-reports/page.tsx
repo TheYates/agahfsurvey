@@ -89,6 +89,8 @@ import { WardsTab } from "./components/wards-tab";
 import { CanteenTab } from "./components/canteen-tab";
 import { MedicalsTab } from "./components/medicals-tab";
 import { FeedbackTab } from "./components/feedback-tab";
+import { fetchDepartmentTabData } from "@/app/actions/department-actions";
+import { Department } from "@/app/actions/department-actions";
 
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
@@ -230,15 +232,19 @@ export default function SurveyReportsPage() {
     satisfactionByDemographic: {
       byUserType: [],
       byPatientType: [],
-      insight: "Error fetching data",
+      insight: "No data available",
     },
     improvementAreas: [],
   });
 
+  // Add state for departments
+  const [departments, setDepartments] = useState<Department[]>([]);
+
   // Add this function to fetch data from the server
   const fetchData = async (dateRangeOption: string) => {
-    setIsLoading(true);
     try {
+      setIsLoading(true);
+
       // Calculate date range based on selection
       let dateRangeFilter = null;
       if (dateRangeOption !== "all") {
@@ -337,8 +343,6 @@ export default function SurveyReportsPage() {
       // Set patientTypeData with real data or fallback to dummy data with named departments if none available
       const realPatientTypeData = fetchedOverviewData.patientTypeData;
       if (realPatientTypeData) {
-        console.log("Raw patient type data:", realPatientTypeData);
-
         // Create a copy with fallback data for departments that will be used if needed
         const enhancedPatientTypeData = {
           ...realPatientTypeData,
@@ -360,7 +364,6 @@ export default function SurveyReportsPage() {
           },
         };
 
-        console.log("Enhanced patient type data:", enhancedPatientTypeData);
         setPatientTypeData(enhancedPatientTypeData);
       } else {
         // Fallback if no patient type data
@@ -436,22 +439,26 @@ export default function SurveyReportsPage() {
           totalWhyNotRecommend: 0,
         });
       }
+
+      // Fetch department data
+      const departmentData = await fetchDepartmentTabData();
+      setDepartments(departmentData.departments);
     } catch (error) {
       console.error("Error fetching data:", error);
-      // If there's an error, provide empty data
-      setLocations([]);
-      // Set default empty states
-      setVisitPurposeData(null);
-      setPatientTypeData(null);
-      setVisitTimeData([]);
-      setImprovementPriorities([]);
-      setTextFeedback({
-        concernWords: [],
-        recommendationWords: [],
-        whyNotRecommendWords: [],
-        totalConcerns: 0,
-        totalRecommendations: 0,
-        totalWhyNotRecommend: 0,
+      // Reset to initial state if there's an error
+      setDepartments([]);
+      setData({
+        surveyData: [],
+        recommendations: [],
+        notRecommendReasons: [],
+        departmentConcerns: [],
+        visitTimeAnalysis: [],
+        satisfactionByDemographic: {
+          byUserType: [],
+          byPatientType: [],
+          insight: "Error fetching data",
+        },
+        improvementAreas: [],
       });
     } finally {
       setIsLoading(false);
@@ -463,9 +470,7 @@ export default function SurveyReportsPage() {
   }, [dateRange]);
 
   // Add debug logging for visitTimeData
-  useEffect(() => {
-    console.log("Debug - visitTimeData in page.tsx:", visitTimeData);
-  }, [visitTimeData]);
+  useEffect(() => {}, [visitTimeData]);
 
   // Helper function for word frequency analysis
   const extractCommonWords = (
@@ -609,7 +614,6 @@ export default function SurveyReportsPage() {
         orientation: string
       ) => {
         // Implementation for exporting multiple tabs to PDF
-        console.log("Exporting multiple tabs to PDF:", selectedTabs);
         // Placeholder implementation
       },
       exportMultipleTabsToExcel: async (
@@ -617,7 +621,6 @@ export default function SurveyReportsPage() {
         dateRangeText: string
       ) => {
         // Implementation for exporting multiple tabs to Excel
-        console.log("Exporting multiple tabs to Excel:", selectedTabs);
         // Placeholder implementation
       },
       exportMultipleTabsToCSV: async (
@@ -625,7 +628,6 @@ export default function SurveyReportsPage() {
         dateRangeText: string
       ) => {
         // Implementation for exporting multiple tabs to CSV
-        console.log("Exporting multiple tabs to CSV:", selectedTabs);
         // Placeholder implementation
       },
       generateOverviewTabHTML: (data) =>
@@ -815,10 +817,7 @@ export default function SurveyReportsPage() {
 
           {/* Add Departments Tab Content */}
           <TabsContent value="departments" className="space-y-4">
-            <DepartmentsTab
-              isLoading={isLoading}
-              departments={locations as any}
-            />
+            <DepartmentsTab isLoading={isLoading} departments={departments} />
           </TabsContent>
 
           {/* Add Wards Tab Content */}

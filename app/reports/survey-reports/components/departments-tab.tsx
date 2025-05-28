@@ -48,6 +48,16 @@ import {
 
 import { Skeleton } from "@/components/ui/skeleton";
 
+import {
+  DepartmentConcern,
+  Recommendation,
+  fetchDepartmentConcerns,
+  fetchRecommendations,
+  fetchVisitTimeData,
+  fetchPatientTypeData,
+  fetchAllSurveyData,
+} from "@/app/actions/department-actions";
+
 interface DepartmentRating {
   reception?: string;
   professionalism?: string;
@@ -191,9 +201,12 @@ export function DepartmentsTab({
 
           if (monthlyData[month]) {
             // Use the overall satisfaction if available, or a default value
-            const satisfaction = submission.ratings?.overall
-              ? ratingToValue(submission.ratings.overall)
-              : 3.5;
+            const satisfaction =
+              submission.Rating &&
+              submission.Rating.length > 0 &&
+              submission.Rating[0].overall
+                ? ratingToValue(submission.Rating[0].overall)
+                : 3.5;
 
             monthlyData[month].total += satisfaction;
             monthlyData[month].count += 1;
@@ -258,6 +271,24 @@ export function DepartmentsTab({
 
     generateSatisfactionTrend();
   }, []);
+
+  useEffect(() => {
+    console.log("Department concerns:", departmentConcerns);
+    console.log("Recommendations:", departmentRecommendations);
+    console.log(
+      "Combined feedback:",
+      [
+        ...departmentConcerns.map((c) => ({ type: "concern", ...c })),
+        ...departmentRecommendations.map((r) => ({
+          type: "recommendation",
+          ...r,
+        })),
+      ].sort(
+        (a, b) =>
+          new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+      )
+    );
+  }, [departmentConcerns, departmentRecommendations]);
 
   if (isLoading || isLoadingAdditionalData) {
     return (
@@ -377,45 +408,25 @@ export function DepartmentsTab({
 
   const ratingOptions = ["Excellent", "Very Good", "Good", "Fair", "Poor"];
 
-  // Get relevant department concerns and recommendations sorted by date
-  const combinedFeedback = [
-    ...departmentConcerns
-      .filter((concern) =>
-        departmentsOnly.some((dept) => dept.name === concern.locationName)
-      )
-      .map((concern) => ({
-        id: `concern-${concern.submissionId}`,
-        type: "concern",
-        submissionId: concern.submissionId,
-        submittedAt: concern.submittedAt,
-        locationName: concern.locationName,
-        text: concern.concern,
-        userType: concern.userType,
-      })),
-    ...departmentRecommendations
-      .filter((rec) =>
-        departmentsOnly.some((dept) =>
-          rec.recommendation.toLowerCase().includes(dept.name.toLowerCase())
-        )
-      )
-      .map((rec) => ({
-        id: `rec-${rec.submissionId}`,
-        type: "recommendation",
-        submissionId: rec.submissionId,
-        submittedAt: rec.submittedAt,
-        locationName:
-          departmentsOnly.find((dept) =>
-            rec.recommendation.toLowerCase().includes(dept.name.toLowerCase())
-          )?.name || "Department",
-        text: rec.recommendation,
-        userType: rec.userType,
-      })),
-  ]
+  // Only include department concerns from locations with locationType = "department"
+  const combinedFeedback = departmentConcerns
+    .filter((concern) =>
+      // Filter concerns to only include those from department-type locations
+      departmentsOnly.some((dept) => dept.name === concern.locationName)
+    )
+    .map((concern) => ({
+      submissionId: concern.submissionId,
+      type: "concern",
+      locationName: concern.locationName,
+      text: concern.concern,
+      submittedAt: concern.submittedAt,
+      userType: concern.userType,
+    }))
     .sort(
       (a, b) =>
         new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
     )
-    .slice(0, 3); // Get the 3 most recent items
+    .slice(0, 3);
 
   if (selectedDepartment) {
     // Show individual department details
@@ -777,10 +788,12 @@ export function DepartmentsTab({
               <h3 className="text-lg font-medium">
                 Recent Department Feedback
               </h3>
-              {departmentFeedbackForSelected.length > 0 ? (
+              {isLoadingConcerns ? (
+                <LoadingSpinner />
+              ) : departmentFeedbackForSelected.length > 0 ? (
                 departmentFeedbackForSelected.map((feedback, index) => (
                   <div
-                    key={`${feedback.id}-${index}`}
+                    key={`${feedback.type}-${feedback.submissionId}-${index}`}
                     className={`border p-3 rounded-md ${
                       feedback.type === "recommendation"
                         ? "border-l-4 border-l-blue-500"
@@ -1064,14 +1077,12 @@ export function DepartmentsTab({
         </CardHeader>
         <CardContent>
           {isLoadingConcerns ? (
-            <div className="flex justify-center py-8">
-              <LoadingSpinner size="md" />
-            </div>
+            <LoadingSpinner />
           ) : combinedFeedback.length > 0 ? (
             <div className="space-y-3">
               {combinedFeedback.map((feedback, index) => (
                 <Card
-                  key={`${feedback.id}-${index}`}
+                  key={`${feedback.type}-${feedback.submissionId}-${index}`}
                   className={`${
                     feedback.type === "recommendation"
                       ? "border-l-4 border-l-blue-500"
@@ -1119,9 +1130,7 @@ export function DepartmentsTab({
               ))}
             </div>
           ) : (
-            <p className="text-center py-8 text-muted-foreground">
-              No department feedback reported.
-            </p>
+            <p>No department feedback reported.</p>
           )}
         </CardContent>
       </Card>
