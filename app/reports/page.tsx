@@ -165,12 +165,6 @@ export default function ReportsPage() {
       // Get the actual total count without filtering
       const totalCount = await getTotalSubmissionCount();
 
-      console.log(
-        `Total submissions count: ${totalCount}, Survey data length: ${
-          surveyData?.length || 0
-        }`
-      );
-
       // Set the TOTAL number of responses without filtering
       setTotalResponses(totalCount);
 
@@ -178,10 +172,6 @@ export default function ReportsPage() {
       const departmentRatings = await getDepartmentRatings();
       const satisfactionDistribution =
         await fetchOverallSatisfactionDistribution();
-
-      console.log("Location visits:", locationVisits);
-      console.log("Department ratings:", departmentRatings);
-      console.log("Satisfaction distribution:", satisfactionDistribution);
 
       if (surveyData?.length > 0) {
         // For debugging, examine the first few survey records

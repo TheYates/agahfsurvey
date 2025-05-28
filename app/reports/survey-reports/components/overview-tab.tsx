@@ -30,17 +30,8 @@ import {
   ImprovementArea,
   UserTypeDistribution,
   VisitTimeAnalysis,
-} from "@/app/actions/report-actions-enhanced";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+} from "@/app/actions/overview-actions";
 import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-} from "@/components/ui/table";
 
 import {
   Chart as ChartJS,
@@ -59,103 +50,109 @@ import {
 } from "chart.js";
 import { Chart, Bar, Pie, Line, Radar } from "react-chartjs-2";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  COLORS,
+  barAveragePlugin,
+  legendLabelsPlugin,
+  legendValueLabelsPlugin,
+} from "../utils/chart-utils";
 
 // Define custom plugins
-const barAveragePlugin = {
-  id: "barAverage",
-  afterDraw: (chart: any) => {
-    const { ctx, legend } = chart;
-    if (!legend || !legend.legendItems) return;
+// const barAveragePlugin = {
+//   id: "barAverage",
+//   afterDraw: (chart: any) => {
+//     const { ctx, legend } = chart;
+//     if (!legend || !legend.legendItems) return;
 
-    const dataset = chart.data.datasets[0];
-    const values = dataset.data;
-    const avg = values.length
-      ? values.reduce((sum: number, val: number) => sum + val, 0) /
-        values.length
-      : 0;
+//     const dataset = chart.data.datasets[0];
+//     const values = dataset.data;
+//     const avg = values.length
+//       ? values.reduce((sum: number, val: number) => sum + val, 0) /
+//         values.length
+//       : 0;
 
-    const formattedAvg = `Avg: ${avg.toFixed(2)}/5`;
+//     const formattedAvg = `Avg: ${avg.toFixed(2)}/5`;
 
-    const legendItem = legend.legendItems[0];
-    if (legendItem) {
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = "#666";
-      ctx.font = '12px "Helvetica Neue", Helvetica, Arial, sans-serif';
+//     const legendItem = legend.legendItems[0];
+//     if (legendItem) {
+//       ctx.textAlign = "left";
+//       ctx.textBaseline = "middle";
+//       ctx.fillStyle = "#666";
+//       ctx.font = '12px "Helvetica Neue", Helvetica, Arial, sans-serif';
 
-      const textX = legendItem.x + legendItem.width + 15;
-      const textY = legendItem.y + legendItem.height / 2;
+//       const textX = legendItem.x + legendItem.width + 15;
+//       const textY = legendItem.y + legendItem.height / 2;
 
-      ctx.fillText(formattedAvg, textX, textY);
-    }
-  },
-};
+//       ctx.fillText(formattedAvg, textX, textY);
+//     }
+//   },
+// };
 
-const legendLabelsPlugin = {
-  id: "legendLabels",
-  afterDraw: (chart: any) => {
-    const { ctx, legend } = chart;
-    if (!legend || !legend.legendItems) return;
+// const legendLabelsPlugin = {
+//   id: "legendLabels",
+//   afterDraw: (chart: any) => {
+//     const { ctx, legend } = chart;
+//     if (!legend || !legend.legendItems) return;
 
-    const data = chart.data;
-    const dataset = data.datasets[0];
-    const total = dataset.data.reduce(
-      (sum: number, val: number) => sum + val,
-      0
-    );
+//     const data = chart.data;
+//     const dataset = data.datasets[0];
+//     const total = dataset.data.reduce(
+//       (sum: number, val: number) => sum + val,
+//       0
+//     );
 
-    legend.legendItems.forEach((legendItem: any, i: number) => {
-      const value = dataset.data[i];
-      const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+//     legend.legendItems.forEach((legendItem: any, i: number) => {
+//       const value = dataset.data[i];
+//       const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
 
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = "#666";
-      ctx.font = '12px "Helvetica Neue", Helvetica, Arial, sans-serif';
+//       ctx.textAlign = "left";
+//       ctx.textBaseline = "middle";
+//       ctx.fillStyle = "#666";
+//       ctx.font = '12px "Helvetica Neue", Helvetica, Arial, sans-serif';
 
-      const textX = legendItem.x + legendItem.width + 10;
-      const textY = legendItem.y + legendItem.height / 2;
+//       const textX = legendItem.x + legendItem.width + 10;
+//       const textY = legendItem.y + legendItem.height / 2;
 
-      ctx.fillText(`${value} (${percentage}%)`, textX, textY);
-    });
-  },
-};
+//       ctx.fillText(`${value} (${percentage}%)`, textX, textY);
+//     });
+//   },
+// };
 
-const legendValueLabelsPlugin = {
-  id: "legendValueLabels",
-  afterDraw: (chart: any) => {
-    const { ctx, legend } = chart;
-    if (!legend || !legend.legendItems) return;
+// const legendValueLabelsPlugin = {
+//   id: "legendValueLabels",
+//   afterDraw: (chart: any) => {
+//     const { ctx, legend } = chart;
+//     if (!legend || !legend.legendItems) return;
 
-    const datasets = chart.data.datasets;
+//     const datasets = chart.data.datasets;
 
-    datasets.forEach((dataset: any, i: number) => {
-      const values = dataset.data as number[];
-      const avg = values.length
-        ? values.reduce((sum: number, val: number) => sum + val, 0) /
-          values.length
-        : 0;
+//     datasets.forEach((dataset: any, i: number) => {
+//       const values = dataset.data as number[];
+//       const avg = values.length
+//         ? values.reduce((sum: number, val: number) => sum + val, 0) /
+//           values.length
+//         : 0;
 
-      const formattedAvg =
-        dataset.label === "Satisfaction Rating"
-          ? `Avg: ${avg.toFixed(2)}/5`
-          : `Avg: ${avg.toFixed(1)}%`;
+//       const formattedAvg =
+//         dataset.label === "Satisfaction Rating"
+//           ? `Avg: ${avg.toFixed(2)}/5`
+//           : `Avg: ${avg.toFixed(1)}%`;
 
-      const legendItem = legend.legendItems[i];
-      if (legendItem) {
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        ctx.fillStyle = "#666";
-        ctx.font = '12px "Helvetica Neue", Helvetica, Arial, sans-serif';
+//       const legendItem = legend.legendItems[i];
+//       if (legendItem) {
+//         ctx.textAlign = "left";
+//         ctx.textBaseline = "middle";
+//         ctx.fillStyle = "#666";
+//         ctx.font = '12px "Helvetica Neue", Helvetica, Arial, sans-serif';
 
-        const textX = legendItem.x + legendItem.width + 15;
-        const textY = legendItem.y + legendItem.height / 2;
+//         const textX = legendItem.x + legendItem.width + 15;
+//         const textY = legendItem.y + legendItem.height / 2;
 
-        ctx.fillText(formattedAvg, textX, textY);
-      }
-    });
-  },
-};
+//         ctx.fillText(formattedAvg, textX, textY);
+//       }
+//     });
+//   },
+// };
 
 ChartJS.register(
   CategoryScale,
@@ -200,15 +197,15 @@ interface OverviewTabProps {
     distribution: UserTypeDistribution[];
     insight: string;
   };
+  locations?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    satisfaction: number;
+    visitCount: number;
+    recommendRate: number;
+  }>;
 }
-
-const COLORS = [
-  "#0a6a74", // Dark teal
-  "#22c5bf", // Light teal
-  "#e8e5c0", // Beige
-  "#f6a050", // Orange
-  "#e84e3c", // Red/coral
-];
 
 export function OverviewTab({
   surveyData,
@@ -220,7 +217,12 @@ export function OverviewTab({
   patientTypeData,
   visitTimeData,
   userTypeData,
+  locations,
 }: OverviewTabProps) {
+  console.log("patientTypeData:", patientTypeData);
+  console.log("visitPurposeData:", visitPurposeData);
+  console.log("visitTimeData:", visitTimeData);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -284,6 +286,56 @@ export function OverviewTab({
 
   // Get critical issues (low satisfaction + high visit count)
   const criticalIssues = improvementAreas.filter((area) => area.isCritical);
+
+  // Get best and worst departments from locations data
+  const getBestAndWorstDepartments = () => {
+    if (!locations || locations.length === 0) {
+      return {
+        best: { name: "N/A", score: 0 },
+        worst: { name: "N/A", score: 0 },
+      };
+    }
+
+    // Sort locations by satisfaction (descending)
+    const sortedLocations = [...locations].sort(
+      (a, b) => b.satisfaction - a.satisfaction
+    );
+
+    const best = {
+      name: sortedLocations[0].name,
+      score: sortedLocations[0].satisfaction,
+    };
+
+    const worst = {
+      name: sortedLocations[sortedLocations.length - 1].name,
+      score: sortedLocations[sortedLocations.length - 1].satisfaction,
+    };
+
+    return { best, worst };
+  };
+
+  const { best: topDepartment, worst: bottomDepartment } =
+    getBestAndWorstDepartments();
+
+  console.log("Overview Tab - Generic top/bottom departments:", {
+    topDepartment,
+    bottomDepartment,
+  });
+  console.log("Visit Purpose comparison data:", {
+    generalPractice: visitPurposeData?.generalPractice
+      ? {
+          topDepartment: visitPurposeData.generalPractice.topDepartment,
+          bottomDepartment: visitPurposeData.generalPractice.bottomDepartment,
+        }
+      : "N/A",
+    occupationalHealth: visitPurposeData?.occupationalHealth
+      ? {
+          topDepartment: visitPurposeData.occupationalHealth.topDepartment,
+          bottomDepartment:
+            visitPurposeData.occupationalHealth.bottomDepartment,
+        }
+      : "N/A",
+  });
 
   return (
     <div className="space-y-6">
@@ -818,7 +870,10 @@ export function OverviewTab({
                       <Users size={18} />
                       New Patients
                       <Badge variant="outline" className="ml-2">
-                        {patientTypeData.newPatients.count} patients
+                        {satisfactionByDemographic.byPatientType.find(
+                          (item) => item.patientType === "New Patient"
+                        )?.count || 0}{" "}
+                        patients
                       </Badge>
                     </h3>
                     <div className="space-y-4">
@@ -826,21 +881,19 @@ export function OverviewTab({
                         <div className="flex justify-between mb-1">
                           <span className="text-sm">Overall Satisfaction:</span>
                           <span className="font-bold">
-                            {typeof patientTypeData.newPatients.satisfaction ===
-                            "number"
-                              ? patientTypeData.newPatients.satisfaction.toFixed(
-                                  1
-                                )
-                              : patientTypeData.newPatients.satisfaction}
+                            {satisfactionByDemographic.byPatientType
+                              .find(
+                                (item) => item.patientType === "New Patient"
+                              )
+                              ?.satisfaction.toFixed(1) || "0.0"}
                             /5.0
                           </span>
                         </div>
                         <Progress
                           value={
-                            typeof patientTypeData.newPatients.satisfaction ===
-                            "number"
-                              ? patientTypeData.newPatients.satisfaction * 20
-                              : 0
+                            (satisfactionByDemographic.byPatientType.find(
+                              (item) => item.patientType === "New Patient"
+                            )?.satisfaction || 0) * 20
                           }
                           className="h-2"
                         />
@@ -850,17 +903,18 @@ export function OverviewTab({
                         <div className="flex justify-between mb-1">
                           <span className="text-sm">Recommendation Rate:</span>
                           <span className="font-bold">
-                            {typeof patientTypeData.newPatients
-                              .recommendRate === "number"
-                              ? patientTypeData.newPatients.recommendRate.toFixed(
-                                  1
-                                )
-                              : patientTypeData.newPatients.recommendRate}
+                            {satisfactionByDemographic.byPatientType.find(
+                              (item) => item.patientType === "New Patient"
+                            )?.recommendRate || 0}
                             %
                           </span>
                         </div>
                         <Progress
-                          value={patientTypeData.newPatients.recommendRate}
+                          value={
+                            satisfactionByDemographic.byPatientType.find(
+                              (item) => item.patientType === "New Patient"
+                            )?.recommendRate || 0
+                          }
                           className="h-2"
                         />
                       </div>
@@ -909,7 +963,10 @@ export function OverviewTab({
                       <Users size={18} />
                       Returning Patients
                       <Badge variant="outline" className="ml-2">
-                        {patientTypeData.returningPatients.count} patients
+                        {satisfactionByDemographic.byPatientType.find(
+                          (item) => item.patientType === "Returning Patient"
+                        )?.count || 0}{" "}
+                        patients
                       </Badge>
                     </h3>
                     <div className="space-y-4">
@@ -917,22 +974,20 @@ export function OverviewTab({
                         <div className="flex justify-between mb-1">
                           <span className="text-sm">Overall Satisfaction:</span>
                           <span className="font-bold">
-                            {typeof patientTypeData.returningPatients
-                              .satisfaction === "number"
-                              ? patientTypeData.returningPatients.satisfaction.toFixed(
-                                  1
-                                )
-                              : patientTypeData.returningPatients.satisfaction}
+                            {satisfactionByDemographic.byPatientType
+                              .find(
+                                (item) =>
+                                  item.patientType === "Returning Patient"
+                              )
+                              ?.satisfaction.toFixed(1) || "0.0"}
                             /5.0
                           </span>
                         </div>
                         <Progress
                           value={
-                            typeof patientTypeData.returningPatients
-                              .satisfaction === "number"
-                              ? patientTypeData.returningPatients.satisfaction *
-                                20
-                              : 0
+                            (satisfactionByDemographic.byPatientType.find(
+                              (item) => item.patientType === "Returning Patient"
+                            )?.satisfaction || 0) * 20
                           }
                           className="h-2"
                         />
@@ -942,18 +997,17 @@ export function OverviewTab({
                         <div className="flex justify-between mb-1">
                           <span className="text-sm">Recommendation Rate:</span>
                           <span className="font-bold">
-                            {typeof patientTypeData.returningPatients
-                              .recommendRate === "number"
-                              ? patientTypeData.returningPatients.recommendRate.toFixed(
-                                  1
-                                )
-                              : patientTypeData.returningPatients.recommendRate}
+                            {satisfactionByDemographic.byPatientType.find(
+                              (item) => item.patientType === "Returning Patient"
+                            )?.recommendRate || 0}
                             %
                           </span>
                         </div>
                         <Progress
                           value={
-                            patientTypeData.returningPatients.recommendRate
+                            satisfactionByDemographic.byPatientType.find(
+                              (item) => item.patientType === "Returning Patient"
+                            )?.recommendRate || 0
                           }
                           className="h-2"
                         />
@@ -1004,6 +1058,7 @@ export function OverviewTab({
 
               <div className="mt-8">
                 <Separator className="my-8" />
+
                 <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
                   <Users size={18} />
                   User Type Distribution
@@ -1334,29 +1389,6 @@ export function OverviewTab({
               </div>
             </CardContent>
           </Card>
-        )}
-
-        {/* Critical issues and quick wins badges */}
-        {criticalIssues.length > 0 && (
-          <Alert className="mb-4 border-[#e84e3c]/50 bg-[#e84e3c]/5">
-            <AlertTriangle className="h-4 w-4 text-[#e84e3c]" />
-            <AlertTitle className="text-[#e84e3c]">Critical Issues</AlertTitle>
-            <AlertDescription>
-              {criticalIssues.length} critical issues identified that require
-              immediate attention.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {quickWins.length > 0 && (
-          <Alert className="mb-4 border-[#22c5bf]/50 bg-[#22c5bf]/5">
-            <CheckCircle2 className="h-4 w-4 text-[#22c5bf]" />
-            <AlertTitle className="text-[#22c5bf]">Quick Wins</AlertTitle>
-            <AlertDescription>
-              {quickWins.length} easy-to-implement improvements with high
-              impact.
-            </AlertDescription>
-          </Alert>
         )}
       </div>
     </div>

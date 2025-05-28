@@ -37,10 +37,7 @@ import {
   ChevronRight,
   ArrowUpDown,
 } from "lucide-react";
-import {
-  getSurveyData,
-  SurveyData,
-} from "@/app/actions/report-actions-enhanced";
+import { getSurveyData, SurveyData } from "@/app/actions/page-actions";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -58,14 +55,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 // Update the SurveyData interface to include the new properties
 interface ExtendedSurveyData extends SurveyData {
@@ -340,7 +329,7 @@ export default function SubmissionsPage() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <Image
-                src="/agahflogo svg.svg"
+                src="/agahflogo.svg"
                 alt="AGA Health Foundation Logo"
                 width={50}
                 height={50}

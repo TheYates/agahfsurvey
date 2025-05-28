@@ -34,7 +34,7 @@ import {
 import {
   getSubmissionById,
   DetailedSubmission,
-} from "@/app/actions/report-actions-enhanced";
+} from "@/app/actions/page-actions";
 import { Separator } from "@/components/ui/separator";
 
 export default function SubmissionDetailPage() {

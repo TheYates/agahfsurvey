@@ -45,12 +45,6 @@ import {
   ArcElement,
 } from "chart.js";
 import { Bar, Pie } from "react-chartjs-2";
-import {
-  fetchDepartmentConcerns,
-  fetchAllSurveyData,
-  DepartmentConcern,
-  fetchOccupationalHealthData,
-} from "@/app/actions/report-actions-enhanced";
 
 // Register ChartJS components
 ChartJS.register(

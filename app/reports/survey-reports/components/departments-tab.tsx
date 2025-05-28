@@ -32,9 +32,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import {
   BarChart,
   CartesianGrid,
@@ -47,15 +45,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import {
-  fetchDepartmentConcerns,
-  fetchAllSurveyData,
-  fetchVisitTimeData,
-  fetchPatientTypeData,
-  fetchRecommendations,
-  DepartmentConcern,
-  Recommendation,
-} from "@/app/actions/report-actions-enhanced";
+
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface DepartmentRating {

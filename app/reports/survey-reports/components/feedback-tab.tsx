@@ -11,14 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   MessageSquare,
@@ -43,14 +36,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import {
-  fetchRecommendations,
-  fetchNotRecommendReasons,
-  fetchDepartmentConcerns,
-  Recommendation,
-  NotRecommendReason,
-  DepartmentConcern,
-} from "@/app/actions/report-actions-enhanced";
 
 interface FeedbackTabProps {
   isLoading: boolean;

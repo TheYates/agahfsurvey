@@ -152,8 +152,6 @@ export async function getLocationVisits(): Promise<LocationVisit[]> {
 // Fetch the department ratings
 export async function getDepartmentRatings(): Promise<DepartmentRating[]> {
   try {
-    console.log("Fetching department ratings...");
-
     // Join Locations with Ratings to get department ratings
     const { data, error } = await supabase.from("Rating").select(`
         id, 
@@ -166,8 +164,6 @@ export async function getDepartmentRatings(): Promise<DepartmentRating[]> {
       console.error("Error fetching department ratings:", error);
       return [];
     }
-
-    console.log("Department ratings raw data:", data);
 
     if (!data || data.length === 0) {
       return [];
@@ -277,8 +273,6 @@ export async function getDepartmentRatings(): Promise<DepartmentRating[]> {
       });
     });
 
-    console.log("Processed department ratings:", departmentRatings);
-
     return departmentRatings;
   } catch (e) {
     console.error("Exception in department ratings:", e);
@@ -303,12 +297,6 @@ export async function fetchOverallSatisfactionDistribution(): Promise<
       // No data available, return empty array
       return [];
     }
-
-    // Log the raw ratings we get from the DB for debugging
-    console.log(
-      "Raw satisfaction ratings:",
-      data.map((item) => item.overall)
-    );
 
     // Count ratings by level (1-5)
     // Initialize with 0 values to ensure we have data for all ratings
@@ -352,8 +340,6 @@ export async function fetchOverallSatisfactionDistribution(): Promise<
         ratingCounts[ratingKey]++;
       }
     });
-
-    console.log("Processed satisfaction counts:", ratingCounts);
 
     // Create dataset with all 5 rating levels, even if some have 0 counts
     return [

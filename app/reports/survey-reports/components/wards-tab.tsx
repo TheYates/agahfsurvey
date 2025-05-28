@@ -48,14 +48,6 @@ import {
   Radar,
   Legend,
 } from "recharts";
-import {
-  fetchDepartmentConcerns,
-  fetchAllSurveyData,
-  fetchDepartments,
-  fetchRecommendations,
-  DepartmentConcern,
-  Recommendation,
-} from "@/app/actions/report-actions-enhanced";
 
 interface Ward {
   id: string;

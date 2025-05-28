@@ -11,15 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
 import {
   Coffee,
   Utensils,
@@ -43,11 +35,6 @@ import {
   ArcElement,
 } from "chart.js";
 import { Bar, Pie } from "react-chartjs-2";
-import {
-  fetchDepartmentConcerns,
-  fetchAllSurveyData,
-  DepartmentConcern,
-} from "@/app/actions/report-actions-enhanced";
 
 interface CanteenData {
   id: string;
