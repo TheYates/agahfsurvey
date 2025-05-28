@@ -1,0 +1,198 @@
+[
+  {
+    "table_name": "DepartmentConcern",
+    "column_name": "concern"
+  },
+  {
+    "table_name": "DepartmentConcern",
+    "column_name": "createdAt"
+  },
+  {
+    "table_name": "DepartmentConcern",
+    "column_name": "id"
+  },
+  {
+    "table_name": "DepartmentConcern",
+    "column_name": "locationId"
+  },
+  {
+    "table_name": "DepartmentConcern",
+    "column_name": "submissionId"
+  },
+  {
+    "table_name": "GeneralObservation",
+    "column_name": "cleanliness"
+  },
+  {
+    "table_name": "GeneralObservation",
+    "column_name": "createdAt"
+  },
+  {
+    "table_name": "GeneralObservation",
+    "column_name": "facilities"
+  },
+  {
+    "table_name": "GeneralObservation",
+    "column_name": "id"
+  },
+  {
+    "table_name": "GeneralObservation",
+    "column_name": "overall"
+  },
+  {
+    "table_name": "GeneralObservation",
+    "column_name": "security"
+  },
+  {
+    "table_name": "GeneralObservation",
+    "column_name": "submissionId"
+  },
+  {
+    "table_name": "Location",
+    "column_name": "createdAt"
+  },
+  {
+    "table_name": "Location",
+    "column_name": "id"
+  },
+  {
+    "table_name": "Location",
+    "column_name": "locationType"
+  },
+  {
+    "table_name": "Location",
+    "column_name": "name"
+  },
+  {
+    "table_name": "Location",
+    "column_name": "updatedAt"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "admission"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "createdAt"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "discharge"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "doctorProfessionalism"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "foodQuality"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "id"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "locationId"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "nurseProfessionalism"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "overall"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "professionalism"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "promptnessCare"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "promptnessFeedback"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "reception"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "submissionId"
+  },
+  {
+    "table_name": "Rating",
+    "column_name": "understanding"
+  },
+  {
+    "table_name": "SubmissionLocation",
+    "column_name": "createdAt"
+  },
+  {
+    "table_name": "SubmissionLocation",
+    "column_name": "id"
+  },
+  {
+    "table_name": "SubmissionLocation",
+    "column_name": "isPrimary"
+  },
+  {
+    "table_name": "SubmissionLocation",
+    "column_name": "locationId"
+  },
+  {
+    "table_name": "SubmissionLocation",
+    "column_name": "submissionId"
+  },
+  {
+    "table_name": "SurveySubmission",
+    "column_name": "createdAt"
+  },
+  {
+    "table_name": "SurveySubmission",
+    "column_name": "id"
+  },
+  {
+    "table_name": "SurveySubmission",
+    "column_name": "patientType"
+  },
+  {
+    "table_name": "SurveySubmission",
+    "column_name": "recommendation"
+  },
+  {
+    "table_name": "SurveySubmission",
+    "column_name": "submittedAt"
+  },
+  {
+    "table_name": "SurveySubmission",
+    "column_name": "updatedAt"
+  },
+  {
+    "table_name": "SurveySubmission",
+    "column_name": "userType"
+  },
+  {
+    "table_name": "SurveySubmission",
+    "column_name": "visitPurpose"
+  },
+  {
+    "table_name": "SurveySubmission",
+    "column_name": "visitTime"
+  },
+  {
+    "table_name": "SurveySubmission",
+    "column_name": "visitedOtherPlaces"
+  },
+  {
+    "table_name": "SurveySubmission",
+    "column_name": "whyNotRecommend"
+  },
+  {
+    "table_name": "SurveySubmission",
+    "column_name": "wouldRecommend"
+  }
+]

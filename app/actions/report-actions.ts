@@ -1,307 +1,384 @@
-"use server"
-
-import { createServerClient } from "@/lib/supabase/server"
-import { cookies } from "next/headers"
-import { mockDataService } from "@/lib/mock-data"
-import type {
-  DepartmentRating,
-  LocationVisit,
-  SurveyData,
-  WardRating,
-  CanteenRating,
-  OccupationalHealthRating,
-  DepartmentConcern,
-} from "@/types"
 import {
-  getDepartmentRatingsQuery,
-  getWardRatingsQuery,
-  getCanteenRatingsQuery,
-  getOccupationalHealthRatingsQuery,
-  getSurveyDataQuery,
-  getLocationVisitsQuery,
-  getDepartmentConcernsQuery,
-  getOverallSatisfactionTrendQuery,
-  getPatientTypeDistributionQuery,
-  getRecommendationScoresQuery,
-  getDepartmentPerformanceQuery,
-  getWardPerformanceQuery,
-  getCommentSentimentQuery,
-  getTopConcernsQuery,
-  getRecentSurveysQuery,
-} from "@/lib/supabase/queries"
+  SurveyData,
+  LocationVisit,
+  DepartmentRating,
+  SatisfactionDistribution,
+} from "../types/survey-types";
+import { createClient } from "@supabase/supabase-js";
 
-// Helper function to create Supabase client
-const getSupabase = () => {
-  const cookieStore = cookies()
-  return createServerClient(cookieStore)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+interface LocationResponse {
+  name: string;
 }
 
-// Get all survey data
-export async function getSurveyData(): Promise<SurveyData[]> {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await getSurveyDataQuery(supabase)
+interface SubmissionLocationResponse {
+  locationId: string;
+  Location: LocationResponse;
+}
 
-    if (error) {
-      console.error("Error fetching survey data:", error)
-      return mockDataService.getSurveyData()
+interface RatingResponse {
+  overall: number;
+}
+
+interface SurveySubmissionResponse {
+  id: string | number;
+  submittedAt: string;
+  visitPurpose: string;
+  wouldRecommend: boolean;
+  recommendation: number;
+  patientType: string;
+  userType: string;
+  visitTime: string;
+  SubmissionLocation: SubmissionLocationResponse[];
+  Rating: RatingResponse[];
+}
+
+interface RatingWithLocationResponse {
+  id: string | number;
+  locationId: string | number;
+  overall: number;
+  Location: LocationResponse;
+}
+
+// Fetch all survey data
+export async function getSurveyData(): Promise<SurveyData[]> {
+  const { data, error } = await supabase
+    .from("SurveySubmission")
+    .select(
+      `
+      id,
+      submittedAt,
+      visitPurpose,
+      wouldRecommend,
+      recommendation,
+      patientType,
+      userType,
+      visitTime,
+      SubmissionLocation (
+        locationId,
+        isPrimary,
+        Location (
+          name
+        )
+      ),
+      Rating (overall)
+    `
+    )
+    .order("submittedAt", { ascending: false });
+
+  if (error || !data) {
+    console.error("Error fetching survey data:", error);
+    return [];
+  }
+
+  // Debug the raw data count
+
+  const result = data.map((item) => ({
+    id: item.id,
+    created_at: item.submittedAt,
+    visit_purpose: item.visitPurpose,
+    recommendation_rating: item.recommendation || 0,
+    overall_rating:
+      Array.isArray(item.Rating) && item.Rating.length > 0
+        ? item.Rating[0].overall || 0
+        : 0,
+    locations_visited:
+      Array.isArray(item.SubmissionLocation) &&
+      item.SubmissionLocation.length > 0
+        ? item.SubmissionLocation.map((sl) => {
+            if (sl && sl.Location) {
+              // Check if Location is an array and get the first element if so
+              const location = Array.isArray(sl.Location)
+                ? sl.Location[0]
+                : sl.Location;
+              return location?.name || "Unknown";
+            }
+            return "Unknown";
+          })
+        : ["No location data"],
+    wouldRecommend: item.wouldRecommend || false,
+    patientType: item.patientType,
+    userType: item.userType,
+    visitTime: item.visitTime,
+  }));
+
+  return result;
+}
+
+// Fetch location visit data
+export async function getLocationVisits(): Promise<LocationVisit[]> {
+  const { data, error } = await supabase.from("SubmissionLocation").select(`
+      locationId,
+      Location!inner (name)
+    `);
+
+  if (error || !data) {
+    console.error("Error fetching location visits:", error);
+    return [];
+  }
+
+  // Count occurrences of each location
+  const locationCounts: Record<string, { name: string; count: number }> = {};
+
+  data.forEach((item) => {
+    const locationId = String(item.locationId || "");
+
+    // Safe access to nested properties
+    let locationName = "Unknown";
+    if (item && item.Location) {
+      // Check if Location is an array and get the first element if so
+      const location = Array.isArray(item.Location)
+        ? item.Location[0]
+        : item.Location;
+      locationName = String(location?.name || "Unknown");
     }
 
-    return data as SurveyData[]
-  } catch (error) {
-    console.error("Error in getSurveyData:", error)
-    return mockDataService.getSurveyData()
-  }
+    if (!locationCounts[locationId]) {
+      locationCounts[locationId] = { name: locationName, count: 0 };
+    }
+
+    locationCounts[locationId].count++;
+  });
+
+  return Object.values(locationCounts).map((loc) => ({
+    location: loc.name,
+    visit_count: loc.count,
+  }));
 }
 
-// Get department ratings
+// Fetch the department ratings
 export async function getDepartmentRatings(): Promise<DepartmentRating[]> {
   try {
-    const supabase = getSupabase()
-    const { data, error } = await getDepartmentRatingsQuery(supabase)
+    console.log("Fetching department ratings...");
+
+    // Join Locations with Ratings to get department ratings
+    const { data, error } = await supabase.from("Rating").select(`
+        id, 
+        overall,
+        locationId,
+        Location(id, name)
+      `);
 
     if (error) {
-      console.error("Error fetching department ratings:", error)
-      return mockDataService.getDepartmentRatings()
+      console.error("Error fetching department ratings:", error);
+      return [];
     }
 
-    return data as DepartmentRating[]
-  } catch (error) {
-    console.error("Error in getDepartmentRatings:", error)
-    return mockDataService.getDepartmentRatings()
+    console.log("Department ratings raw data:", data);
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // Group by location
+    const locationSatisfaction: Record<
+      string,
+      {
+        locationName: string;
+        ratings: { rating: string; count: number }[];
+      }
+    > = {};
+
+    data.forEach((rating) => {
+      // Skip ratings without location data
+      if (!rating.Location || !rating.locationId) return;
+
+      // Get location name - safely extract name with type checking
+      let locationName = "Unknown Location";
+      try {
+        if (rating.Location) {
+          // Handle both object and array cases
+          const locObj = Array.isArray(rating.Location)
+            ? rating.Location[0]
+            : rating.Location;
+
+          locationName =
+            locObj && typeof locObj === "object" && "name" in locObj
+              ? String(locObj.name)
+              : "Unknown Location";
+        }
+      } catch (e) {
+        console.error("Error extracting location name:", e);
+      }
+
+      // Create location entry if it doesn't exist
+      if (!locationSatisfaction[rating.locationId]) {
+        locationSatisfaction[rating.locationId] = {
+          locationName: locationName || "Unknown Location",
+          ratings: [],
+        };
+      }
+
+      // Convert rating to standard format
+      let ratingValue = 3; // Default
+
+      // Handle text ratings
+      if (typeof rating.overall === "string") {
+        switch (rating.overall.toLowerCase()) {
+          case "excellent":
+            ratingValue = 5;
+            break;
+          case "very good":
+            ratingValue = 4;
+            break;
+          case "good":
+            ratingValue = 3;
+            break;
+          case "fair":
+            ratingValue = 2;
+            break;
+          case "poor":
+            ratingValue = 1;
+            break;
+          default:
+            ratingValue = 3;
+        }
+      }
+      // Handle numeric ratings
+      else if (typeof rating.overall === "number") {
+        ratingValue = Math.round(rating.overall);
+      }
+
+      // Ensure rating is within valid range
+      if (ratingValue < 1 || ratingValue > 5) {
+        ratingValue = 3;
+      }
+
+      // Find if this rating already exists
+      const ratingKey = String(ratingValue);
+      const existingRating = locationSatisfaction[
+        rating.locationId
+      ].ratings.find((r) => r.rating === ratingKey);
+
+      if (existingRating) {
+        existingRating.count++;
+      } else {
+        locationSatisfaction[rating.locationId].ratings.push({
+          rating: ratingKey,
+          count: 1,
+        });
+      }
+    });
+
+    // Convert to departmentRatings format
+    const departmentRatings: DepartmentRating[] = [];
+
+    Object.values(locationSatisfaction).forEach((location) => {
+      location.ratings.forEach((ratingInfo) => {
+        departmentRatings.push({
+          locationName: location.locationName,
+          category: "overall",
+          rating: ratingInfo.rating,
+          count: ratingInfo.count,
+        });
+      });
+    });
+
+    console.log("Processed department ratings:", departmentRatings);
+
+    return departmentRatings;
+  } catch (e) {
+    console.error("Exception in department ratings:", e);
+    return [];
   }
 }
 
-// Get ward ratings
-export async function getWardRatings(): Promise<WardRating[]> {
+// Fetch overall satisfaction distribution
+export async function fetchOverallSatisfactionDistribution(): Promise<
+  SatisfactionDistribution[]
+> {
   try {
-    const supabase = getSupabase()
-    const { data, error } = await getWardRatingsQuery(supabase)
+    // Use a simple direct query to get ratings
+    const { data, error } = await supabase.from("Rating").select("overall");
 
     if (error) {
-      console.error("Error fetching ward ratings:", error)
-      return mockDataService.getWardRatings()
+      console.error("Error fetching satisfaction distribution:", error);
+      return [];
     }
 
-    return data as WardRating[]
-  } catch (error) {
-    console.error("Error in getWardRatings:", error)
-    return mockDataService.getWardRatings()
+    if (!data || data.length === 0) {
+      // No data available, return empty array
+      return [];
+    }
+
+    // Log the raw ratings we get from the DB for debugging
+    console.log(
+      "Raw satisfaction ratings:",
+      data.map((item) => item.overall)
+    );
+
+    // Count ratings by level (1-5)
+    // Initialize with 0 values to ensure we have data for all ratings
+    const ratingCounts = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 };
+
+    data.forEach((item) => {
+      if (!item.overall) return;
+
+      let ratingValue = 3; // Default to middle rating
+
+      // Handle text ratings
+      if (typeof item.overall === "string") {
+        switch (item.overall.toLowerCase()) {
+          case "excellent":
+            ratingValue = 5;
+            break;
+          case "very good":
+            ratingValue = 4;
+            break;
+          case "good":
+            ratingValue = 3;
+            break;
+          case "fair":
+            ratingValue = 2;
+            break;
+          case "poor":
+            ratingValue = 1;
+            break;
+          default:
+            ratingValue = 3; // Default to middle rating
+        }
+      }
+      // Handle numeric ratings
+      else if (typeof item.overall === "number") {
+        ratingValue = Math.round(item.overall);
+      }
+
+      // Ensure rating is within range
+      if (ratingValue >= 1 && ratingValue <= 5) {
+        const ratingKey = String(ratingValue) as "1" | "2" | "3" | "4" | "5";
+        ratingCounts[ratingKey]++;
+      }
+    });
+
+    console.log("Processed satisfaction counts:", ratingCounts);
+
+    // Create dataset with all 5 rating levels, even if some have 0 counts
+    return [
+      { name: "5", value: ratingCounts["5"] }, // Excellent
+      { name: "4", value: ratingCounts["4"] }, // Very Good
+      { name: "3", value: ratingCounts["3"] }, // Good
+      { name: "2", value: ratingCounts["2"] }, // Fair
+      { name: "1", value: ratingCounts["1"] }, // Poor
+    ];
+  } catch (e) {
+    console.error("Exception in satisfaction distribution:", e);
+    return [];
   }
 }
 
-// Get canteen ratings
-export async function getCanteenRatings(): Promise<CanteenRating[]> {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await getCanteenRatingsQuery(supabase)
+// Fix the count function to use the correct Supabase API
+export async function getTotalSubmissionCount(): Promise<number> {
+  const { data, error, count } = await supabase
+    .from("SurveySubmission")
+    .select("*", { count: "exact", head: true });
 
-    if (error) {
-      console.error("Error fetching canteen ratings:", error)
-      return mockDataService.getCanteenRatings()
-    }
-
-    return data as CanteenRating[]
-  } catch (error) {
-    console.error("Error in getCanteenRatings:", error)
-    return mockDataService.getCanteenRatings()
+  if (error) {
+    console.error("Error fetching total submission count:", error);
+    return 0;
   }
-}
 
-// Get occupational health ratings
-export async function getOccupationalHealthRatings(): Promise<OccupationalHealthRating[]> {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await getOccupationalHealthRatingsQuery(supabase)
-
-    if (error) {
-      console.error("Error fetching occupational health ratings:", error)
-      return mockDataService.getOccupationalHealthRatings()
-    }
-
-    return data as OccupationalHealthRating[]
-  } catch (error) {
-    console.error("Error in getOccupationalHealthRatings:", error)
-    return mockDataService.getOccupationalHealthRatings()
-  }
-}
-
-// Get department concerns
-export async function getDepartmentConcerns(): Promise<DepartmentConcern[]> {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await getDepartmentConcernsQuery(supabase)
-
-    if (error) {
-      console.error("Error fetching department concerns:", error)
-      return mockDataService.getDepartmentConcerns()
-    }
-
-    return data as DepartmentConcern[]
-  } catch (error) {
-    console.error("Error in getDepartmentConcerns:", error)
-    return mockDataService.getDepartmentConcerns()
-  }
-}
-
-// Get location visits
-export async function getLocationVisits(): Promise<LocationVisit[]> {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await getLocationVisitsQuery(supabase)
-
-    if (error) {
-      console.error("Error fetching location visits:", error)
-      return mockDataService.getLocationVisits()
-    }
-
-    return data as LocationVisit[]
-  } catch (error) {
-    console.error("Error in getLocationVisits:", error)
-    return mockDataService.getLocationVisits()
-  }
-}
-
-// Get overall satisfaction trend
-export async function getOverallSatisfactionTrend() {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await getOverallSatisfactionTrendQuery(supabase)
-
-    if (error) {
-      console.error("Error fetching satisfaction trend:", error)
-      return mockDataService.getOverallSatisfactionTrend()
-    }
-
-    return data
-  } catch (error) {
-    console.error("Error in getOverallSatisfactionTrend:", error)
-    return mockDataService.getOverallSatisfactionTrend()
-  }
-}
-
-// Get patient type distribution
-export async function getPatientTypeDistribution() {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await getPatientTypeDistributionQuery(supabase)
-
-    if (error) {
-      console.error("Error fetching patient type distribution:", error)
-      return mockDataService.getPatientTypeDistribution()
-    }
-
-    return data
-  } catch (error) {
-    console.error("Error in getPatientTypeDistribution:", error)
-    return mockDataService.getPatientTypeDistribution()
-  }
-}
-
-// Get recommendation scores
-export async function getRecommendationScores() {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await getRecommendationScoresQuery(supabase)
-
-    if (error) {
-      console.error("Error fetching recommendation scores:", error)
-      return mockDataService.getRecommendationScores()
-    }
-
-    return data
-  } catch (error) {
-    console.error("Error in getRecommendationScores:", error)
-    return mockDataService.getRecommendationScores()
-  }
-}
-
-// Get department performance
-export async function getDepartmentPerformance() {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await getDepartmentPerformanceQuery(supabase)
-
-    if (error) {
-      console.error("Error fetching department performance:", error)
-      return mockDataService.getDepartmentPerformance()
-    }
-
-    return data
-  } catch (error) {
-    console.error("Error in getDepartmentPerformance:", error)
-    return mockDataService.getDepartmentPerformance()
-  }
-}
-
-// Get ward performance
-export async function getWardPerformance() {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await getWardPerformanceQuery(supabase)
-
-    if (error) {
-      console.error("Error fetching ward performance:", error)
-      return mockDataService.getWardPerformance()
-    }
-
-    return data
-  } catch (error) {
-    console.error("Error in getWardPerformance:", error)
-    return mockDataService.getWardPerformance()
-  }
-}
-
-// Get comment sentiment
-export async function getCommentSentiment() {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await getCommentSentimentQuery(supabase)
-
-    if (error) {
-      console.error("Error fetching comment sentiment:", error)
-      return mockDataService.getCommentSentiment()
-    }
-
-    return data
-  } catch (error) {
-    console.error("Error in getCommentSentiment:", error)
-    return mockDataService.getCommentSentiment()
-  }
-}
-
-// Get top concerns
-export async function getTopConcerns() {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await getTopConcernsQuery(supabase)
-
-    if (error) {
-      console.error("Error fetching top concerns:", error)
-      return mockDataService.getTopConcerns()
-    }
-
-    return data
-  } catch (error) {
-    console.error("Error in getTopConcerns:", error)
-    return mockDataService.getTopConcerns()
-  }
-}
-
-// Get recent surveys
-export async function getRecentSurveys() {
-  try {
-    const supabase = getSupabase()
-    const { data, error } = await getRecentSurveysQuery(supabase)
-
-    if (error) {
-      console.error("Error fetching recent surveys:", error)
-      return mockDataService.getRecentSurveys()
-    }
-
-    return data
-  } catch (error) {
-    console.error("Error in getRecentSurveys:", error)
-    return mockDataService.getRecentSurveys()
-  }
+  return count || 0;
 }
