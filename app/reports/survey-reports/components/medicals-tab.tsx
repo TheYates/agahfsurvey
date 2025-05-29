@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -45,6 +45,14 @@ import {
   ArcElement,
 } from "chart.js";
 import { Bar, Pie } from "react-chartjs-2";
+import {
+  fetchOccupationalHealthData,
+  fetchAllSurveyData,
+  type UserTypeData,
+  type LocationRating,
+  type OccupationalHealthData,
+  type DepartmentConcern,
+} from "@/app/actions/medicals-actions";
 
 // Register ChartJS components
 ChartJS.register(
@@ -58,38 +66,6 @@ ChartJS.register(
   ChartLegend,
   ArcElement
 );
-
-// Add interface for user type distribution
-interface UserTypeData {
-  name: string;
-  value: number;
-}
-
-// Add interface for location rating data
-interface LocationRating {
-  name: string;
-  rating: number;
-}
-
-// Update OccupationalHealthData interface to include userTypeDistribution
-interface OccupationalHealthData {
-  name: string;
-  satisfaction: number;
-  visitCount: number;
-  ratings: {
-    reception: number;
-    professionalism: number;
-    understanding: number;
-    "promptness-care": number;
-    "promptness-feedback": number;
-    overall: number;
-    [key: string]: number;
-  };
-  userTypeDistribution?: UserTypeData[];
-  topRatedLocations?: LocationRating[];
-  lowestRatedLocations?: LocationRating[];
-  userTypeInsight?: string;
-}
 
 interface OccupationalHealthTabProps {
   isLoading: boolean;
@@ -117,6 +93,30 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
   const [ohData, setOhData] = useState<OccupationalHealthData | null>(null);
   const [ohConcerns, setOhConcerns] = useState<DepartmentConcern[]>([]);
   const [isLoadingConcerns, setIsLoadingConcerns] = useState(false);
+
+  // Default user types data if none is provided
+  const defaultUserTypes = [
+    { name: "AGAG Employee", value: 0 },
+    { name: "AGAG/Contractor Dependant", value: 0 },
+    { name: "Other Corporate Employee", value: 0 },
+    { name: "Contractor Employee", value: 0 },
+  ];
+
+  // Use useMemo for userTypeData to ensure all user types are included
+  const userTypeData = useMemo(() => {
+    if (!ohData?.userTypeDistribution) return defaultUserTypes;
+
+    // Create a map of existing user types
+    const existingUserTypes = new Map(
+      ohData.userTypeDistribution.map((item) => [item.name, item.value])
+    );
+
+    // Create complete list including defaults
+    return defaultUserTypes.map((defaultType) => ({
+      name: defaultType.name,
+      value: existingUserTypes.get(defaultType.name) || 0,
+    }));
+  }, [ohData?.userTypeDistribution]);
 
   // Fetch occupational health data directly from the dedicated endpoint
   useEffect(() => {
@@ -269,17 +269,6 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
     }
   );
 
-  // Default user types data if none is provided
-  const defaultUserTypes = [
-    { name: "AGAG Employee", value: 0 },
-    { name: "AGAG/Contractor Dependant", value: 0 },
-    { name: "Other Corporate Employee", value: 0 },
-    { name: "Contractor Employee", value: 0 },
-  ];
-
-  // Use the data from state or fall back to defaults
-  const userTypeData = ohData.userTypeDistribution || defaultUserTypes;
-
   return (
     <div className="space-y-6">
       <Card>
@@ -302,12 +291,7 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {
-                    Array.from(new Set(ohConcerns.map((c) => c.submissionId)))
-                      .length
-                  }
-                </div>
+                <div className="text-2xl font-bold">{ohData.visitCount}</div>
                 <p className="text-xs text-muted-foreground">
                   {ohConcerns.length} total concerns from occupational health
                   visits
@@ -795,7 +779,7 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
                         </p>
                         <div className="flex justify-end mt-1">
                           <span className="text-xs text-muted-foreground">
-                            User: {concern.userType}
+                            {concern.userType}
                           </span>
                         </div>
                       </CardContent>
