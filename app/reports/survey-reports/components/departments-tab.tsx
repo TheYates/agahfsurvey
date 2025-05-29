@@ -58,6 +58,18 @@ import {
   fetchAllSurveyData,
 } from "@/app/actions/department-actions";
 
+// Import the new DepartmentDetails component
+import { DepartmentDetails } from "./department-details";
+
+// Add import for the Select components
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 interface DepartmentRating {
   reception?: string;
   professionalism?: string;
@@ -213,59 +225,34 @@ export function DepartmentsTab({
           }
         });
 
-        // Convert monthly data to trend format
-        const trend = months.map((month) => ({
-          month,
-          satisfaction:
-            monthlyData[month].count > 0
-              ? monthlyData[month].total / monthlyData[month].count
-              : null,
-        }));
-
-        // Fill null values with nearby month data or defaults
-        for (let i = 0; i < trend.length; i++) {
-          if (trend[i].satisfaction === null) {
-            // Look for previous or next valid value
-            let prevValue = null;
-            let nextValue = null;
-
-            for (let j = i - 1; j >= 0; j--) {
-              if (trend[j].satisfaction !== null) {
-                prevValue = trend[j].satisfaction;
-                break;
-              }
-            }
-
-            for (let j = i + 1; j < trend.length; j++) {
-              if (trend[j].satisfaction !== null) {
-                nextValue = trend[j].satisfaction;
-                break;
-              }
-            }
-
-            if (prevValue !== null && nextValue !== null) {
-              trend[i].satisfaction = (prevValue + nextValue) / 2;
-            } else if (prevValue !== null) {
-              trend[i].satisfaction = prevValue;
-            } else if (nextValue !== null) {
-              trend[i].satisfaction = nextValue;
-            } else {
-              trend[i].satisfaction = 3.5; // Default fallback
-            }
-          }
-        }
+        // Convert monthly data to trend format and only include months with actual data
+        const trend = months
+          .map((month) => ({
+            month,
+            satisfaction:
+              monthlyData[month].count > 0
+                ? Math.round(
+                    (monthlyData[month].total / monthlyData[month].count) * 10
+                  ) / 10
+                : null,
+          }))
+          .filter((item) => item.satisfaction !== null);
 
         setSatisfactionTrend(trend);
       } catch (error) {
-        // Provide fallback data
-        setSatisfactionTrend([
-          { month: "Jan", satisfaction: 0 },
-          { month: "Feb", satisfaction: 0 },
-          { month: "Mar", satisfaction: 0 },
-          { month: "Apr", satisfaction: 0 },
-          { month: "May", satisfaction: 0 },
-          { month: "Jun", satisfaction: 0 },
-        ]);
+        console.error("Error generating satisfaction trend:", error);
+        // Provide minimal fallback data - just one data point for the current month
+        const currentMonth = new Date().toLocaleString("default", {
+          month: "short",
+        });
+        const fallbackData = [
+          {
+            month: currentMonth,
+            satisfaction: selectedDepartment?.satisfaction || 3.5,
+          },
+        ];
+        console.log("Using fallback satisfaction trend data:", fallbackData);
+        setSatisfactionTrend(fallbackData);
       }
     };
 
@@ -436,417 +423,51 @@ export function DepartmentsTab({
         .sort((a, b) => b.satisfaction - a.satisfaction)
         .findIndex((dept) => dept.id === selectedDepartment.id) + 1;
 
-    // Create ranking suffix
-    const getRankingSuffix = (ranking: number) => {
-      if (ranking === 1) return "st";
-      if (ranking === 2) return "nd";
-      if (ranking === 3) return "rd";
-      return "th";
-    };
-
-    // Get department concerns for the selected department
-    const departmentConcernsForSelected = departmentConcerns.filter(
-      (concern) => concern.locationName === selectedDepartment.name
-    );
-
-    const departmentFeedbackForSelected = [
-      ...departmentConcernsForSelected.map((concern) => ({
-        id: `concern-${concern.submissionId}`,
-        type: "concern",
-        submissionId: concern.submissionId,
-        submittedAt: concern.submittedAt,
-        locationName: concern.locationName,
-        text: concern.concern,
-        userType: concern.userType,
-      })),
-      ...departmentRecommendations
-        .filter((rec) =>
-          rec.recommendation
-            .toLowerCase()
-            .includes(selectedDepartment.name.toLowerCase())
-        )
-        .map((rec) => ({
-          id: `rec-${rec.submissionId}`,
-          type: "recommendation",
-          submissionId: rec.submissionId,
-          submittedAt: rec.submittedAt,
-          locationName: selectedDepartment.name,
-          text: rec.recommendation,
-          userType: rec.userType,
-        })),
-    ].sort(
-      (a, b) =>
-        new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-    );
-
-    // Calculate metrics from real data
-    // Get average visit time from visit time data if available
-    let avgVisitTime = 0;
-    if (visitTimeData.length > 0) {
-      // Calculate weighted average based on counts
-      const totalSamples = visitTimeData.reduce(
-        (sum, item) => sum + item.count,
-        0
-      );
-      if (totalSamples > 0) {
-        // Each time period has different typical durations, this is an estimation
-        const timeWeights = {
-          "less-than-month": 15, // 15 minutes average for recent visits
-          "one-two-months": 20,
-          "three-six-months": 25,
-          "more-than-six-months": 30,
-        };
-
-        avgVisitTime = Math.round(
-          visitTimeData.reduce((sum, item) => {
-            const weight =
-              timeWeights[item.id as keyof typeof timeWeights] || 20;
-            return sum + weight * item.count;
-          }, 0) / totalSamples
-        );
-      } else {
-        avgVisitTime = 20; // Default if no data
-      }
-    } else {
-      // Fallback to estimation based on satisfaction
-      avgVisitTime = 15 + Math.round(selectedDepartment.satisfaction * 2);
-    }
-
-    // Get returning rate from patient type data if available
-    let returningRate = 0;
-    if (patientTypeData) {
-      const totalPatients =
-        patientTypeData.newPatients.count +
-        patientTypeData.returningPatients.count;
-      if (totalPatients > 0) {
-        returningRate = Math.round(
-          (patientTypeData.returningPatients.count / totalPatients) * 100
-        );
-      } else {
-        returningRate = Math.round(selectedDepartment.recommendRate); // Default to recommend rate
-      }
-    } else {
-      // Fallback to department's recommend rate
-      returningRate = Math.round(selectedDepartment.recommendRate);
-    }
-
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1"
-            onClick={() => setSelectedDepartment(null)}
-          >
-            <ArrowLeft size={16} />
-            <span>Back to All Departments</span>
-          </Button>
-          <Badge variant="outline" className="text-sm py-1 px-3">
-            {selectedDepartment.visitCount} responses
-          </Badge>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Building size={20} />
-              {selectedDepartment.name}
-            </CardTitle>
-            <CardDescription>
-              Department performance overview based on{" "}
-              {selectedDepartment.visitCount} survey responses
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Overall Satisfaction
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-2xl font-bold">
-                      {selectedDepartment.satisfaction.toFixed(1)}
-                    </div>
-                    <Badge
-                      className={cn(
-                        selectedDepartment.satisfaction >= 4
-                          ? "bg-green-100 text-green-800"
-                          : selectedDepartment.satisfaction >= 3
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-red-100 text-red-800"
-                      )}
-                    >
-                      {valueToRating(selectedDepartment.satisfaction)}
-                    </Badge>
-                  </div>
-                  <Progress
-                    value={selectedDepartment.satisfaction * 20}
-                    className="h-2"
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Department Ranking
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center">
-                    <div className="text-2xl font-bold">
-                      {departmentRanking}
-                      <span className="text-sm">
-                        {getRankingSuffix(departmentRanking)}
-                      </span>
-                    </div>
-                    <span className="text-xs ml-2 text-muted-foreground">
-                      of {departmentsOnly.length} departments
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Based on overall satisfaction rating
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    <div className="flex items-center gap-1">
-                      <Clock size={16} />
-                      Response Share
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {Math.round(
-                      (selectedDepartment.visitCount / totalResponses) * 100
-                    )}
-                    %
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Share of total survey responses
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    <div className="flex items-center gap-1">
-                      <RefreshCcw size={16} />
-                      Returning Rate
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{returningRate}%</div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Percentage of returning patients
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Detailed Ratings</CardTitle>
-                <CardDescription>
-                  Performance breakdown by category
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  {Object.entries(selectedDepartment.ratings).map(
-                    ([key, value]) => {
-                      // Find matching category label
-                      const category = ratingCategories.find(
-                        (cat) => cat.id === key
-                      ) || {
-                        id: key,
-                        label: key
-                          .replace(/-/g, " ")
-                          .replace(/\b\w/g, (l) => l.toUpperCase()),
-                      };
-
-                      return (
-                        <div key={key} className="space-y-1">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium">
-                              {category.label}
-                            </span>
-                            <span className="text-sm font-medium">
-                              {value.toFixed(1)}/5.0
-                              <span className="text-xs ml-1 text-muted-foreground">
-                                ({valueToRating(value)})
-                              </span>
-                            </span>
-                          </div>
-                          <Progress value={value * 20} className="h-2" />
-                        </div>
-                      );
-                    }
-                  )}
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium mb-3">
-                    Ratings by Category
-                  </h4>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={Object.entries(selectedDepartment.ratings).map(
-                          ([key, value]) => {
-                            // Find matching category label
-                            const category = ratingCategories.find(
-                              (cat) => cat.id === key
-                            ) || {
-                              id: key,
-                              label: key
-                                .replace(/-/g, " ")
-                                .replace(/\b\w/g, (l) => l.toUpperCase()),
-                            };
-                            return {
-                              category: category.label,
-                              rating: value,
-                            };
-                          }
-                        )}
-                        margin={{ top: 10, right: 30, left: 0, bottom: 60 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis
-                          dataKey="category"
-                          angle={-45}
-                          textAnchor="end"
-                          height={70}
-                          tick={{ fontSize: 12 }}
-                        />
-                        <YAxis domain={[0, 5]} />
-                        <Tooltip
-                          formatter={(value) => [
-                            typeof value === "number"
-                              ? value.toFixed(1)
-                              : value,
-                            "Rating",
-                          ]}
-                        />
-                        <Bar
-                          dataKey="rating"
-                          fill="#7c3aed"
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-medium mb-3">
-                    Satisfaction Trend (Last 6 Months)
-                  </h4>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={satisfactionTrend}
-                        margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis domain={[0, 5]} />
-                        <Tooltip
-                          formatter={(value) => [
-                            typeof value === "number"
-                              ? value.toFixed(1)
-                              : value,
-                            "Satisfaction",
-                          ]}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="satisfaction"
-                          stroke="#7c3aed"
-                          strokeWidth={2}
-                          dot={{ r: 4 }}
-                          activeDot={{ r: 6 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="space-y-2">
-              <h3 className="text-lg font-medium">
-                Recent Department Feedback
-              </h3>
-              {isLoadingConcerns ? (
-                <LoadingSpinner />
-              ) : departmentFeedbackForSelected.length > 0 ? (
-                departmentFeedbackForSelected.map((feedback, index) => (
-                  <div
-                    key={`${feedback.type}-${feedback.submissionId}-${index}`}
-                    className={`border p-3 rounded-md ${
-                      feedback.type === "recommendation"
-                        ? "border-l-4 border-l-blue-500"
-                        : "border-l-4 border-l-amber-500"
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-1">
-                      <Badge
-                        variant={
-                          feedback.type === "recommendation"
-                            ? "outline"
-                            : "secondary"
-                        }
-                        className="text-xs"
-                      >
-                        {feedback.type === "recommendation"
-                          ? "Recommendation"
-                          : "Concern"}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(feedback.submittedAt).toLocaleDateString(
-                          "en-US",
-                          { year: "numeric", month: "long", day: "numeric" }
-                        )}
-                      </span>
-                    </div>
-                    <p className="italic text-sm text-muted-foreground">
-                      "{feedback.text}"
-                    </p>
-                    <div className="flex justify-end mt-1">
-                      <span className="text-xs text-muted-foreground">
-                        User: {feedback.userType}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="border p-4 rounded-md">
-                  <p className="text-sm text-muted-foreground">
-                    No specific feedback reported for this department.
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <DepartmentDetails
+        selectedDepartment={selectedDepartment}
+        departmentRanking={departmentRanking}
+        departmentsOnly={departmentsOnly}
+        departmentConcerns={departmentConcerns}
+        departmentRecommendations={departmentRecommendations}
+        ratingCategories={ratingCategories}
+        satisfactionTrend={satisfactionTrend}
+        onBackClick={() => setSelectedDepartment(null)}
+        valueToRating={valueToRating}
+      />
     );
   }
 
   // Department overview and list
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-medium">Department Performance Overview</h2>
+        <div className="w-[280px]">
+          <Select
+            onValueChange={(value) => {
+              const dept = departmentsOnly.find((d) => d.id === value);
+              if (dept) {
+                setSelectedDepartment(dept);
+              }
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select a department" />
+            </SelectTrigger>
+            <SelectContent>
+              {departmentsOnly
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((dept) => (
+                  <SelectItem key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">

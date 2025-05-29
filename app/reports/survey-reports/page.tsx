@@ -91,6 +91,8 @@ import { MedicalsTab } from "./components/medicals-tab";
 import { FeedbackTab } from "./components/feedback-tab";
 import { fetchDepartmentTabData } from "@/app/actions/department-actions";
 import { Department } from "@/app/actions/department-actions";
+import { Ward, WardConcern, Recommendation } from "@/app/actions/ward-actions";
+import { fetchWardTabData } from "@/app/actions/ward-actions";
 
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
@@ -240,7 +242,10 @@ export default function SurveyReportsPage() {
   // Add state for departments
   const [departments, setDepartments] = useState<Department[]>([]);
 
-  // Add this function to fetch data from the server
+  // Add state for wards
+  const [wards, setWards] = useState<Ward[]>([]);
+
+  // Update the fetchData function to also fetch ward data
   const fetchData = async (dateRangeOption: string) => {
     try {
       setIsLoading(true);
@@ -297,47 +302,38 @@ export default function SurveyReportsPage() {
         userTypeData: fetchedOverviewData.userTypeData,
       });
 
-      // Create mock locations for demo purposes
-      // In a real app, this would come from a database
-      const mockLocations: (DepartmentData | WardData)[] = [
-        {
-          id: "1",
-          name: "Emergency Room",
-          type: "department",
-          satisfaction: 4.2,
-          visitCount: 120,
-          recommendRate: 85,
-        },
-        {
-          id: "2",
-          name: "X-Ray Unit",
-          type: "department",
-          satisfaction: 3.8,
-          visitCount: 75,
-          recommendRate: 72,
-        },
-        {
-          id: "3",
-          name: "General Ward",
-          type: "ward",
-          satisfaction: 4.5,
-          visitCount: 50,
-          recommendRate: 90,
-        },
-        {
-          id: "4",
-          name: "Pharmacy",
-          type: "department",
-          satisfaction: 3.5,
-          visitCount: 200,
-          recommendRate: 65,
-        },
+      // Fetch department data using server action
+      const departmentData = await fetchDepartmentTabData();
+      setDepartments(departmentData.departments);
+
+      // Fetch ward data using server action
+      const wardData = await fetchWardTabData();
+      setWards(wardData.wards);
+
+      // Now combine departments and wards for locations
+      const combinedLocations: (DepartmentData | WardData)[] = [
+        ...departmentData.departments.map((dept) => ({
+          id: dept.id,
+          name: dept.name,
+          type: "department" as const,
+          satisfaction: dept.satisfaction,
+          visitCount: dept.visitCount,
+          recommendRate: dept.recommendRate,
+        })),
+        ...wardData.wards.map((ward) => ({
+          id: ward.id,
+          name: ward.name,
+          type: "ward" as const,
+          satisfaction: ward.satisfaction,
+          visitCount: ward.visitCount,
+          recommendRate: ward.recommendRate,
+        })),
       ];
 
-      // Set locations with mock data
-      setLocations(mockLocations);
+      // Set locations with real data
+      setLocations(combinedLocations);
 
-      // Set state for each section with the real data
+      // Continue with the rest of the data handling
       setVisitPurposeData(fetchedOverviewData.visitPurposeData || null);
 
       // Set patientTypeData with real data or fallback to dummy data with named departments if none available
@@ -439,14 +435,11 @@ export default function SurveyReportsPage() {
           totalWhyNotRecommend: 0,
         });
       }
-
-      // Fetch department data
-      const departmentData = await fetchDepartmentTabData();
-      setDepartments(departmentData.departments);
     } catch (error) {
       console.error("Error fetching data:", error);
       // Reset to initial state if there's an error
       setDepartments([]);
+      setWards([]);
       setData({
         surveyData: [],
         recommendations: [],
@@ -714,8 +707,8 @@ export default function SurveyReportsPage() {
         </div>
 
         {/* Global Filters */}
-        <Card className="mb-6">
-          <CardContent className="py-4">
+        <Card className="mb-3">
+          <CardContent className="py-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar size={16} />
@@ -822,10 +815,7 @@ export default function SurveyReportsPage() {
 
           {/* Add Wards Tab Content */}
           <TabsContent value="wards" className="space-y-4">
-            <WardsTab
-              isLoading={isLoading}
-              wards={locations.filter((loc) => loc.type === "ward") as any}
-            />
+            <WardsTab isLoading={isLoading} wards={wards} />
           </TabsContent>
 
           {/* Canteen Tab Content */}
