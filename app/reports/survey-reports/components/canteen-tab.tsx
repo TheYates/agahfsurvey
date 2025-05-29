@@ -35,28 +35,13 @@ import {
   ArcElement,
 } from "chart.js";
 import { Bar, Pie } from "react-chartjs-2";
-
-interface CanteenData {
-  id: string;
-  name: string;
-  visitCount: number;
-  satisfaction: number;
-  recommendRate: number;
-  ratings: {
-    reception: number;
-    professionalism: number;
-    understanding: number;
-    "promptness-care": number;
-    "promptness-feedback": number;
-    "food-quality": number;
-    overall: number;
-  };
-}
-
-interface CanteenTabProps {
-  isLoading: boolean;
-  departments: any[];
-}
+import {
+  fetchCanteenData,
+  fetchCanteenConcerns,
+  getCanteenSubmissionCount,
+  CanteenData,
+  DepartmentConcern,
+} from "@/app/actions/canteen-actions";
 
 // Convert numeric value to rating text
 const valueToRating = (value: number): string => {
@@ -89,6 +74,11 @@ ChartJS.register(
   ArcElement
 );
 
+interface CanteenTabProps {
+  isLoading: boolean;
+  departments: any[];
+}
+
 export function CanteenTab({ isLoading, departments }: CanteenTabProps) {
   const [canteenData, setCanteenData] = useState<CanteenData | null>(null);
   const [canteenConcerns, setCanteenConcerns] = useState<DepartmentConcern[]>(
@@ -96,331 +86,37 @@ export function CanteenTab({ isLoading, departments }: CanteenTabProps) {
   );
   const [isLoadingConcerns, setIsLoadingConcerns] = useState(false);
   const [foodTypeData, setFoodTypeData] = useState<any[]>([]);
+  const [submissionCount, setSubmissionCount] = useState<number>(0);
 
-  // Find canteen data from departments
+  // Fetch canteen data
   useEffect(() => {
-    if (departments && departments.length > 0) {
-      // Try to find the canteen with more flexible matching
-      const canteen = departments.find(
-        (dept) =>
-          dept.name === "Canteen Services" ||
-          dept.name === "Canteen" ||
-          dept.name.toLowerCase().includes("canteen") ||
-          dept.name.toLowerCase().includes("cafeteria") ||
-          dept.name.toLowerCase().includes("dining") ||
-          dept.name.toLowerCase().includes("food") ||
-          dept.type === "canteen"
-      );
-
-      if (canteen) {
-        setCanteenData({
-          id: canteen.id,
-          name: canteen.name,
-          visitCount: canteen.visitCount,
-          satisfaction: canteen.satisfaction,
-          recommendRate: canteen.recommendRate,
-          ratings: canteen.ratings,
-        });
-      } else {
-        // No canteen found - check for any departments with canteen ratings
-
-        // Collect all departments that have canteen-related ratings
-        let totalVisits = 0;
-        let totalSatisfaction = 0;
-        let totalRecommend = 0;
-        const combinedRatings = {
-          reception: 0,
-          professionalism: 0,
-          understanding: 0,
-          "promptness-care": 0,
-          "promptness-feedback": 0,
-          "food-quality": 0,
-          overall: 0,
-        };
-        let hasCanteenRatings = false;
-
-        // Check all departments for canteen ratings
-        departments.forEach((dept) => {
-          if (dept.ratings && dept.ratings["food-quality"] !== undefined) {
-            hasCanteenRatings = true;
-            totalVisits += dept.visitCount || 0;
-            totalSatisfaction +=
-              (dept.satisfaction || 0) * (dept.visitCount || 1);
-            totalRecommend +=
-              (dept.recommendRate || 0) * (dept.visitCount || 1);
-
-            // Combine ratings
-            Object.keys(combinedRatings).forEach((key) => {
-              if (dept.ratings[key] !== undefined) {
-                combinedRatings[key as keyof typeof combinedRatings] +=
-                  (dept.ratings[key] || 0) * (dept.visitCount || 1);
-              }
-            });
-          }
-        });
-
-        if (hasCanteenRatings && totalVisits > 0) {
-          // Average the values
-          Object.keys(combinedRatings).forEach((key) => {
-            combinedRatings[key as keyof typeof combinedRatings] =
-              combinedRatings[key as keyof typeof combinedRatings] /
-              totalVisits;
-          });
-
-          // Add slight variations to make data look more realistic
-          const baseAvgSatisfaction = totalSatisfaction / totalVisits;
-          const variedRatings = {
-            reception: Math.max(
-              1,
-              Math.min(
-                5,
-                combinedRatings.reception + (Math.random() * 0.6 - 0.3)
-              )
-            ),
-            professionalism: Math.max(
-              1,
-              Math.min(
-                5,
-                combinedRatings.professionalism + (Math.random() * 0.6 - 0.3)
-              )
-            ),
-            understanding: Math.max(
-              1,
-              Math.min(
-                5,
-                combinedRatings.understanding + (Math.random() * 0.6 - 0.3)
-              )
-            ),
-            "promptness-care": Math.max(
-              1,
-              Math.min(
-                5,
-                combinedRatings["promptness-care"] + (Math.random() * 0.6 - 0.3)
-              )
-            ),
-            "promptness-feedback": Math.max(
-              1,
-              Math.min(
-                5,
-                combinedRatings["promptness-feedback"] +
-                  (Math.random() * 0.6 - 0.3)
-              )
-            ),
-            "food-quality": Math.max(
-              1,
-              Math.min(5, combinedRatings["food-quality"] - Math.random() * 0.3)
-            ), // Food quality often rated slightly lower
-            overall: combinedRatings.overall,
-          };
-
-          setCanteenData({
-            id: "canteen-combined",
-            name: "Canteen Services",
-            visitCount: totalVisits,
-            satisfaction: totalSatisfaction / totalVisits,
-            recommendRate: totalRecommend / totalVisits,
-            ratings: variedRatings as CanteenData["ratings"],
-          });
-        } else {
-          // Look for any department with food service ratings across all departments
-          const deptWithFoodRatings = departments.find(
-            (dept) =>
-              dept.ratings &&
-              (dept.name.toLowerCase().includes("food") ||
-                dept.ratings["food-quality"] !== undefined)
-          );
-
-          if (deptWithFoodRatings) {
-            setCanteenData({
-              id: deptWithFoodRatings.id,
-              name: "Canteen Services",
-              visitCount: deptWithFoodRatings.visitCount,
-              satisfaction: deptWithFoodRatings.satisfaction,
-              recommendRate: deptWithFoodRatings.recommendRate,
-              ratings: deptWithFoodRatings.ratings as CanteenData["ratings"],
-            });
-          } else {
-            // Create a dedicated entry for canteen if none exists
-            // Use real survey data from concerns to at least show submissions
-            fetchAllSurveyData()
-              .then((surveyData) => {
-                // Since there's no explicit canteen department, use all surveys as potential canteen data
-
-                // For now, consider all submissions as potentially relevant to canteen
-                const canteenSurveys = surveyData;
-
-                const visitCount = canteenSurveys.length;
-
-                if (visitCount > 0) {
-                  // Calculate average ratings if available
-                  let satisfactionSum = 0;
-                  let recommendCount = 0;
-                  const ratings = {
-                    reception: 0,
-                    professionalism: 0,
-                    understanding: 0,
-                    "promptness-care": 0,
-                    "promptness-feedback": 0,
-                    "food-quality": 0,
-                    overall: 0,
-                  };
-
-                  // Use satisfaction directly from the survey submissions
-                  canteenSurveys.forEach((survey) => {
-                    // Add to satisfaction total if available
-                    if (typeof survey.satisfaction === "number") {
-                      satisfactionSum += survey.satisfaction;
-                    }
-
-                    // Count recommendations
-                    if (survey.wouldRecommend === true) {
-                      recommendCount++;
-                    }
-                  });
-
-                  // For now, distribute the overall satisfaction across all rating categories
-                  // since we don't have granular ratings
-                  const avgSatisfaction = satisfactionSum / visitCount;
-
-                  // Create slightly varied ratings instead of same value for all
-                  const ratingVariations = {
-                    reception: Math.max(
-                      1,
-                      Math.min(5, avgSatisfaction + (Math.random() * 0.8 - 0.4))
-                    ),
-                    professionalism: Math.max(
-                      1,
-                      Math.min(5, avgSatisfaction + (Math.random() * 0.8 - 0.4))
-                    ),
-                    understanding: Math.max(
-                      1,
-                      Math.min(5, avgSatisfaction + (Math.random() * 0.8 - 0.4))
-                    ),
-                    "promptness-care": Math.max(
-                      1,
-                      Math.min(5, avgSatisfaction + (Math.random() * 0.8 - 0.4))
-                    ),
-                    "promptness-feedback": Math.max(
-                      1,
-                      Math.min(5, avgSatisfaction + (Math.random() * 0.8 - 0.4))
-                    ),
-                    "food-quality": Math.max(
-                      1,
-                      Math.min(5, avgSatisfaction - Math.random() * 0.5)
-                    ), // Typically slightly lower than overall
-                    overall: avgSatisfaction,
-                  };
-
-                  // Calculate recommendation rate
-                  const recommendRate = (recommendCount / visitCount) * 100;
-
-                  setCanteenData({
-                    id: "canteen-direct",
-                    name: "Canteen Services",
-                    visitCount: visitCount,
-                    satisfaction: avgSatisfaction || 0,
-                    recommendRate: recommendRate,
-                    ratings: ratingVariations as CanteenData["ratings"],
-                  });
-                } else {
-                  // No canteen data at all
-                  setCanteenData({
-                    id: "canteen-empty",
-                    name: "Canteen Services",
-                    visitCount: 0,
-                    satisfaction: 0,
-                    recommendRate: 0,
-                    ratings: {
-                      reception: 0,
-                      professionalism: 0,
-                      understanding: 0,
-                      "promptness-care": 0,
-                      "promptness-feedback": 0,
-                      "food-quality": 0,
-                      overall: 0,
-                    },
-                  });
-                }
-              })
-              .catch((error) => {
-                console.error("Error fetching survey data for canteen:", error);
-                // Fallback to empty data
-                setCanteenData({
-                  id: "canteen-error",
-                  name: "Canteen Services",
-                  visitCount: 0,
-                  satisfaction: 0,
-                  recommendRate: 0,
-                  ratings: {
-                    reception: 0,
-                    professionalism: 0,
-                    understanding: 0,
-                    "promptness-care": 0,
-                    "promptness-feedback": 0,
-                    "food-quality": 0,
-                    overall: 0,
-                  },
-                });
-              });
-          }
+    const getCanteenData = async () => {
+      try {
+        const data = await fetchCanteenData(departments);
+        if (data) {
+          setCanteenData(data);
         }
-      }
 
-      // Food type data will be populated from real metrics in the future
-      // For now, we'll leave it empty to show "No data" rather than using mock data
-      setFoodTypeData([]);
+        // Get actual count of canteen submissions
+        const count = await getCanteenSubmissionCount();
+        setSubmissionCount(count);
+      } catch (error) {
+        console.error("Error fetching canteen data:", error);
+      }
+    };
+
+    if (!isLoading && departments && departments.length > 0) {
+      getCanteenData();
     }
-  }, [departments]);
+  }, [departments, isLoading]);
 
   // Fetch canteen concerns
   useEffect(() => {
     const loadCanteenConcerns = async () => {
       setIsLoadingConcerns(true);
       try {
-        // Get both concerns and general survey data
-        const [allConcerns, allSurveys] = await Promise.all([
-          fetchDepartmentConcerns(),
-          fetchAllSurveyData(),
-        ]);
-
-        // Filter concerns that match canteen
-        const canteenSpecificConcerns = allConcerns.filter(
-          (concern) =>
-            concern.locationName?.toLowerCase().includes("canteen") ||
-            concern.locationName?.toLowerCase().includes("cafeteria") ||
-            concern.locationName?.toLowerCase().includes("dining") ||
-            concern.visitPurpose === "Dining" ||
-            (concern.concern &&
-              (concern.concern.toLowerCase().includes("food") ||
-                concern.concern.toLowerCase().includes("meal") ||
-                concern.concern.toLowerCase().includes("canteen")))
-        );
-
-        // If no specific canteen concerns found, use general survey recommendations
-        if (canteenSpecificConcerns.length === 0 && allSurveys.length > 0) {
-          // Convert survey recommendations to concern format
-          const concernsFromRecommendations = allSurveys
-            .filter(
-              (survey) =>
-                survey.recommendation && survey.recommendation.trim() !== ""
-            )
-            .map((survey) => ({
-              submissionId: survey.submissionId,
-              submittedAt: survey.submittedAt,
-              locationName: "Canteen Services", // Assign to canteen
-              concern: survey.recommendation,
-              userType: survey.userType || "Patient",
-              visitPurpose: survey.visitPurpose || "Dining",
-              patientType: survey.patientType || "Patient",
-              severity: 2,
-            }));
-
-          setCanteenConcerns(concernsFromRecommendations);
-        } else if (canteenSpecificConcerns.length > 0) {
-          setCanteenConcerns(canteenSpecificConcerns);
-        } else {
-          setCanteenConcerns([]);
-        }
+        const concerns = await fetchCanteenConcerns();
+        setCanteenConcerns(concerns);
       } catch (error) {
         console.error("Error fetching canteen concerns:", error);
         setCanteenConcerns([]);
@@ -495,8 +191,8 @@ export function CanteenTab({ isLoading, departments }: CanteenTabProps) {
             {canteenData.name}
           </CardTitle>
           <CardDescription>
-            Canteen Services performance overview based on{" "}
-            {canteenData.visitCount} survey responses
+            Canteen Services performance overview based on {submissionCount}{" "}
+            survey responses
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -508,15 +204,9 @@ export function CanteenTab({ isLoading, departments }: CanteenTabProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {
-                    canteenConcerns.filter((c) =>
-                      c.locationName?.toLowerCase().includes("canteen")
-                    ).length
-                  }
-                </div>
+                <div className="text-2xl font-bold">{submissionCount}</div>
                 <p className="text-xs text-muted-foreground">
-                  out of {canteenData.visitCount} total survey responses
+                  with {canteenConcerns.length} providing feedback
                 </p>
               </CardContent>
             </Card>
