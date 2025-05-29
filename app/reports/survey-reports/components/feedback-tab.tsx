@@ -36,6 +36,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import {
+  fetchRecommendations,
+  fetchNotRecommendReasons,
+  fetchDepartmentConcerns,
+  type Recommendation,
+  type NotRecommendReason,
+  type DepartmentConcern,
+} from "@/app/actions/feedback-actions";
 
 interface FeedbackTabProps {
   isLoading: boolean;
@@ -90,10 +98,7 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
 
   // Get unique locations from all feedback types
   const allLocations = Array.from(
-    new Set([
-      ...concerns.map((c) => c.locationName),
-      ...notRecommendReasons.flatMap((r) => r.locations || []),
-    ])
+    new Set([...concerns.map((c) => c.locationName)])
   ).sort();
 
   // Filter concerns based on selected filters
@@ -131,10 +136,6 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
 
   // Filter notRecommendReasons based on selected filters
   const filteredReasons = notRecommendReasons
-    .filter(
-      (reason) =>
-        locationFilter === "all" || reason.locations?.includes(locationFilter)
-    )
     .filter(
       (reason) =>
         !searchQuery.trim() ||
@@ -344,46 +345,26 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
             </Card>
           </div>
 
-          {/* Filters */}
+          {/* Feedback tabs and content */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                Filter Feedback
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <label className="text-sm font-medium block mb-2">
-                    Location
-                  </label>
-                  <Select
-                    value={locationFilter}
-                    onValueChange={setLocationFilter}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Locations</SelectItem>
-                      {allLocations.map((location) => (
-                        <SelectItem key={location} value={location}>
-                          {location}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            <CardHeader>
+              <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare size={18} />
+                    Raw Feedback Responses
+                  </CardTitle>
+                  <CardDescription>
+                    Actual text responses from patients
+                  </CardDescription>
                 </div>
 
-                <div className="flex-1">
-                  <label className="text-sm font-medium block mb-2">
-                    Search
-                  </label>
+                {/* Make search fully responsive */}
+                <div className="w-full md:w-1/3">
                   <div className="relative">
                     <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search feedback..."
+                      placeholder="Search all feedback..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-8"
@@ -391,19 +372,6 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Feedback tabs and content */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare size={18} />
-                Raw Feedback Responses
-              </CardTitle>
-              <CardDescription>
-                Actual text responses from patients
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs
@@ -416,7 +384,7 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
                     Department Concerns
                   </TabsTrigger>
                   <TabsTrigger value="recommendations">
-                    Recommendations
+                    Service Recommendations
                   </TabsTrigger>
                   <TabsTrigger value="why-not">Why Not Recommend</TabsTrigger>
                 </TabsList>
@@ -426,11 +394,37 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <h3 className="text-lg font-medium">
-                        Department Concerns
+                        Department Concerns/Recommendations
                       </h3>
                       <div className="text-sm text-muted-foreground">
                         {filteredConcerns.length} items found
                       </div>
+                    </div>
+
+                    {/* Add location filter here */}
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Filter className="h-4 w-4 text-muted-foreground" />
+                        <label className="text-sm font-medium">
+                          Filter by Location
+                        </label>
+                      </div>
+                      <Select
+                        value={locationFilter}
+                        onValueChange={setLocationFilter}
+                      >
+                        <SelectTrigger className="w-full md:w-64">
+                          <SelectValue placeholder="Select location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Locations</SelectItem>
+                          {allLocations.map((location) => (
+                            <SelectItem key={location} value={location}>
+                              {location}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     {items.length > 0 && activeTab === "concerns" ? (
@@ -512,7 +506,7 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <h3 className="text-lg font-medium">
-                        General Recommendations
+                        Service Recommendations
                       </h3>
                       <div className="text-sm text-muted-foreground">
                         {filteredRecommendations.length} items found

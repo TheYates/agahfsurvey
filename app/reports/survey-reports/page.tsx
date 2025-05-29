@@ -661,7 +661,7 @@ export default function SurveyReportsPage() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <Image
-                src="/agahflogo.svg"
+                src="/agahflogo white.svg"
                 alt="AGA Health Foundation Logo"
                 width={50}
                 height={50}
