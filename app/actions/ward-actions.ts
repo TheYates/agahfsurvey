@@ -33,15 +33,7 @@ export interface Ward {
 export interface WardConcern {
   submissionId: string;
   locationName: string;
-  concern: string;
-  submittedAt: string;
-  userType: string;
-}
-
-// Interface for recommendations
-export interface Recommendation {
-  submissionId: string;
-  recommendation: string;
+  concern: string; // Contains both concerns and recommendations
   submittedAt: string;
   userType: string;
 }
@@ -103,68 +95,114 @@ const ratingToValue = (rating: string): number => {
 
 /**
  * Fetches all wards with their satisfaction ratings
+ * @param limit Optional limit on number of wards to return (for pagination)
+ * @param offset Optional offset for pagination
+ * @returns Object containing wards array and total count
  */
-export async function fetchWards() {
-  const supabase = createServerClient();
+export async function fetchWards(
+  limit: number = 5,
+  offset: number = 0
+): Promise<{ wards: Ward[]; total: number }> {
+  const supabase = await createServerClient();
 
   try {
-    // Get all locations that are wards
+    console.time("fetchWards");
+
+    // Get all locations that are wards - only select the fields we need
+    // Comment out pagination to load all wards at once
+    console.time("fetchWards:locations");
     const { data: locations, error: locationsError } = await supabase
       .from("Location")
-      .select("*")
+      .select("id, name")
       .eq("locationType", "ward");
+    // Comment out pagination
+    //.range(offset, offset + limit - 1); // Apply range for pagination
+    console.timeEnd("fetchWards:locations");
 
     if (locationsError) {
       console.error("Error fetching ward locations:", locationsError);
-      return [];
+      console.timeEnd("fetchWards");
+      return { wards: [], total: 0 };
     }
 
     if (!locations || locations.length === 0) {
-      return [];
+      console.timeEnd("fetchWards");
+      return { wards: [], total: 0 };
     }
+
+    // Get count of total wards for pagination info
+    const { count, error: countError } = await supabase
+      .from("Location")
+      .select("id", { count: "exact" })
+      .eq("locationType", "ward");
+
+    if (countError) {
+      console.error("Error counting wards:", countError);
+    }
+
+    // Get ALL submissions for ALL wards in a SINGLE query
+    console.time("fetchWards:submissions");
+    const locationIds = locations.map((loc) => loc.id);
+
+    const { data: allSubmissionLocations, error: submissionsError } =
+      await supabase
+        .from("SubmissionLocation")
+        .select(
+          `
+        locationId,
+        submission:submissionId (
+          id,
+          submittedAt,
+          wouldRecommend,
+          Rating (
+            locationId,
+            reception,
+            professionalism,
+            understanding,
+            promptnessCare,
+            promptnessFeedback,
+            overall,
+            admission,
+            nurseProfessionalism,
+            doctorProfessionalism,
+            foodQuality,
+            discharge
+          )
+        )
+      `
+        )
+        .in("locationId", locationIds);
+    console.timeEnd("fetchWards:submissions");
+
+    if (submissionsError) {
+      console.error(`Error fetching submissions:`, submissionsError);
+      console.timeEnd("fetchWards");
+      return { wards: [], total: count || 0 };
+    }
+
+    // Group submissions by locationId for faster processing
+    console.time("fetchWards:process");
+
+    console.time("fetchWards:process:grouping");
+    const submissionsByLocation: Record<string, any[]> = {};
+    locationIds.forEach((id) => {
+      submissionsByLocation[id] = [];
+    });
+
+    allSubmissionLocations?.forEach((sl) => {
+      if (submissionsByLocation[sl.locationId]) {
+        submissionsByLocation[sl.locationId].push(sl);
+      }
+    });
+    console.timeEnd("fetchWards:process:grouping");
 
     // Create result array to hold ward data
     const wardsData: Ward[] = [];
 
-    // For each location, get its ratings and submission counts
+    // Process each location with its grouped submissions
+    console.time("fetchWards:process:calculations");
     for (const location of locations) {
-      // Get submissions for this location
-      const { data: submissionLocations, error: submissionsError } =
-        await supabase
-          .from("SubmissionLocation")
-          .select(
-            `
-            locationId,
-            submission:submissionId (
-              id,
-              submittedAt,
-              wouldRecommend,
-              Rating (
-                locationId,
-                reception,
-                professionalism,
-                understanding,
-                promptnessCare,
-                promptnessFeedback,
-                overall,
-                admission,
-                nurseProfessionalism,
-                doctorProfessionalism,
-                foodQuality,
-                discharge
-              )
-            )
-          `
-          )
-          .eq("locationId", location.id);
-
-      if (submissionsError) {
-        console.error(
-          `Error fetching submissions for location ${location.id}:`,
-          submissionsError
-        );
-        continue;
-      }
+      const submissionLocations = submissionsByLocation[location.id] || [];
 
       // Count visits
       const visitCount = submissionLocations?.length || 0;
@@ -289,6 +327,7 @@ export async function fetchWards() {
         visitCount > 0 ? Math.round((recommendCount / visitCount) * 100) : 0;
 
       // Calculate average ratings
+      console.time("fetchWards:process:averages");
       const avgRatings = {
         reception:
           ratings.reception.count > 0
@@ -374,6 +413,7 @@ export async function fetchWards() {
               )
             : 0,
       };
+      console.timeEnd("fetchWards:process:averages");
 
       // Calculate overall satisfaction as the average of all ratings
       const ratingValues = Object.values(avgRatings).filter((val) => val > 0);
@@ -404,20 +444,32 @@ export async function fetchWards() {
         occupancy,
       });
     }
+    console.timeEnd("fetchWards:process:calculations");
+    console.timeEnd("fetchWards:process");
 
     // If we have no real data, provide fallback data
     if (
       wardsData.length === 0 ||
       wardsData.every((ward) => ward.visitCount === 0)
     ) {
-      return getFallbackWardData();
+      console.timeEnd("fetchWards");
+      const fallbackData = getFallbackWardData();
+      return { wards: fallbackData, total: fallbackData.length };
     }
 
     // Return actual data without fallbacks
-    return wardsData;
+    console.timeEnd("fetchWards");
+    return { wards: wardsData, total: count || 0 };
   } catch (error) {
     console.error("Error in fetchWards:", error);
-    return getFallbackWardData();
+    console.timeEnd("fetchWards:process:averages");
+    console.timeEnd("fetchWards:process:calculations");
+    console.timeEnd("fetchWards:process:grouping");
+    console.timeEnd("fetchWards:process");
+    console.timeEnd("fetchWards:submissions");
+    console.timeEnd("fetchWards:locations");
+    console.timeEnd("fetchWards");
+    return { wards: [], total: 0 };
   }
 }
 
@@ -425,185 +477,110 @@ export async function fetchWards() {
  * Fetches concerns specifically related to wards
  */
 export async function fetchWardConcerns(): Promise<WardConcern[]> {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   try {
-    // Get all ward concerns with related data - directly query DepartmentConcern table without filtering by ward IDs first
-    const { data, error } = await supabase.from("DepartmentConcern").select(`
-      id,
-      concern,
-      locationId,
-      submissionId,
-      Location:locationId (
-        id,
-        name,
-        locationType
-      ),
-      Submission:submissionId (
-        id,
-        submittedAt,
-        visitPurpose,
-        patientType,
-        userType
-      )
-    `);
+    console.time("fetchWardConcerns");
 
-    if (error) {
-      console.error("Error fetching department concerns:", error);
+    // Get all ward locations first to use their IDs
+    console.time("fetchWardConcerns:locations");
+    const { data: wardLocations, error: locationsError } = await supabase
+      .from("Location")
+      .select("id")
+      .eq("locationType", "ward");
+    console.timeEnd("fetchWardConcerns:locations");
+
+    if (locationsError) {
+      console.error("Error fetching ward locations:", locationsError);
+      console.timeEnd("fetchWardConcerns");
       return [];
     }
 
-    // Filter to only include concerns where Location.locationType is 'ward'
-    const wardConcerns = data
-      .filter((item) => {
-        const location = item.Location as any;
-        return location && location.locationType === "ward";
-      })
-      .map((concern) => {
-        // Extract submission data with type assertions
-        const submission = concern.Submission as any;
-        const location = concern.Location as any;
+    // If no ward locations found, return empty array
+    if (!wardLocations || wardLocations.length === 0) {
+      console.timeEnd("fetchWardConcerns");
+      return [];
+    }
 
-        return {
-          submissionId: concern.submissionId,
-          submittedAt: submission?.submittedAt || new Date().toISOString(),
-          locationName: location?.name || "Unknown Ward",
-          concern: concern.concern,
-          visitPurpose: submission?.visitPurpose || "Unknown",
-          patientType: submission?.patientType || "Unknown",
-          userType: submission?.userType || "Anonymous",
-        };
-      });
+    // Extract the ward location IDs
+    const wardLocationIds = wardLocations.map((loc) => loc.id);
+
+    // Fetch concerns directly for these ward locations
+    console.time("fetchWardConcerns:concerns");
+    const { data, error } = await supabase
+      .from("DepartmentConcern")
+      .select(
+        `
+        id,
+        concern,
+        locationId,
+        submissionId,
+        Location:locationId (
+          id,
+          name
+        ),
+        Submission:submissionId (
+          id,
+          submittedAt,
+          userType
+        )
+      `
+      )
+      .in("locationId", wardLocationIds)
+      .order("id", { ascending: false })
+      .limit(100); // Limit to 100 most recent concerns
+    console.timeEnd("fetchWardConcerns:concerns");
+
+    if (error) {
+      console.error("Error fetching ward concerns:", error);
+      console.timeEnd("fetchWardConcerns");
+      return [];
+    }
+
+    // Map the concerns to the expected format
+    console.time("fetchWardConcerns:mapping");
+    const wardConcerns = data.map((concern) => {
+      // Extract submission data with type assertions
+      const submission = concern.Submission as any;
+      const location = concern.Location as any;
+
+      return {
+        submissionId: concern.submissionId,
+        submittedAt: submission?.submittedAt || new Date().toISOString(),
+        locationName: location?.name || "Unknown Ward",
+        concern: concern.concern,
+        userType: submission?.userType || "Anonymous",
+      };
+    });
+    console.timeEnd("fetchWardConcerns:mapping");
 
     // Just return the real concerns, no fallback data
+    console.timeEnd("fetchWardConcerns");
     return wardConcerns;
   } catch (error) {
     console.error("Error in fetchWardConcerns:", error);
+    console.timeEnd("fetchWardConcerns:mapping");
+    console.timeEnd("fetchWardConcerns:concerns");
+    console.timeEnd("fetchWardConcerns:locations");
+    console.timeEnd("fetchWardConcerns");
     return [];
   }
-}
-
-/**
- * Fetches recommendations that are related to wards
- */
-export async function fetchWardRecommendations(): Promise<Recommendation[]> {
-  const supabase = createServerClient();
-
-  try {
-    // First get all ward locations to match recommendations against
-    const { data: wards, error: wardsError } = await supabase
-      .from("Location")
-      .select("id, name")
-      .eq("locationType", "ward");
-
-    if (wardsError) {
-      console.error("Error fetching ward locations:", wardsError);
-      return [];
-    }
-
-    if (!wards || wards.length === 0) {
-      return [];
-    }
-
-    // Create a list of ward names for text matching
-    const wardNames = wards.map((ward) => ward.name.toLowerCase());
-    const wardIds = wards.map((ward) => ward.id);
-
-    // Find all submissions linked to ward locations through SubmissionLocation
-    const { data: wardSubmissions, error: locationsError } = await supabase
-      .from("SubmissionLocation")
-      .select(
-        `
-        submissionId
-      `
-      )
-      .in("locationId", wardIds);
-
-    if (locationsError) {
-      console.error("Error fetching submissions for wards:", locationsError);
-    }
-
-    // Create a set of submission IDs that are linked to wards for faster lookup
-    const wardSubmissionIds = new Set();
-    if (wardSubmissions && wardSubmissions.length > 0) {
-      wardSubmissions.forEach((sl) => wardSubmissionIds.add(sl.submissionId));
-    }
-
-    // Fetch all recommendations from survey submissions
-    const { data: recommendations, error: recsError } = await supabase
-      .from("SurveySubmission")
-      .select(
-        `
-        id,
-        submittedAt,
-        recommendation,
-        userType
-      `
-      )
-      .not("recommendation", "is", null)
-      .not("recommendation", "eq", "");
-
-    if (recsError) {
-      console.error("Error fetching recommendations:", recsError);
-      return [];
-    }
-
-    // Filter recommendations to those that specifically:
-    // 1. Mention a ward name in the recommendation text, OR
-    // 2. Are from submissions explicitly linked to ward locations
-    const wardRecommendations = recommendations
-      .filter((rec) => {
-        // Check if the recommendation text mentions a ward name
-        const mentionsWard =
-          rec.recommendation &&
-          wardNames.some((name) =>
-            rec.recommendation.toLowerCase().includes(name)
-          );
-
-        // Check if the submission is linked to a ward
-        const isLinkedToWard = wardSubmissionIds.has(rec.id);
-
-        // Only include recommendations that either mention a ward or are from ward submissions
-        return mentionsWard || isLinkedToWard;
-      })
-      .map((rec) => ({
-        submissionId: rec.id,
-        recommendation: rec.recommendation,
-        submittedAt: rec.submittedAt,
-        userType: rec.userType || "Anonymous",
-      }));
-
-    return wardRecommendations;
-  } catch (error) {
-    console.error("Error in fetchWardRecommendations:", error);
-    return [];
-  }
-}
-
-/**
- * Fetches data for the entire ward tab
- */
-export async function fetchWardTabData() {
-  const wards = await fetchWards();
-  const concerns = await fetchWardConcerns();
-  const recommendations = await fetchWardRecommendations();
-
-  return {
-    wards,
-    concerns,
-    recommendations,
-  };
 }
 
 /**
  * Fetches all survey submissions for trend analysis
  */
 export async function fetchAllSurveyData(): Promise<SurveySubmission[]> {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   try {
-    // Get all survey submissions with ratings
-    const { data, error } = await supabase.from("SurveySubmission").select(`
+    console.time("fetchAllSurveyData");
+
+    // Get survey submissions with ratings, limited to the most recent ones
+    const { data, error } = await supabase
+      .from("SurveySubmission")
+      .select(
+        `
         id, 
         submittedAt,
         wouldRecommend,
@@ -616,137 +593,99 @@ export async function fetchAllSurveyData(): Promise<SurveySubmission[]> {
           promptnessFeedback,
           overall
         )
-      `);
+      `
+      )
+      .order("submittedAt", { ascending: false })
+      .limit(250); // Limit to 250 most recent submissions
 
     if (error) {
       console.error("Error fetching survey data:", error);
+      console.timeEnd("fetchAllSurveyData");
       return [];
     }
 
+    console.timeEnd("fetchAllSurveyData");
     return data || [];
   } catch (error) {
     console.error("Error in fetchAllSurveyData:", error);
+    console.timeEnd("fetchAllSurveyData");
     return [];
+  }
+}
+
+/**
+ * Fetches data for the entire ward tab
+ * @param limit Optional limit on number of wards to return (for pagination)
+ * @param offset Optional offset for pagination
+ */
+export async function fetchWardTabData(limit: number = 5, offset: number = 0) {
+  try {
+    console.time("fetchWardTabData:total");
+    console.time("fetchWardTabData:init");
+
+    // Prepare fetch promises for parallel execution
+    console.time("fetchWardTabData:wards");
+    console.log("Starting fetchWards...");
+    // Comment out pagination for the test
+    const wardsPromise = fetchWards(); // Remove pagination params
+
+    console.time("fetchWardTabData:concerns");
+    console.log("Starting fetchWardConcerns...");
+    const concernsPromise = fetchWardConcerns();
+
+    console.timeEnd("fetchWardTabData:init");
+
+    // Wait for all promises to resolve with detailed timing for each
+    console.time("fetchWardTabData:await");
+    const [wardsData, concerns] = await Promise.all([
+      wardsPromise.then((result) => {
+        console.log(`fetchWards completed with ${result.wards.length} wards`);
+        return result;
+      }),
+      concernsPromise.then((result) => {
+        console.log(
+          `fetchWardConcerns completed with ${result.length} concerns/recommendations`
+        );
+        return result;
+      }),
+    ]);
+    console.timeEnd("fetchWardTabData:await");
+
+    console.timeEnd("fetchWardTabData:wards");
+    console.timeEnd("fetchWardTabData:concerns");
+
+    console.time("fetchWardTabData:prepare-response");
+    const result = {
+      wards: wardsData.wards,
+      concerns, // All feedback (concerns and recommendations) is in this array
+      recommendations: [], // Empty array for backward compatibility
+      pagination: {
+        total: wardsData.total,
+        limit,
+        offset,
+        hasMore: offset + wardsData.wards.length < wardsData.total,
+      },
+    };
+    console.timeEnd("fetchWardTabData:prepare-response");
+
+    console.timeEnd("fetchWardTabData:total");
+    console.log(
+      `fetchWardTabData completed with ${wardsData.wards.length} wards and ${concerns.length} feedback items`
+    );
+    return result;
+  } catch (error) {
+    console.error("Error fetching ward tab data:", error);
+    console.timeEnd("fetchWardTabData:prepare-response");
+    console.timeEnd("fetchWardTabData:await");
+    console.timeEnd("fetchWardTabData:concerns");
+    console.timeEnd("fetchWardTabData:wards");
+    console.timeEnd("fetchWardTabData:init");
+    console.timeEnd("fetchWardTabData:total");
+    throw error;
   }
 }
 
 // Fallback data functions
 function getFallbackWardData(): Ward[] {
-  return [
-    {
-      id: "ward-1",
-      name: "Medical Ward",
-      type: "ward",
-      visitCount: 42,
-      satisfaction: 4.2,
-      recommendRate: 88,
-      ratings: {
-        reception: 4.1,
-        professionalism: 4.3,
-        understanding: 4.0,
-        "promptness-care": 3.9,
-        "promptness-feedback": 3.8,
-        overall: 4.2,
-        admission: 4.1,
-        "nurse-professionalism": 4.3,
-        "doctor-professionalism": 4.0,
-        "food-quality": 3.9,
-        discharge: 4.2,
-      },
-      capacity: 30,
-      occupancy: 24,
-    },
-    {
-      id: "ward-2",
-      name: "Surgical Ward",
-      type: "ward",
-      visitCount: 38,
-      satisfaction: 4.5,
-      recommendRate: 92,
-      ratings: {
-        reception: 4.3,
-        professionalism: 4.7,
-        understanding: 4.4,
-        "promptness-care": 4.6,
-        "promptness-feedback": 4.2,
-        overall: 4.5,
-        admission: 4.3,
-        "nurse-professionalism": 4.7,
-        "doctor-professionalism": 4.4,
-        "food-quality": 4.6,
-        discharge: 4.5,
-      },
-      capacity: 25,
-      occupancy: 22,
-    },
-    {
-      id: "ward-3",
-      name: "Pediatric Ward",
-      type: "ward",
-      visitCount: 29,
-      satisfaction: 4.7,
-      recommendRate: 95,
-      ratings: {
-        reception: 4.6,
-        professionalism: 4.8,
-        understanding: 4.7,
-        "promptness-care": 4.5,
-        "promptness-feedback": 4.4,
-        overall: 4.7,
-        admission: 4.6,
-        "nurse-professionalism": 4.8,
-        "doctor-professionalism": 4.7,
-        "food-quality": 4.5,
-        discharge: 4.7,
-      },
-      capacity: 20,
-      occupancy: 15,
-    },
-    {
-      id: "ward-4",
-      name: "Maternity Ward",
-      type: "ward",
-      visitCount: 31,
-      satisfaction: 4.4,
-      recommendRate: 90,
-      ratings: {
-        reception: 4.3,
-        professionalism: 4.5,
-        understanding: 4.4,
-        "promptness-care": 4.2,
-        "promptness-feedback": 4.1,
-        overall: 4.4,
-        admission: 4.3,
-        "nurse-professionalism": 4.5,
-        "doctor-professionalism": 4.4,
-        "food-quality": 4.2,
-        discharge: 4.4,
-      },
-      capacity: 18,
-      occupancy: 14,
-    },
-    {
-      id: "ward-5",
-      name: "Intensive Care Unit",
-      type: "ward",
-      visitCount: 18,
-      satisfaction: 4.6,
-      recommendRate: 91,
-      ratings: {
-        reception: 4.4,
-        professionalism: 4.8,
-        understanding: 4.5,
-        "promptness-care": 4.7,
-        "promptness-feedback": 4.3,
-        overall: 4.6,
-        admission: 4.4,
-        "nurse-professionalism": 4.8,
-        "doctor-professionalism": 4.5,
-        "food-quality": 4.7,
-        discharge: 4.6,
-      },
-      capacity: 12,
-      occupancy: 10,
-    },
-  ];
+  return [];
 }

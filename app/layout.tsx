@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: "AGA Health Foundation Survey",
   description: "Patient satisfaction survey for AGA Health Foundation",
   generator: "v0.dev",
-  icons: "agahflogo.svg",
+  icons: "agahflogo white.svg",
 };
 
 export default function RootLayout({

@@ -43,9 +43,16 @@ SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 2. Get your API keys from the Supabase dashboard (Settings > API)
 
 3. Create the database schema by running the migration file:
+
    - Go to the SQL Editor in your Supabase dashboard
    - Copy the contents of `schema/supabase-migration.sql`
    - Run the SQL commands to create all tables and relationships
+
+4. Apply performance optimizations (optional but recommended):
+   - Go to the SQL Editor in your Supabase dashboard
+   - Copy the contents of `schema/performance-optimization-indexes.sql`
+   - Run the SQL commands to add optimized indexes
+   - See `schema/README-PERFORMANCE.md` for details on the optimizations
 
 ### Running the Application
 
@@ -90,3 +97,5 @@ This application uses Supabase authentication. You can configure authentication 
 ## License
 
 [MIT](LICENSE)
+
+## Performance Optimizations\n\nThe application includes several optimizations to improve performance:\n\n1. **Database Indexes**: Specialized indexes for common query patterns\n2. **Efficient Query Patterns**: Avoiding N+1 query problems\n3. **Data Limiting**: Only fetching necessary data\n4. **Client-side Caching**: Using sessionStorage to avoid redundant fetches\n5. **Parallel Data Loading**: Using Promise.all for concurrent data fetching\n\nFor details on the performance improvements and how to apply them, see schema/README-PERFORMANCE.md.\n

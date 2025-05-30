@@ -53,6 +53,7 @@ import {
   type OccupationalHealthData,
   type DepartmentConcern,
 } from "@/app/actions/medicals-actions";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Register ChartJS components
 ChartJS.register(
@@ -120,15 +121,52 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
 
   // Fetch occupational health data directly from the dedicated endpoint
   useEffect(() => {
+    const CACHE_KEY = "medicalsTabData";
+    const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+    const instanceId = Math.random().toString(36).substring(2, 9); // Unique ID for this instance
+    const timerName = `MedicalsTab_data_loading_${instanceId}`;
+
     const loadOccupationalHealthData = async () => {
+      // Check for cached data first
+      try {
+        console.time(timerName);
+        console.log(
+          "MedicalsTab: Data fetch triggered (part of shared loading)"
+        );
+
+        const cachedData = sessionStorage.getItem(CACHE_KEY);
+        if (cachedData) {
+          const { data, timestamp } = JSON.parse(cachedData);
+          // Use cache if less than 5 minutes old
+          if (Date.now() - timestamp < CACHE_TIME) {
+            console.log("MedicalsTab: Using cached data");
+            setOhData(data.ohData);
+            setOhConcerns(data.ohConcerns);
+            setIsLoadingConcerns(false);
+            console.timeEnd(timerName);
+            return;
+          }
+        }
+      } catch (err) {
+        // If cache read fails, just continue with normal data fetching
+        console.log("Error reading cache:", err);
+      }
+
       setIsLoadingConcerns(true);
       try {
         console.log("OccupationalHealthTab: Fetching specific OH data...");
+
+        const fetchTimerName = `OccupationalHealthTab_fetch_${instanceId}`;
+        console.time(fetchTimerName);
         const { ohData: fetchedData, ohConcerns: fetchedConcerns } =
           await fetchOccupationalHealthData();
+        console.timeEnd(fetchTimerName);
 
         // Also fetch all survey data to get user type distribution
+        const surveyDataTimerName = `OccupationalHealthTab_survey_data_${instanceId}`;
+        console.time(surveyDataTimerName);
         const allSurveyData = await fetchAllSurveyData();
+        console.timeEnd(surveyDataTimerName);
 
         console.log("OccupationalHealthTab: Received OH data:", fetchedData);
         console.log(
@@ -142,6 +180,8 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
 
           // Calculate real user type distribution from survey data
           // Filter for occupational health visits only
+          const processTimerName = `Process_user_type_distribution_${instanceId}`;
+          console.time(processTimerName);
           const ohVisits = allSurveyData.filter(
             (survey) => survey.visitPurpose === "Medicals (Occupational Health)"
           );
@@ -167,6 +207,7 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
           )
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value); // Sort by count, descending
+          console.timeEnd(processTimerName);
 
           // Ensure we have at least some data - use empty categories if no data found
           typedData.userTypeDistribution =
@@ -195,14 +236,36 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
           }
 
           setOhData(typedData);
+
+          // Store results in cache
+          try {
+            const cacheData = {
+              data: {
+                ohData: typedData,
+                ohConcerns: fetchedConcerns,
+              },
+              timestamp: Date.now(),
+            };
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+          } catch (error) {
+            console.error("Error storing cache:", error);
+          }
         } else {
           setOhData(null);
         }
         setOhConcerns(fetchedConcerns);
+
+        console.timeEnd(timerName);
       } catch (error) {
         console.error("Error fetching occupational health data:", error);
         setOhData(null);
         setOhConcerns([]);
+        // Still end the timer to avoid orphaned timers
+        try {
+          console.timeEnd(timerName);
+        } catch (e) {
+          console.error("Error ending timer:", e);
+        }
       } finally {
         setIsLoadingConcerns(false);
       }
@@ -213,11 +276,179 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
 
   if (isLoading || isLoadingConcerns) {
     return (
-      <div className="flex flex-col items-center justify-center h-96">
-        <LoadingSpinner size="lg" />
-        <p className="text-muted-foreground mt-4">
-          Loading occupational health data...
-        </p>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-7 w-56" />
+            <Skeleton className="h-4 w-72 mt-1" />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Skeleton for summary cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i}>
+                  <CardHeader className="pb-2">
+                    <Skeleton className="h-5 w-32" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-9 w-16 mb-1" />
+                    <Skeleton className="h-3 w-32" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Skeleton for detailed ratings and chart */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-36" />
+                  <Skeleton className="h-4 w-48 mt-1" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className="space-y-1">
+                        <div className="flex justify-between">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-4 w-16" />
+                        </div>
+                        <Skeleton className="h-2 w-full" />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-64 mt-1" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-80 w-full" />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Skeleton for locations analysis */}
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-56" />
+                <Skeleton className="h-4 w-72 mt-1" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Skeleton className="h-5 w-32 mb-3" />
+                    <div className="border rounded-md">
+                      <div className="p-3 border-b">
+                        <div className="grid grid-cols-2 gap-4">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                        </div>
+                      </div>
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="p-3 border-b">
+                          <div className="grid grid-cols-2 gap-4">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-full" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <Skeleton className="h-5 w-32 mb-3" />
+                    <div className="border rounded-md">
+                      <div className="p-3 border-b">
+                        <div className="grid grid-cols-2 gap-4">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                        </div>
+                      </div>
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="p-3 border-b">
+                          <div className="grid grid-cols-2 gap-4">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-full" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Skeleton for user type analysis */}
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-4 w-64 mt-1" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Skeleton className="h-5 w-32 mb-3" />
+                    <Skeleton className="h-[250px] w-full" />
+                  </div>
+                  <div>
+                    <Skeleton className="h-5 w-32 mb-3" />
+                    <div className="border rounded-md">
+                      <div className="p-3 border-b">
+                        <div className="grid grid-cols-3 gap-4">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-full" />
+                        </div>
+                      </div>
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="p-3 border-b">
+                          <div className="grid grid-cols-3 gap-4">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-full" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 p-3 bg-muted/30 rounded-md">
+                      <Skeleton className="h-4 w-full mb-1" />
+                      <Skeleton className="h-4 w-5/6" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Skeleton for feedback */}
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-6 w-56" />
+                <Skeleton className="h-4 w-72 mt-1" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i} className="border-l-4 border-l-amber-500/30">
+                      <CardHeader className="p-3 pb-1">
+                        <div className="flex justify-between">
+                          <Skeleton className="h-5 w-32" />
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-3 pt-1">
+                        <Skeleton className="h-4 w-full mb-1" />
+                        <Skeleton className="h-4 w-5/6 mb-1" />
+                        <Skeleton className="h-4 w-4/6" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </CardContent>
+        </Card>
       </div>
     );
   }

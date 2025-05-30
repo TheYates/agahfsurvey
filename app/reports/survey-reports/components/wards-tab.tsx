@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 
 import {
   Table,
@@ -30,15 +31,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { WardDetails } from "./ward-details";
 
 import {
   Ward,
   WardConcern,
-  Recommendation,
   fetchWardConcerns,
-  fetchWardRecommendations,
   fetchAllSurveyData,
   SurveySubmission,
 } from "@/app/actions/ward-actions";
@@ -77,6 +77,13 @@ export interface ExtendedWard extends Omit<Ward, "ratings"> {
 interface WardsTabProps {
   isLoading: boolean;
   wards: Ward[];
+  pagination?: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+  onLoadMore?: () => Promise<void>;
 }
 
 // Convert numeric value to rating text
@@ -106,36 +113,103 @@ const ratingToValue = (rating: string): number => {
   }
 };
 
-export function WardsTab({ isLoading, wards }: WardsTabProps) {
+// Cache keys and expiration time
+const CACHE_KEY_CONCERNS = "wardConcernsData";
+const CACHE_KEY_RECOMMENDATIONS = "wardRecommendationsData";
+const CACHE_KEY_WARDS = "wardsData";
+const CACHE_TIME = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+export function WardsTab({
+  isLoading,
+  wards,
+  pagination,
+  onLoadMore,
+}: WardsTabProps) {
   const [selectedWard, setSelectedWard] = useState<ExtendedWard | null>(null);
   const [wardConcerns, setWardConcerns] = useState<WardConcern[]>([]);
-  const [wardRecommendations, setWardRecommendations] = useState<
-    Recommendation[]
-  >([]);
   const [isLoadingConcerns, setIsLoadingConcerns] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [departmentAverages, setDepartmentAverages] = useState<
     Record<string, number>
   >({});
   const [satisfactionTrend, setSatisfactionTrend] = useState<any[]>([]);
 
-  // Fetch real ward feedback
+  // Fetch ward concerns with caching
   useEffect(() => {
-    const loadWardFeedback = async () => {
+    const loadWardConcerns = async () => {
       setIsLoadingConcerns(true);
       try {
-        // Fetch real ward concerns (combined with recommendations)
+        console.time("WardsTab concerns loading");
+
+        // Check for cached data first
+        const cachedData = sessionStorage.getItem(CACHE_KEY_CONCERNS);
+
+        if (cachedData) {
+          const { concerns, timestamp } = JSON.parse(cachedData);
+
+          // Use cached data if it's less than 5 minutes old
+          if (Date.now() - timestamp < CACHE_TIME) {
+            console.log("WardsTab: Using cached concerns data");
+            setWardConcerns(concerns);
+            setIsLoadingConcerns(false);
+            console.timeEnd("WardsTab concerns loading");
+            return;
+          }
+        }
+
+        // Fetch fresh data if no valid cache exists
+        console.time("fetchWardConcerns");
         const concerns = await fetchWardConcerns();
+        console.timeEnd("fetchWardConcerns");
+
         setWardConcerns(concerns);
+
+        // Store in cache with timestamp
+        sessionStorage.setItem(
+          CACHE_KEY_CONCERNS,
+          JSON.stringify({
+            concerns,
+            timestamp: Date.now(),
+          })
+        );
+
+        console.timeEnd("WardsTab concerns loading");
       } catch (error) {
-        console.error("Error fetching ward feedback:", error);
+        console.error("Error fetching ward concerns:", error);
         setWardConcerns([]);
+        console.timeEnd("WardsTab concerns loading");
       } finally {
         setIsLoadingConcerns(false);
       }
     };
 
-    loadWardFeedback();
+    loadWardConcerns();
   }, []);
+
+  // Cache ward data when it changes
+  useEffect(() => {
+    // Don't cache during initial loading or if there are no wards
+    if (isLoading || wards.length === 0) return;
+
+    try {
+      console.time("WardsTab caching");
+
+      // Store wards data in cache with pagination info
+      sessionStorage.setItem(
+        CACHE_KEY_WARDS,
+        JSON.stringify({
+          wards,
+          pagination,
+          timestamp: Date.now(),
+        })
+      );
+
+      console.timeEnd("WardsTab caching");
+    } catch (error) {
+      console.error("Error caching wards data:", error);
+      console.timeEnd("WardsTab caching");
+    }
+  }, [wards, pagination, isLoading]);
 
   // Generate satisfaction trend based on real survey data
   useEffect(() => {
@@ -187,7 +261,6 @@ export function WardsTab({ isLoading, wards }: WardsTabProps) {
           .filter((item) => item.satisfaction !== null);
 
         setSatisfactionTrend(trend);
-        console.log("Satisfaction trend data:", trend);
       } catch (error) {
         console.error("Error generating satisfaction trend:", error);
         // Provide minimal fallback data - just one data point for the current month
@@ -200,7 +273,7 @@ export function WardsTab({ isLoading, wards }: WardsTabProps) {
             satisfaction: selectedWard?.satisfaction || 3.5,
           },
         ];
-        console.log("Using fallback satisfaction trend data:", fallbackData);
+
         setSatisfactionTrend(fallbackData);
       }
     };
@@ -249,49 +322,94 @@ export function WardsTab({ isLoading, wards }: WardsTabProps) {
   // Debug log the loaded data and satisfaction trend
   useEffect(() => {
     // Log satisfaction trend data whenever it changes
-    console.log("Current satisfaction trend data:", satisfactionTrend);
   }, [satisfactionTrend]);
 
-  useEffect(() => {
-    // Debug the combined feedback array
-    const debugCombined = [
-      ...wardConcerns.map((concern) => ({
-        id: `concern-${concern.submissionId}`,
-        type: "concern",
-        submissionId: concern.submissionId,
-        submittedAt: concern.submittedAt,
-        locationName: concern.locationName,
-        text: concern.concern,
-        userType: concern.userType || "Anonymous",
-      })),
-      ...wardRecommendations
-        .filter((rec) => rec.recommendation)
-        .map((rec) => ({
-          id: `rec-${rec.submissionId}`,
-          type: "recommendation",
-          submissionId: rec.submissionId,
-          submittedAt: rec.submittedAt,
-          locationName: "Ward Recommendation",
-          text: rec.recommendation,
-          userType: rec.userType || "Anonymous",
-        })),
-    ].sort(
-      (a, b) =>
-        new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-    );
-
-    if (debugCombined.length === 0) {
-      console.warn(
-        "WARNING: No combined feedback found - check fetchWardConcerns and fetchWardRecommendations"
-      );
+  // Handler for loading more wards
+  const handleLoadMore = async () => {
+    if (onLoadMore && pagination?.hasMore) {
+      setIsLoadingMore(true);
+      try {
+        await onLoadMore();
+      } catch (error) {
+        console.error("Error loading more wards:", error);
+      } finally {
+        setIsLoadingMore(false);
+      }
     }
-  }, [wardConcerns, wardRecommendations]);
+  };
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-96">
-        <LoadingSpinner size="lg" />
-        <p className="text-muted-foreground mt-4">Loading ward data...</p>
+      <div className="space-y-6">
+        {/* Skeleton for wards summary cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="relative overflow-hidden">
+              <CardHeader className="pb-2">
+                <Skeleton className="h-5 w-32" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Skeleton className="h-8 w-16" />
+                  <div className="flex items-center">
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Skeleton for ward ratings */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-64 mt-1" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                  <Skeleton className="h-2 w-full" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Skeleton for wards table */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-64 mt-1" />
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <div className="p-4 bg-muted/5">
+                <div className="grid grid-cols-7 gap-4">
+                  {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                    <Skeleton key={i} className="h-5 w-full" />
+                  ))}
+                </div>
+              </div>
+              <div className="border-t">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="p-4 border-b">
+                    <div className="grid grid-cols-7 gap-4">
+                      {[1, 2, 3, 4, 5, 6, 7].map((j) => (
+                        <Skeleton key={j} className="h-5 w-full" />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -396,6 +514,11 @@ export function WardsTab({ isLoading, wards }: WardsTabProps) {
     )
     .slice(0, 5); // Get the 5 most recent items
 
+  // Update the handler for selecting a ward to load recommendations when needed
+  const handleSelectWard = async (ward: Ward) => {
+    setSelectedWard(ward as unknown as ExtendedWard);
+  };
+
   if (selectedWard) {
     // Show individual ward details
     // Get ward ranking
@@ -430,7 +553,7 @@ export function WardsTab({ isLoading, wards }: WardsTabProps) {
             onValueChange={(value) => {
               const ward = wardsOnly.find((w) => w.id === value);
               if (ward) {
-                setSelectedWard(ward as unknown as ExtendedWard);
+                handleSelectWard(ward);
               }
             }}
           >
@@ -585,7 +708,6 @@ export function WardsTab({ isLoading, wards }: WardsTabProps) {
                 <TableHead>Ward</TableHead>
                 <TableHead>Response Count</TableHead>
                 <TableHead>Satisfaction</TableHead>
-                <TableHead>Recommend Rate</TableHead>
                 <TableHead>Top Rating</TableHead>
                 <TableHead>Lowest Rating</TableHead>
               </TableRow>
@@ -632,9 +754,7 @@ export function WardsTab({ isLoading, wards }: WardsTabProps) {
                     <TableRow
                       key={ward.id}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() =>
-                        setSelectedWard(ward as unknown as ExtendedWard)
-                      }
+                      onClick={() => handleSelectWard(ward)}
                     >
                       <TableCell className="font-bold text-center">
                         {rankDisplay}
@@ -652,7 +772,6 @@ export function WardsTab({ isLoading, wards }: WardsTabProps) {
                           />
                         </div>
                       </TableCell>
-                      <TableCell>{ward.recommendRate.toFixed(0)}%</TableCell>
                       <TableCell>
                         <div className="flex items-center">
                           {getLabel(topRated[0])}
@@ -732,6 +851,29 @@ export function WardsTab({ isLoading, wards }: WardsTabProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Load More button */}
+      {pagination?.hasMore && (
+        <div className="flex justify-center mt-4">
+          <Button
+            onClick={handleLoadMore}
+            disabled={isLoadingMore}
+            variant="outline"
+            className="w-full max-w-xs"
+          >
+            {isLoadingMore ? (
+              <>
+                <LoadingSpinner className="mr-2 h-4 w-4" />
+                Loading more wards...
+              </>
+            ) : (
+              <>
+                Load More Wards ({wards.length} of {pagination.total})
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

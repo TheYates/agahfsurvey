@@ -58,6 +58,14 @@ export interface DetailedSubmission {
     recommendation?: string;
     recommendation_reason?: string;
   };
+  generalObservation: {
+    cleanliness?: string;
+    facilities?: string;
+    security?: string;
+    overall?: string;
+  };
+  whyNotRecommend?: string;
+  recommendation?: string;
 }
 
 // Function to fetch all survey data
@@ -74,17 +82,23 @@ export async function getSurveyData(): Promise<SurveyData[]> {
       patientType,
       userType,
       visitTime,
+      whyNotRecommend,
       SubmissionLocation (
         locationId,
-        isPrimary,
         Location (
-          id, name, type
+          id, name, locationType
         )
       ),
       Rating (
         overall,
-        location,
-        Location (id, name)
+        locationId
+      ),
+      GeneralObservation (
+        cleanliness,
+        facilities,
+        security,
+        overall,
+        submissionId
       )
     `
     )
@@ -118,9 +132,8 @@ export async function getSurveyData(): Promise<SurveyData[]> {
       Array.isArray(item.SubmissionLocation) &&
       item.SubmissionLocation.length > 0
     ) {
-      const primary =
-        item.SubmissionLocation.find((sl) => sl.isPrimary) ||
-        item.SubmissionLocation[0];
+      // Just use the first location since isPrimary is not available
+      const primary = item.SubmissionLocation[0];
 
       if (primary && primary.Location) {
         // Handle both object and array cases
@@ -128,7 +141,7 @@ export async function getSurveyData(): Promise<SurveyData[]> {
           ? primary.Location[0]
           : primary.Location;
         primaryLocation = location?.name || "Unknown";
-        department = location?.type || "Unknown";
+        department = location?.locationType || "Unknown";
       }
     }
 
@@ -198,17 +211,23 @@ export async function getSurveyById(id: string): Promise<SurveyData | null> {
       patientType,
       userType,
       visitTime,
+      whyNotRecommend,
       SubmissionLocation (
         locationId,
-        isPrimary,
         Location (
-          id, name, type
+          id, name, locationType
         )
       ),
       Rating (
         overall,
-        location,
-        Location (id, name)
+        locationId
+      ),
+      GeneralObservation (
+        cleanliness,
+        facilities,
+        security,
+        overall,
+        submissionId
       )
     `
     )
@@ -242,9 +261,8 @@ export async function getSurveyById(id: string): Promise<SurveyData | null> {
     Array.isArray(data.SubmissionLocation) &&
     data.SubmissionLocation.length > 0
   ) {
-    const primary =
-      data.SubmissionLocation.find((sl) => sl.isPrimary) ||
-      data.SubmissionLocation[0];
+    // Just use the first location since isPrimary is not available
+    const primary = data.SubmissionLocation[0];
 
     if (primary && primary.Location) {
       // Handle both object and array cases
@@ -252,7 +270,7 @@ export async function getSurveyById(id: string): Promise<SurveyData | null> {
         ? primary.Location[0]
         : primary.Location;
       primaryLocation = location?.name || "Unknown";
-      department = location?.type || "Unknown";
+      department = location?.locationType || "Unknown";
     }
   }
 
@@ -301,20 +319,37 @@ export async function getSubmissionById(
       patientType,
       userType,
       visitTime,
-      comments,
-      concerns,
-      suggestions,
-      recommendation_reason,
+      whyNotRecommend,
       SubmissionLocation (
         locationId,
         Location (
-          id, name, type
+          id, name, locationType
         )
       ),
       Rating (
-        category,
         overall,
-        comment
+        locationId,
+        reception,
+        professionalism,
+        understanding,
+        promptnessCare,
+        promptnessFeedback,
+        foodQuality,
+        admission,
+        nurseProfessionalism,
+        doctorProfessionalism,
+        discharge
+      ),
+      GeneralObservation (
+        cleanliness,
+        facilities,
+        security,
+        overall,
+        submissionId
+      ),
+      DepartmentConcern (
+        concern,
+        locationId
       )
     `
     )
@@ -336,7 +371,7 @@ export async function getSubmissionById(
           return {
             id: location?.id || "unknown",
             name: location?.name || "Unknown Location",
-            type: location?.type || "Unknown Type",
+            type: location?.locationType || "Unknown Type",
           };
         }
         return {
@@ -350,52 +385,97 @@ export async function getSubmissionById(
   // Process ratings with location names
   const ratings = [];
 
-  // Add a rating for each location
-  if (
-    locations.length > 0 &&
-    Array.isArray(data.Rating) &&
-    data.Rating.length > 0
-  ) {
-    // For each location, create a rating entry
+  // Get all ratings from the database
+  let allRatings = Array.isArray(data.Rating) ? data.Rating : [];
+  console.log("All ratings from database:", allRatings);
+
+  // Map each location to its ratings
+  if (locations.length > 0 && allRatings.length > 0) {
+    // For each location, find corresponding rating or create a default one
     locations.forEach((location) => {
-      const locationRating = {
-        locationName: location.name,
-        reception: "Good",
-        professionalism: "Good",
-        understanding: "Good",
-        promptnessCare: "Good",
-        promptnessFeedback: "Good",
-        overall: "Good",
-        comment: "",
-      };
+      // Find rating for this location
+      const locationRating = allRatings.find(
+        (r) => r.locationId === location.id
+      );
 
-      // Try to find specific ratings for this location
-      const rating = data.Rating[0]; // Just use the first rating as an example
-      if (rating) {
-        if (typeof rating.overall === "string") {
-          locationRating.overall = rating.overall;
-        } else if (typeof rating.overall === "number") {
-          // Convert number to string rating
-          locationRating.overall = convertNumericToTextRating(rating.overall);
-        }
+      if (locationRating) {
+        // If rating exists, use actual values from database
+        ratings.push({
+          locationName: location.name,
+          reception: locationRating.reception || "",
+          professionalism: locationRating.professionalism || "",
+          understanding: locationRating.understanding || "",
+          promptnessCare: locationRating.promptnessCare || "",
+          promptnessFeedback: locationRating.promptnessFeedback || "",
+          overall: locationRating.overall || "",
+          // Add ward-specific fields if they exist
+          admission: locationRating.admission || "",
+          nurseProfessionalism: locationRating.nurseProfessionalism || "",
+          doctorProfessionalism: locationRating.doctorProfessionalism || "",
+          discharge: locationRating.discharge || "",
+          // Add canteen-specific fields
+          foodQuality: locationRating.foodQuality || "",
+          comment: "",
+        });
+      } else {
+        // No rating found for this location, create empty one
+        ratings.push({
+          locationName: location.name,
+          reception: "",
+          professionalism: "",
+          understanding: "",
+          promptnessCare: "",
+          promptnessFeedback: "",
+          overall: "",
+          comment: "",
+        });
+      }
+    });
+  } else if (allRatings.length > 0) {
+    // If we have ratings but no matching locations, create entries for each rating
+    allRatings.forEach((rating) => {
+      // Find location name based on locationId
+      let locationName = "Unknown Location";
 
-        if (rating.comment) {
-          locationRating.comment = rating.comment;
-        }
+      // Try to find location with this ID
+      const location = locations.find((loc) => loc.id === rating.locationId);
+      if (location) {
+        locationName = location.name;
+      } else {
+        // If location not in SubmissionLocation, fetch it directly
+        // (would need to be implemented as a separate async call)
+        // For now, just use ID as name
+        locationName = `Location ID: ${rating.locationId}`;
       }
 
-      ratings.push(locationRating);
+      ratings.push({
+        locationName: locationName,
+        reception: rating.reception || "",
+        professionalism: rating.professionalism || "",
+        understanding: rating.understanding || "",
+        promptnessCare: rating.promptnessCare || "",
+        promptnessFeedback: rating.promptnessFeedback || "",
+        overall: rating.overall || "",
+        // Add ward-specific fields if they exist
+        admission: rating.admission || "",
+        nurseProfessionalism: rating.nurseProfessionalism || "",
+        doctorProfessionalism: rating.doctorProfessionalism || "",
+        discharge: rating.discharge || "",
+        // Add canteen-specific fields
+        foodQuality: rating.foodQuality || "",
+        comment: "",
+      });
     });
   } else {
     // Add a default rating if no locations or ratings exist
     ratings.push({
       locationName: "General",
-      reception: "Good",
-      professionalism: "Good",
-      understanding: "Good",
-      promptnessCare: "Good",
-      promptnessFeedback: "Good",
-      overall: "Good",
+      reception: "",
+      professionalism: "",
+      understanding: "",
+      promptnessCare: "",
+      promptnessFeedback: "",
+      overall: "",
       comment: "",
     });
   }
@@ -403,24 +483,23 @@ export async function getSubmissionById(
   // Process concerns
   const concerns: { locationName: string; concern: string }[] = [];
 
-  if (typeof data.concerns === "string" && data.concerns.trim()) {
-    // If concerns is a simple string, add it as a general concern
-    concerns.push({
-      locationName: "General",
-      concern: data.concerns,
-    });
-  } else if (Array.isArray(data.concerns)) {
-    // If concerns is an array, convert each item
-    data.concerns.forEach((concern: any) => {
+  if (
+    Array.isArray(data.DepartmentConcern) &&
+    data.DepartmentConcern.length > 0
+  ) {
+    data.DepartmentConcern.forEach((concern: any) => {
+      // Find location name based on locationId
+      let locationName = "General";
+      if (concern.locationId) {
+        const location = locations.find((loc) => loc.id === concern.locationId);
+        if (location) {
+          locationName = location.name;
+        }
+      }
+
       concerns.push({
-        locationName:
-          typeof concern === "object" && concern.locationName
-            ? concern.locationName
-            : "General",
-        concern:
-          typeof concern === "object" && concern.text
-            ? concern.text
-            : concern.toString(),
+        locationName,
+        concern: concern.concern || "",
       });
     });
   }
@@ -441,6 +520,88 @@ export async function getSubmissionById(
       ratingScores.reduce((sum, score) => sum + score, 0) / ratingScores.length;
   }
 
+  // Process general observations
+  const generalObs = {
+    cleanliness: "",
+    facilities: "",
+    security: "",
+    overall: "",
+  };
+
+  if (
+    Array.isArray(data.GeneralObservation) &&
+    data.GeneralObservation.length > 0
+  ) {
+    // Find observation matching this submission
+    const matchingObs = data.GeneralObservation.find(
+      (obs) => obs && obs.submissionId === data.id
+    );
+
+    console.log("All GeneralObservation records:", data.GeneralObservation);
+    console.log("Current submission ID:", data.id);
+    console.log("Matching observation found:", matchingObs);
+
+    if (matchingObs) {
+      generalObs.cleanliness = matchingObs.cleanliness || "";
+      generalObs.facilities = matchingObs.facilities || "";
+      generalObs.security = matchingObs.security || "";
+      generalObs.overall = matchingObs.overall || "";
+    } else {
+      // If no exact match found, just use the first record (as a fallback)
+      const obs = data.GeneralObservation[0];
+      if (obs) {
+        generalObs.cleanliness = obs.cleanliness || "";
+        generalObs.facilities = obs.facilities || "";
+        generalObs.security = obs.security || "";
+        generalObs.overall = obs.overall || "";
+      }
+    }
+  } else {
+    console.log("No GeneralObservation records found for submission:", data.id);
+  }
+
+  // Additional fallback - try fetching ALL general observations to find a match
+  if (
+    !generalObs.cleanliness &&
+    !generalObs.facilities &&
+    !generalObs.security &&
+    !generalObs.overall
+  ) {
+    try {
+      const { data: allObs, error: allObsError } = await supabase
+        .from("GeneralObservation")
+        .select("*");
+
+      console.log("All GeneralObservation records from direct query:", allObs);
+
+      if (allObs && allObs.length > 0 && !allObsError) {
+        // Try different ID formats (case insensitive, with/without dashes)
+        const normalizedId = data.id.toLowerCase().replace(/-/g, "");
+
+        const matchingRecord = allObs.find((obs) => {
+          if (!obs.submissionId) return false;
+          const normalizedObsId = obs.submissionId
+            .toLowerCase()
+            .replace(/-/g, "");
+          return normalizedObsId === normalizedId;
+        });
+
+        if (matchingRecord) {
+          console.log(
+            "Found matching record with normalized ID:",
+            matchingRecord
+          );
+          generalObs.cleanliness = matchingRecord.cleanliness || "";
+          generalObs.facilities = matchingRecord.facilities || "";
+          generalObs.security = matchingRecord.security || "";
+          generalObs.overall = matchingRecord.overall || "";
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching all GeneralObservations:", err);
+    }
+  }
+
   // Structure the result
   const result: DetailedSubmission = {
     id: data.id,
@@ -455,17 +616,17 @@ export async function getSubmissionById(
     ratings,
     concerns,
     feedback: {
-      comment: data.comments || undefined,
-      concern:
-        data.concerns && typeof data.concerns === "string"
-          ? data.concerns
-          : undefined,
-      suggestion: data.suggestions || undefined,
+      comment: undefined,
+      concern: undefined,
+      suggestion: undefined,
       recommendation: data.recommendation
         ? data.recommendation.toString()
         : undefined,
-      recommendation_reason: data.recommendation_reason || undefined,
+      recommendation_reason: data.whyNotRecommend || undefined,
     },
+    generalObservation: generalObs,
+    whyNotRecommend: data.whyNotRecommend || undefined,
+    recommendation: data.recommendation || undefined,
   };
 
   return result;

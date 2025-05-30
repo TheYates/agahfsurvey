@@ -20,6 +20,7 @@ import {
   Sparkles,
   Stethoscope,
   Hospital,
+  Star,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -172,6 +173,15 @@ ChartJS.register(
   legendValueLabelsPlugin
 );
 
+// Convert numeric value to rating text
+const valueToRating = (value: number): string => {
+  if (value >= 4.5) return "Excellent";
+  if (value >= 3.5) return "Very Good";
+  if (value >= 2.5) return "Good";
+  if (value >= 1.5) return "Fair";
+  return "Poor";
+};
+
 interface SurveyData {
   totalResponses: number;
   recommendRate: number;
@@ -182,6 +192,13 @@ interface SurveyData {
     value: number;
     color?: string;
   }>;
+  generalObservationStats?: {
+    cleanliness: number;
+    facilities: number;
+    security: number;
+    overall: number;
+    [key: string]: number;
+  };
 }
 
 interface OverviewTabProps {
@@ -1039,115 +1056,325 @@ export function OverviewTab({
                   <Users size={18} />
                   User Type Distribution
                 </h3>
-                <div className="h-80 w-full">
-                  <Pie
-                    data={{
-                      labels: userTypeData.distribution.map(
-                        (item) => item.name
-                      ),
-                      datasets: [
-                        {
-                          label: "User Types",
-                          data: userTypeData.distribution.map(
-                            (item) => item.value
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <div className="h-80 w-full">
+                      <Pie
+                        data={{
+                          labels: userTypeData.distribution.map(
+                            (item) => item.name
                           ),
-                          backgroundColor: userTypeData.distribution.map(
-                            (_, index) => COLORS[index % COLORS.length]
-                          ),
-                          borderColor: userTypeData.distribution.map(
-                            (_, index) => COLORS[index % COLORS.length]
-                          ),
-                          borderWidth: 1,
-                        },
-                      ],
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          position: "right" as const,
-                          labels: {
-                            boxWidth: 15,
-                          },
-                        },
-                        tooltip: {
-                          callbacks: {
-                            label: function (context: any) {
-                              const label = context.label || "";
-                              const value = context.raw || 0;
-                              const total = (
-                                context.dataset.data as number[]
-                              ).reduce((a, b) => a + b, 0);
-                              const percentage =
-                                total > 0
-                                  ? Math.round((value / total) * 100)
-                                  : 0;
-                              return `${label}: ${value} (${percentage}%)`;
+                          datasets: [
+                            {
+                              label: "User Types",
+                              data: userTypeData.distribution.map(
+                                (item) => item.value
+                              ),
+                              backgroundColor: userTypeData.distribution.map(
+                                (_, index) => COLORS[index % COLORS.length]
+                              ),
+                              borderColor: userTypeData.distribution.map(
+                                (_, index) => COLORS[index % COLORS.length]
+                              ),
+                              borderWidth: 1,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: "right" as const,
+                              labels: {
+                                boxWidth: 15,
+                              },
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: function (context: any) {
+                                  const label = context.label || "";
+                                  const value = context.raw || 0;
+                                  const total = (
+                                    context.dataset.data as number[]
+                                  ).reduce((a, b) => a + b, 0);
+                                  const percentage =
+                                    total > 0
+                                      ? Math.round((value / total) * 100)
+                                      : 0;
+                                  return `${label}: ${value} (${percentage}%)`;
+                                },
+                              },
                             },
                           },
-                        },
-                      },
-                    }}
-                  />
-                </div>
+                        }}
+                      />
+                    </div>
 
-                {userTypeData.insight && (
-                  <div className="mt-6">
-                    <Alert>
-                      <Lightbulb className="h-4 w-4" />
-                      <AlertTitle>Insight</AlertTitle>
-                      <AlertDescription>
-                        {userTypeData.insight}
-                      </AlertDescription>
-                    </Alert>
-                  </div>
-                )}
-
-                <div className="mt-6 space-y-4">
-                  <h4 className="text-sm font-medium">Key Observations</h4>
-                  <ul className="space-y-2 text-sm">
-                    {userTypeData.distribution &&
-                    userTypeData.distribution.length > 0 ? (
-                      <>
-                        <li className="flex items-start">
-                          <span className="bg-[#0a6a74]/10 p-1 rounded mr-2">
-                            <Users className="h-4 w-4 text-[#0a6a74]" />
-                          </span>
-                          <span>
-                            {(() => {
-                              const sorted = [
-                                ...userTypeData.distribution,
-                              ].sort((a, b) => b.value - a.value);
-                              const topType = sorted[0];
-                              const total = sorted.reduce(
-                                (sum, item) => sum + item.value,
-                                0
-                              );
-                              const percentage = total
-                                ? ((topType.value / total) * 100).toFixed(1)
-                                : "0";
-
-                              return `${topType.name} represents ${percentage}% of all respondents, making it the largest user group.`;
-                            })()}
-                          </span>
-                        </li>
-                        <li className="flex items-start">
-                          <span className="bg-[#0a6a74]/10 p-1 rounded mr-2">
-                            <TrendingUp className="h-4 w-4 text-[#0a6a74]" />
-                          </span>
-                          <span>
-                            Understanding the distribution helps tailor services
-                            to specific workforce needs.
-                          </span>
-                        </li>
-                      </>
-                    ) : (
-                      <li className="text-muted-foreground">
-                        No user type data available
-                      </li>
+                    {userTypeData.insight && (
+                      <div className="mt-6">
+                        <Alert>
+                          <Lightbulb className="h-4 w-4" />
+                          <AlertTitle>Insight</AlertTitle>
+                          <AlertDescription>
+                            {userTypeData.insight}
+                          </AlertDescription>
+                        </Alert>
+                      </div>
                     )}
-                  </ul>
+
+                    <div className="mt-6 space-y-4">
+                      <h4 className="text-sm font-medium">Key Observations</h4>
+                      <ul className="space-y-2 text-sm">
+                        {userTypeData.distribution &&
+                        userTypeData.distribution.length > 0 ? (
+                          <>
+                            <li className="flex items-start">
+                              <span className="bg-[#0a6a74]/10 p-1 rounded mr-2">
+                                <Users className="h-4 w-4 text-[#0a6a74]" />
+                              </span>
+                              <span>
+                                {(() => {
+                                  const sorted = [
+                                    ...userTypeData.distribution,
+                                  ].sort((a, b) => b.value - a.value);
+                                  const topType = sorted[0];
+                                  const total = sorted.reduce(
+                                    (sum, item) => sum + item.value,
+                                    0
+                                  );
+                                  const percentage = total
+                                    ? ((topType.value / total) * 100).toFixed(1)
+                                    : "0";
+
+                                  return `${topType.name} represents ${percentage}% of all respondents, making it the largest user group.`;
+                                })()}
+                              </span>
+                            </li>
+                            <li className="flex items-start">
+                              <span className="bg-[#0a6a74]/10 p-1 rounded mr-2">
+                                <TrendingUp className="h-4 w-4 text-[#0a6a74]" />
+                              </span>
+                              <span>
+                                Understanding the distribution helps tailor
+                                services to specific workforce needs.
+                              </span>
+                            </li>
+                          </>
+                        ) : (
+                          <li className="text-muted-foreground">
+                            No user type data available
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                      <Sparkles size={18} />
+                      General Observation Ratings
+                    </h3>
+                    <div className="h-80 w-full">
+                      <Bar
+                        data={{
+                          labels: [
+                            "Cleanliness/Serenity",
+                            "Facilities",
+                            "Security",
+                            "Overall impression",
+                          ],
+                          datasets: [
+                            {
+                              label: "Average Rating",
+                              data: [
+                                surveyData.generalObservationStats
+                                  ?.cleanliness || 0,
+                                surveyData.generalObservationStats
+                                  ?.facilities || 0,
+                                surveyData.generalObservationStats?.security ||
+                                  0,
+                                surveyData.generalObservationStats?.overall ||
+                                  0,
+                              ],
+                              backgroundColor: COLORS[1],
+                              borderColor: COLORS[1],
+                              borderWidth: 1,
+                              borderRadius: 4,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              max: 5,
+                              ticks: {
+                                stepSize: 1,
+                                callback: function (value) {
+                                  return value + ".0";
+                                },
+                              },
+                              title: {
+                                display: true,
+                                text: "Average Rating (0-5)",
+                              },
+                            },
+                          },
+                          plugins: {
+                            legend: {
+                              position: "bottom",
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: function (context) {
+                                  const value = context.parsed.y;
+                                  return `Rating: ${value.toFixed(1)}/5.0`;
+                                },
+                              },
+                            },
+                          },
+                        }}
+                      />
+                    </div>
+
+                    <div className="mt-6">
+                      <h4 className="text-sm font-medium mb-3">
+                        Rating Details
+                      </h4>
+                      <div className="space-y-3">
+                        {[
+                          { id: "cleanliness", label: "Cleanliness/serenity" },
+                          { id: "facilities", label: "Facilities" },
+                          { id: "security", label: "Security" },
+                          { id: "overall", label: "Overall impression" },
+                        ].map((category) => {
+                          const rating =
+                            surveyData.generalObservationStats?.[category.id] ||
+                            0;
+                          return (
+                            <div key={category.id} className="space-y-1">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm">
+                                  {category.label}
+                                </span>
+                                <span className="text-sm font-medium">
+                                  {rating.toFixed(1)}/5.0
+                                  <span className="text-xs ml-1 text-muted-foreground">
+                                    ({valueToRating(rating)})
+                                  </span>
+                                </span>
+                              </div>
+                              <Progress
+                                value={rating * 20}
+                                className={cn(
+                                  "h-2",
+                                  rating >= 4
+                                    ? "bg-[#22c5bf]/30"
+                                    : rating >= 3
+                                    ? "bg-[#f6a050]/30"
+                                    : "bg-[#e84e3c]/30"
+                                )}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="mt-6 space-y-4">
+                      <h4 className="text-sm font-medium">Key Insights</h4>
+                      <ul className="space-y-2 text-sm">
+                        {surveyData.generalObservationStats ? (
+                          <>
+                            <li className="flex items-start">
+                              <span className="bg-[#22c5bf]/10 p-1 rounded mr-2">
+                                <Star className="h-4 w-4 text-[#22c5bf]" />
+                              </span>
+                              <span>
+                                {(() => {
+                                  const categories = [
+                                    {
+                                      id: "cleanliness",
+                                      label: "Cleanliness/serenity",
+                                    },
+                                    { id: "facilities", label: "Facilities" },
+                                    { id: "security", label: "Security" },
+                                    {
+                                      id: "overall",
+                                      label: "Overall impression",
+                                    },
+                                  ];
+                                  const stats =
+                                    surveyData.generalObservationStats || {};
+                                  const topCategory = categories.reduce(
+                                    (max, curr) => {
+                                      if (!stats[curr.id] || !stats[max.id])
+                                        return max;
+                                      return stats[curr.id] > stats[max.id]
+                                        ? curr
+                                        : max;
+                                    },
+                                    categories[0]
+                                  );
+                                  return `${
+                                    topCategory.label
+                                  } is our highest-rated area with ${
+                                    stats[topCategory.id]?.toFixed(1) || "0.0"
+                                  }/5.0 score.`;
+                                })()}
+                              </span>
+                            </li>
+                            <li className="flex items-start">
+                              <span className="bg-[#f6a050]/10 p-1 rounded mr-2">
+                                <AlertTriangle className="h-4 w-4 text-[#f6a050]" />
+                              </span>
+                              <span>
+                                {(() => {
+                                  const categories = [
+                                    {
+                                      id: "cleanliness",
+                                      label: "Cleanliness/serenity",
+                                    },
+                                    { id: "facilities", label: "Facilities" },
+                                    { id: "security", label: "Security" },
+                                    {
+                                      id: "overall",
+                                      label: "Overall impression",
+                                    },
+                                  ];
+                                  const stats =
+                                    surveyData.generalObservationStats || {};
+                                  const lowestCategory = categories.reduce(
+                                    (min, curr) => {
+                                      if (!stats[curr.id] || !stats[min.id])
+                                        return min;
+                                      return stats[curr.id] < stats[min.id]
+                                        ? curr
+                                        : min;
+                                    },
+                                    categories[0]
+                                  );
+                                  return `${
+                                    lowestCategory.label
+                                  } may need attention with ${
+                                    stats[lowestCategory.id]?.toFixed(1) ||
+                                    "0.0"
+                                  }/5.0 score.`;
+                                })()}
+                              </span>
+                            </li>
+                          </>
+                        ) : (
+                          <li className="text-muted-foreground">
+                            No general observation data available
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -1208,7 +1435,10 @@ export function OverviewTab({
                                     : "text-[#e84e3c]"
                                 )}
                               >
-                                {item.satisfaction.toFixed(1)}/5
+                                {!isNaN(item.satisfaction)
+                                  ? item.satisfaction.toFixed(1)
+                                  : "0.0"}
+                                /5
                               </span>
                             </div>
                             <Progress

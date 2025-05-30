@@ -173,7 +173,6 @@ export async function fetchCanteenRatings(): Promise<CanteenData["ratings"]> {
           : 3,
     };
 
-    console.log("Final calculated canteen ratings:", finalRatings);
     return finalRatings;
   } catch (error) {
     console.error("Error fetching canteen ratings:", error);

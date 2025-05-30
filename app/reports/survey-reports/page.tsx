@@ -21,31 +21,6 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
-import { ExportModal } from "@/components/export-modal";
-import {
-  exportToPDF,
-  exportToExcel,
-  exportToCSV,
-  prepareSurveyDataForExport,
-  prepareDepartmentDataForExport,
-  prepareSummaryDataForExport,
-  prepareOverviewDataForExport,
-  prepareWardsDataForExport,
-  prepareCanteenDataForExport,
-  prepareMedicalsDataForExport,
-  prepareFeedbackDataForExport,
-  getExportFilename,
-  ExportOptions,
-  exportTabContentToPDF,
-} from "@/app/reports/survey-reports/utils/export-utils";
-import {
-  generateOverviewTabHTML,
-  generateDepartmentsTabHTML,
-  generateWardsTabHTML,
-  generateCanteenTabHTML,
-  generateMedicalsTabHTML,
-  generateFeedbackTabHTML,
-} from "./utils/html-generators";
 
 import {
   ArrowLeft,
@@ -91,15 +66,13 @@ import { MedicalsTab } from "./components/medicals-tab";
 import { FeedbackTab } from "./components/feedback-tab";
 import { fetchDepartmentTabData } from "@/app/actions/department-actions";
 import { Department } from "@/app/actions/department-actions";
-import { Ward, WardConcern, Recommendation } from "@/app/actions/ward-actions";
+import { Ward } from "@/app/actions/ward-actions";
 import { fetchWardTabData } from "@/app/actions/ward-actions";
 
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import html2canvas from "html2canvas";
-import { COLORS, satisfactionToText } from "./utils/chart-utils";
-import { useExport } from "./utils/useExport";
 
 // Define the data structure
 interface EnhancedData {
@@ -223,6 +196,15 @@ export default function SurveyReportsPage() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const dashboardRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<string>("overview");
+  // Track which tabs have been loaded to avoid unnecessary data fetching
+  const [loadedTabs, setLoadedTabs] = useState<Record<string, boolean>>({
+    overview: false,
+    departments: false,
+    wards: false,
+    canteen: false,
+    medicals: false,
+    feedback: false,
+  });
 
   // Move the state initialization here
   const [data, setData] = useState<EnhancedData>({
@@ -245,10 +227,24 @@ export default function SurveyReportsPage() {
   // Add state for wards
   const [wards, setWards] = useState<Ward[]>([]);
 
-  // Update the fetchData function to also fetch ward data
+  // Add state for ward pagination
+  const [wardPagination, setWardPagination] = useState<{
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  }>({
+    total: 0,
+    limit: 5,
+    offset: 0,
+    hasMore: false,
+  });
+
+  // Update the fetchData function to implement better caching and parallel loading
   const fetchData = async (dateRangeOption: string) => {
     try {
       setIsLoading(true);
+      console.time("Total data loading time");
 
       // Calculate date range based on selection
       let dateRangeFilter = null;
@@ -274,8 +270,62 @@ export default function SurveyReportsPage() {
         };
       }
 
-      // Use the fetchOverviewTabData function to get all data at once
-      const fetchedOverviewData = await fetchOverviewTabData();
+      // Check for cached data first
+      const CACHE_KEY = `surveyReportsData_${dateRangeOption}`;
+      const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+
+      let cachedData = null;
+      if (typeof window !== "undefined") {
+        try {
+          const cached = sessionStorage.getItem(CACHE_KEY);
+          if (cached) {
+            const { data, timestamp } = JSON.parse(cached);
+            if (Date.now() - timestamp < CACHE_EXPIRY) {
+              console.log("Using cached survey reports data");
+
+              // Set all the data from cache
+              setOverviewData(data.overviewData);
+              setData(data.enhancedData);
+              setDepartments(data.departments);
+              setWards(data.wards);
+              setWardPagination(data.wardPagination);
+              setLocations(data.locations);
+              setVisitPurposeData(data.visitPurposeData);
+              setPatientTypeData(data.patientTypeData);
+              setVisitTimeData(data.visitTimeData);
+
+              // Mark all tabs as loaded since we have the data
+              setLoadedTabs({
+                overview: true,
+                departments: true,
+                wards: true,
+                canteen: false, // These will be loaded on demand
+                medicals: false,
+                feedback: false,
+              });
+
+              setIsLoading(false);
+              console.timeEnd("Total data loading time");
+              return;
+            }
+          }
+        } catch (error) {
+          console.error("Error reading cache:", error);
+        }
+      }
+
+      // Fetch all data in parallel
+      console.log("Fetching fresh data...");
+
+      // Start all fetches in parallel
+      const overviewPromise = fetchOverviewTabData();
+      const departmentPromise = fetchDepartmentTabData();
+      const wardPromise = fetchWardTabData(5, 0);
+
+      // Wait for all promises to resolve
+      const [fetchedOverviewData, departmentData, wardData] = await Promise.all(
+        [overviewPromise, departmentPromise, wardPromise]
+      );
 
       // Store the fetched data in the overviewData state
       setOverviewData(fetchedOverviewData);
@@ -290,7 +340,7 @@ export default function SurveyReportsPage() {
       };
 
       // Set data state with the overview data
-      setData({
+      const enhancedData = {
         surveyData: [surveyData],
         recommendations: [surveyData],
         notRecommendReasons: [surveyData],
@@ -300,15 +350,21 @@ export default function SurveyReportsPage() {
           fetchedOverviewData.satisfactionByDemographic,
         improvementAreas: fetchedOverviewData.improvementAreas,
         userTypeData: fetchedOverviewData.userTypeData,
-      });
+      };
 
-      // Fetch department data using server action
-      const departmentData = await fetchDepartmentTabData();
+      setData(enhancedData);
       setDepartments(departmentData.departments);
-
-      // Fetch ward data using server action
-      const wardData = await fetchWardTabData();
       setWards(wardData.wards);
+
+      // Update ward pagination state
+      const wardPaginationData = {
+        total: wardData.pagination?.total || 0,
+        limit: wardData.pagination?.limit || 5,
+        offset: wardData.pagination?.offset || 0,
+        hasMore: wardData.pagination?.hasMore || false,
+      };
+
+      setWardPagination(wardPaginationData);
 
       // Now combine departments and wards for locations
       const combinedLocations: (DepartmentData | WardData)[] = [
@@ -335,126 +391,49 @@ export default function SurveyReportsPage() {
 
       // Continue with the rest of the data handling
       setVisitPurposeData(fetchedOverviewData.visitPurposeData || null);
-
-      // Set patientTypeData with real data or fallback to dummy data with named departments if none available
-      const realPatientTypeData = fetchedOverviewData.patientTypeData;
-      if (realPatientTypeData) {
-        // Create a copy with fallback data for departments that will be used if needed
-        const enhancedPatientTypeData = {
-          ...realPatientTypeData,
-          newPatients: {
-            ...realPatientTypeData.newPatients,
-            // Only override if the departments are "No data" or empty
-            topDepartment:
-              realPatientTypeData.newPatients.topDepartment.name ===
-                "No data" ||
-              realPatientTypeData.newPatients.topDepartment.name === ""
-                ? { name: "General Ward", score: 4.0 }
-                : realPatientTypeData.newPatients.topDepartment,
-            bottomDepartment:
-              realPatientTypeData.newPatients.bottomDepartment.name ===
-                "No data" ||
-              realPatientTypeData.newPatients.bottomDepartment.name === ""
-                ? { name: "Pharmacy", score: 3.2 }
-                : realPatientTypeData.newPatients.bottomDepartment,
-          },
-        };
-
-        setPatientTypeData(enhancedPatientTypeData);
-      } else {
-        // Fallback if no patient type data
-        setPatientTypeData({
-          newPatients: {
-            count: 0,
-            satisfaction: 0,
-            recommendRate: 0,
-            topDepartment: { name: "General Ward", score: 4.0 },
-            bottomDepartment: { name: "Pharmacy", score: 3.2 },
-          },
-          returningPatients: {
-            count: 0,
-            satisfaction: 0,
-            recommendRate: 0,
-            topDepartment: { name: "Lying-In Ward", score: 4.0 },
-            bottomDepartment: { name: "Dressing Room", score: 1.0 },
-          },
-        });
-      }
-
+      setPatientTypeData(fetchedOverviewData.patientTypeData || null);
       setVisitTimeData(fetchedOverviewData.visitTimeData || []);
-      setImprovementPriorities(fetchedOverviewData.improvementAreas || []);
 
-      // For text feedback, create a mock implementation
-      // In a real app, this would come from separate API calls
-      const feedbackData: any[] = [];
-      const recommendationsData: any[] = [];
-      const notRecommendData: any[] = [];
+      // Cache the data for future use
+      if (typeof window !== "undefined") {
+        try {
+          const dataToCache = {
+            overviewData: fetchedOverviewData,
+            enhancedData,
+            departments: departmentData.departments,
+            wards: wardData.wards,
+            wardPagination: wardPaginationData,
+            locations: combinedLocations,
+            visitPurposeData: fetchedOverviewData.visitPurposeData || null,
+            patientTypeData: fetchedOverviewData.patientTypeData || null,
+            visitTimeData: fetchedOverviewData.visitTimeData || [],
+            timestamp: Date.now(),
+          };
 
-      // Process text feedback data
-      if (
-        feedbackData.length > 0 ||
-        recommendationsData.length > 0 ||
-        notRecommendData.length > 0
-      ) {
-        // Extract all concerns
-        const allConcerns = feedbackData
-          .map((f: any) => f.concern)
-          .filter((c: any) => c && c.trim() !== "");
-
-        // Extract all recommendations
-        const allRecommendations = recommendationsData
-          .map((r: any) => r.recommendation)
-          .filter((r: any) => r && r.trim() !== "");
-
-        // Extract all "why not recommend" reasons
-        const allWhyNotRecommend = notRecommendData
-          .map((r: any) => r.reason)
-          .filter((r: any) => r && r.trim() !== "");
-
-        // Simple word frequency analysis
-        const concernWords = extractCommonWords(allConcerns);
-        const recommendationWords = extractCommonWords(allRecommendations);
-        const whyNotRecommendWords = extractCommonWords(allWhyNotRecommend);
-
-        setTextFeedback({
-          concernWords: concernWords.slice(0, 20),
-          recommendationWords: recommendationWords.slice(0, 20),
-          whyNotRecommendWords: whyNotRecommendWords.slice(0, 20),
-          totalConcerns: allConcerns.length,
-          totalRecommendations: allRecommendations.length,
-          totalWhyNotRecommend: allWhyNotRecommend.length,
-        });
-      } else {
-        // Fallback to empty data
-        setTextFeedback({
-          concernWords: [],
-          recommendationWords: [],
-          whyNotRecommendWords: [],
-          totalConcerns: 0,
-          totalRecommendations: 0,
-          totalWhyNotRecommend: 0,
-        });
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify(dataToCache));
+        } catch (error) {
+          console.error("Error caching data:", error);
+        }
       }
+
+      // Mark core tabs as loaded
+      setLoadedTabs({
+        ...loadedTabs,
+        overview: true,
+        departments: true,
+        wards: true,
+      });
+
+      setIsLoading(false);
+      console.timeEnd("Total data loading time");
     } catch (error) {
       console.error("Error fetching data:", error);
-      // Reset to initial state if there's an error
-      setDepartments([]);
-      setWards([]);
-      setData({
-        surveyData: [],
-        recommendations: [],
-        notRecommendReasons: [],
-        departmentConcerns: [],
-        visitTimeAnalysis: [],
-        satisfactionByDemographic: {
-          byUserType: [],
-          byPatientType: [],
-          insight: "Error fetching data",
-        },
-        improvementAreas: [],
-      });
-    } finally {
       setIsLoading(false);
+      toast({
+        title: "Error loading data",
+        description: "Please try refreshing the page.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -465,188 +444,100 @@ export default function SurveyReportsPage() {
   // Add debug logging for visitTimeData
   useEffect(() => {}, [visitTimeData]);
 
-  // Helper function for word frequency analysis
-  const extractCommonWords = (
-    texts: string[]
-  ): { text: string; value: number }[] => {
-    // Combine all texts
-    const combinedText = texts.join(" ").toLowerCase();
-
-    // Remove common stop words
-    const stopWords = [
-      "the",
-      "and",
-      "a",
-      "an",
-      "in",
-      "on",
-      "at",
-      "to",
-      "for",
-      "with",
-      "was",
-      "were",
-      "is",
-      "are",
-      "be",
-      "been",
-      "being",
-      "have",
-      "has",
-      "had",
-      "do",
-      "does",
-      "did",
-      "but",
-      "or",
-      "as",
-      "if",
-      "then",
-      "else",
-      "when",
-      "up",
-      "down",
-      "in",
-      "out",
-      "no",
-      "yes",
-      "not",
-      "so",
-      "that",
-      "this",
-      "these",
-      "those",
-      "my",
-      "your",
-      "his",
-      "her",
-      "its",
-      "our",
-      "their",
-      "i",
-      "you",
-      "he",
-      "she",
-      "it",
-      "we",
-      "they",
-      "me",
-      "him",
-      "us",
-      "them",
-    ];
-
-    // Split into words and count frequency
-    const wordCounts: Record<string, number> = {};
-
-    combinedText.split(/\s+/).forEach((word) => {
-      // Clean the word (remove punctuation)
-      const cleanWord = word.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
-
-      // Skip if empty or a stop word or too short
-      if (cleanWord && !stopWords.includes(cleanWord) && cleanWord.length > 2) {
-        wordCounts[cleanWord] = (wordCounts[cleanWord] || 0) + 1;
-      }
-    });
-
-    // Convert to array and sort by frequency
-    return Object.entries(wordCounts)
-      .map(([text, value]) => ({ text, value }))
-      .sort((a, b) => b.value - a.value);
-  };
-
-  // Word cloud data for visualization
-  const wordCloudData = useMemo(() => {
-    if (!textFeedback) return [];
-
-    // Combine all word data
-    return [
-      ...textFeedback.concernWords.map((item: any) => ({
-        ...item,
-        category: "concern",
-        color: "#4caf50",
-      })),
-      ...textFeedback.recommendationWords.map((item: any) => ({
-        ...item,
-        category: "recommendation",
-        color: "#2196f3",
-      })),
-      ...textFeedback.whyNotRecommendWords.map((item: any) => ({
-        ...item,
-        category: "issue",
-        color: "#f44336",
-      })),
-    ];
-  }, [textFeedback]);
-
-  // Get the handleExport function from the hook
-  const { handleExport: exportHandler } = useExport();
-
-  // Function to handle exports from this component
-  const handleExport = (
-    format: string,
-    dataType: string,
-    options?: Record<string, any>
-  ) => {
-    return exportHandler(format, dataType, options || {}, {
-      setIsLoading,
-      dateRange,
-      activeTabRef,
-      overviewData,
-      data,
-      dashboardRef,
-      visitPurposeData,
-      patientTypeData,
-      locations,
-      visitTimeData,
-      textFeedback,
-      improvementPriorities,
-      exportMultipleTabsToPDF: async (
-        selectedTabs: string[],
-        dateRangeText: string,
-        orientation: string
-      ) => {
-        // Implementation for exporting multiple tabs to PDF
-        // Placeholder implementation
-      },
-      exportMultipleTabsToExcel: async (
-        selectedTabs: string[],
-        dateRangeText: string
-      ) => {
-        // Implementation for exporting multiple tabs to Excel
-        // Placeholder implementation
-      },
-      exportMultipleTabsToCSV: async (
-        selectedTabs: string[],
-        dateRangeText: string
-      ) => {
-        // Implementation for exporting multiple tabs to CSV
-        // Placeholder implementation
-      },
-      generateOverviewTabHTML: (data) =>
-        generateOverviewTabHTML(
-          data,
-          visitPurposeData,
-          patientTypeData,
-          locations
-        ),
-      generateDepartmentsTabHTML,
-      generateWardsTabHTML,
-      generateCanteenTabHTML,
-      generateMedicalsTabHTML,
-      generateFeedbackTabHTML,
-    });
-  };
-
   // Track the active tab
   const handleTabChange = (value: string) => {
+    console.log(`Tab change started: ${activeTabRef.current} -> ${value}`);
+    const startTime = performance.now();
+
+    // Update the active tab ref
     activeTabRef.current = value;
 
-    // If the export modal is open, ensure it reflects the current tab
-    if (isExportModalOpen) {
-      // Force a re-render by closing and reopening the modal
-      setIsExportModalOpen(false);
-      setTimeout(() => setIsExportModalOpen(true), 10);
+    // Check if this is one of the specialized tabs that should share loading
+    const relatedTabs = ["canteen", "medicals", "feedback"];
+
+    if (relatedTabs.includes(value)) {
+      // If any of the related tabs is already loaded, mark all as loaded
+      const anyRelatedTabLoaded = relatedTabs.some((tab) => loadedTabs[tab]);
+
+      if (anyRelatedTabLoaded) {
+        console.log(`Using already loaded data for ${value} tab`);
+      } else {
+        console.log(
+          `Triggering shared loading for all tabs: ${relatedTabs.join(", ")}`
+        );
+
+        // Mark all related tabs as loaded to trigger their data fetching
+        const updatedLoadedTabs = { ...loadedTabs };
+        relatedTabs.forEach((tab) => {
+          updatedLoadedTabs[tab] = true;
+        });
+        setLoadedTabs(updatedLoadedTabs);
+      }
+    } else {
+      // For other tabs, just mark this one as loaded if it's not already
+      if (!loadedTabs[value]) {
+        setLoadedTabs({
+          ...loadedTabs,
+          [value]: true,
+        });
+      }
+    }
+
+    const endTime = performance.now();
+    console.log(`Tab change to ${value} completed in ${endTime - startTime}ms`);
+  };
+
+  // Function to render tab content with loading state only on first load
+  const renderTabContent = (
+    tabId: string,
+    content: React.ReactNode,
+    loadingContent: React.ReactNode
+  ) => {
+    // Special handling for related tabs (canteen, medicals, feedback)
+    const relatedTabs = ["canteen", "medicals", "feedback"];
+
+    if (relatedTabs.includes(tabId)) {
+      // Check if any of the related tabs have been loaded
+      const anyRelatedTabLoaded = relatedTabs.some((tab) => loadedTabs[tab]);
+
+      // If none are loaded and we're loading, show loading content
+      if (!anyRelatedTabLoaded && isLoading) {
+        return loadingContent;
+      }
+
+      // Otherwise show the actual content
+      return content;
+    }
+
+    // For other tabs, show loading content only on first load
+    if (!loadedTabs[tabId] && isLoading) {
+      return loadingContent;
+    }
+
+    return content;
+  };
+
+  // Function to load more wards
+  const loadMoreWards = async () => {
+    try {
+      // Calculate the new offset
+      const newOffset = wardPagination.offset + wardPagination.limit;
+
+      // Fetch the next batch of wards
+      const wardData = await fetchWardTabData(wardPagination.limit, newOffset);
+
+      // Combine the new wards with existing ones
+      setWards((prevWards) => [...prevWards, ...wardData.wards]);
+
+      // Update pagination state
+      setWardPagination({
+        total: wardData.pagination?.total || 0,
+        limit: wardData.pagination?.limit || 5,
+        offset: newOffset,
+        hasMore: wardData.pagination?.hasMore || false,
+      });
+    } catch (error) {
+      console.error("Error loading more wards:", error);
     }
   };
 
@@ -685,15 +576,7 @@ export default function SurveyReportsPage() {
                 <span className="hidden md:inline">Back to Reports</span>
               </Button>
             </Link>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1"
-              onClick={() => setIsExportModalOpen(true)}
-            >
-              <Download size={16} />
-              <span className="hidden md:inline">Export</span>
-            </Button>
+
             <Button
               variant="outline"
               size="sm"
@@ -770,7 +653,7 @@ export default function SurveyReportsPage() {
                 <span className="hidden sm:inline">Canteen</span>
               </span>
             </TabsTrigger>
-            <TabsTrigger value="occupational-health">
+            <TabsTrigger value="medicals">
               <span className="flex items-center gap-1.5">
                 <Stethoscope className="h-4 w-4" />
                 <span className="hidden sm:inline">Medicals</span>
@@ -785,62 +668,350 @@ export default function SurveyReportsPage() {
           </TabsList>
 
           {/* Add Overview Tab Content */}
-          <TabsContent value="overview" className="space-y-4">
-            <OverviewTab
-              surveyData={{
-                totalResponses: overviewData.surveyData.totalResponses || 0,
-                recommendRate: overviewData.surveyData.recommendRate || 0,
-                avgSatisfaction: overviewData.surveyData.avgSatisfaction || 0,
-                purposeDistribution:
-                  overviewData.surveyData.purposeDistribution || [],
-              }}
-              isLoading={isLoading}
-              satisfactionByDemographic={data.satisfactionByDemographic}
-              visitTimeAnalysis={data.visitTimeAnalysis}
-              improvementAreas={data.improvementAreas}
-              visitPurposeData={visitPurposeData}
-              patientTypeData={patientTypeData}
-              visitTimeData={visitTimeData}
-              userTypeData={
-                data.userTypeData || { distribution: [], insight: "" }
-              }
-              locations={locations}
-            />
+          <TabsContent value="overview">
+            {renderTabContent(
+              "overview",
+              <OverviewTab
+                surveyData={{
+                  totalResponses: overviewData.surveyData.totalResponses || 0,
+                  recommendRate: overviewData.surveyData.recommendRate || 0,
+                  avgSatisfaction: overviewData.surveyData.avgSatisfaction || 0,
+                  purposeDistribution:
+                    overviewData.surveyData.purposeDistribution || [],
+                  generalObservationStats: overviewData.surveyData
+                    .generalObservationStats || {
+                    cleanliness: 0,
+                    facilities: 0,
+                    security: 0,
+                    overall: 0,
+                  },
+                }}
+                isLoading={isLoading}
+                satisfactionByDemographic={data.satisfactionByDemographic}
+                visitTimeAnalysis={data.visitTimeAnalysis}
+                improvementAreas={data.improvementAreas}
+                visitPurposeData={visitPurposeData}
+                patientTypeData={patientTypeData}
+                visitTimeData={visitTimeData}
+                userTypeData={
+                  data.userTypeData || { distribution: [], insight: "" }
+                }
+                locations={locations}
+              />,
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-8 w-64" />
+                    <Skeleton className="h-4 w-full mt-2" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                      {Array(4)
+                        .fill(0)
+                        .map((_, i) => (
+                          <Card key={i}>
+                            <CardHeader className="pb-2">
+                              <Skeleton className="h-5 w-24" />
+                            </CardHeader>
+                            <CardContent>
+                              <Skeleton className="h-9 w-16 mb-1" />
+                              <Skeleton className="h-3 w-32" />
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Card>
+                        <CardHeader>
+                          <Skeleton className="h-6 w-48" />
+                          <Skeleton className="h-4 w-32 mt-1" />
+                        </CardHeader>
+                        <CardContent>
+                          <Skeleton className="h-64 w-full" />
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader>
+                          <Skeleton className="h-6 w-48" />
+                          <Skeleton className="h-4 w-32 mt-1" />
+                        </CardHeader>
+                        <CardContent>
+                          <Skeleton className="h-64 w-full" />
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </TabsContent>
 
           {/* Add Departments Tab Content */}
-          <TabsContent value="departments" className="space-y-4">
-            <DepartmentsTab isLoading={isLoading} departments={departments} />
+          <TabsContent value="departments">
+            {renderTabContent(
+              "departments",
+              <DepartmentsTab
+                isLoading={isLoading}
+                departments={departments}
+              />,
+              <div className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {Array(8)
+                    .fill(0)
+                    .map((_, i) => (
+                      <Card key={i} className="relative overflow-hidden">
+                        <CardHeader className="pb-2">
+                          <Skeleton className="h-5 w-32" />
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <Skeleton className="h-9 w-16" />
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-2 w-full" />
+                            <div className="flex justify-between mt-4">
+                              <Skeleton className="h-4 w-20" />
+                              <Skeleton className="h-4 w-16" />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-40" />
+                    <Skeleton className="h-4 w-64 mt-1" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-80 w-full" />
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </TabsContent>
 
           {/* Add Wards Tab Content */}
-          <TabsContent value="wards" className="space-y-4">
-            <WardsTab isLoading={isLoading} wards={wards} />
+          <TabsContent value="wards">
+            {renderTabContent(
+              "wards",
+              <WardsTab
+                isLoading={false}
+                wards={wards}
+                pagination={wardPagination}
+                onLoadMore={loadMoreWards}
+              />,
+              <WardsTab isLoading={true} wards={[]} />
+            )}
           </TabsContent>
 
-          {/* Canteen Tab Content */}
+          {/* Add Canteen Tab Content */}
           <TabsContent value="canteen">
-            <CanteenTab isLoading={isLoading} departments={locations} />
+            {renderTabContent(
+              "canteen",
+              <CanteenTab isLoading={isLoading} departments={departments} />,
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-7 w-48" />
+                    <Skeleton className="h-4 w-64 mt-1" />
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {Array(4)
+                        .fill(0)
+                        .map((_, i) => (
+                          <Card key={i}>
+                            <CardHeader className="pb-2">
+                              <Skeleton className="h-5 w-32" />
+                            </CardHeader>
+                            <CardContent>
+                              <Skeleton className="h-9 w-16 mb-1" />
+                              <Skeleton className="h-3 w-32" />
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Card>
+                        <CardHeader>
+                          <Skeleton className="h-6 w-36" />
+                          <Skeleton className="h-4 w-48 mt-1" />
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            {Array(6)
+                              .fill(0)
+                              .map((_, i) => (
+                                <div key={i} className="space-y-1">
+                                  <div className="flex justify-between">
+                                    <Skeleton className="h-4 w-32" />
+                                    <Skeleton className="h-4 w-16" />
+                                  </div>
+                                  <Skeleton className="h-2 w-full" />
+                                </div>
+                              ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader>
+                          <Skeleton className="h-6 w-48" />
+                          <Skeleton className="h-4 w-64 mt-1" />
+                        </CardHeader>
+                        <CardContent>
+                          <Skeleton className="h-80 w-full" />
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </TabsContent>
 
-          {/* Occupational Health Tab Content */}
-          <TabsContent value="occupational-health">
-            <MedicalsTab isLoading={isLoading} />
+          {/* Add Medicals Tab Content */}
+          <TabsContent value="medicals">
+            {renderTabContent(
+              "medicals",
+              <MedicalsTab isLoading={isLoading} />,
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-7 w-56" />
+                    <Skeleton className="h-4 w-72 mt-1" />
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {Array(4)
+                        .fill(0)
+                        .map((_, i) => (
+                          <Card key={i}>
+                            <CardHeader className="pb-2">
+                              <Skeleton className="h-5 w-32" />
+                            </CardHeader>
+                            <CardContent>
+                              <Skeleton className="h-9 w-16 mb-1" />
+                              <Skeleton className="h-3 w-32" />
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Card>
+                        <CardHeader>
+                          <Skeleton className="h-6 w-36" />
+                          <Skeleton className="h-4 w-48 mt-1" />
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            {Array(6)
+                              .fill(0)
+                              .map((_, i) => (
+                                <div key={i} className="space-y-1">
+                                  <div className="flex justify-between">
+                                    <Skeleton className="h-4 w-32" />
+                                    <Skeleton className="h-4 w-16" />
+                                  </div>
+                                  <Skeleton className="h-2 w-full" />
+                                </div>
+                              ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader>
+                          <Skeleton className="h-6 w-48" />
+                          <Skeleton className="h-4 w-64 mt-1" />
+                        </CardHeader>
+                        <CardContent>
+                          <Skeleton className="h-80 w-full" />
+                        </CardContent>
+                      </Card>
+                    </div>
+                    <Card>
+                      <CardHeader>
+                        <Skeleton className="h-6 w-56" />
+                        <Skeleton className="h-4 w-72 mt-1" />
+                      </CardHeader>
+                      <CardContent>
+                        <Skeleton className="h-64 w-full" />
+                      </CardContent>
+                    </Card>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </TabsContent>
 
-          {/* Feedback Tab Content */}
+          {/* Add Feedback Tab Content */}
           <TabsContent value="feedback">
-            <FeedbackTab isLoading={isLoading} surveyData={data.surveyData} />
+            {renderTabContent(
+              "feedback",
+              <FeedbackTab
+                isLoading={isLoading}
+                surveyData={data.surveyData}
+              />,
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-7 w-48" />
+                    <Skeleton className="h-4 w-64 mt-1" />
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {Array(3)
+                        .fill(0)
+                        .map((_, i) => (
+                          <Card key={i}>
+                            <CardHeader>
+                              <Skeleton className="h-6 w-36" />
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-4">
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-5/6" />
+                                <Skeleton className="h-4 w-4/6" />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                    </div>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                          <Skeleton className="h-6 w-48" />
+                          <Skeleton className="h-4 w-56 mt-1" />
+                        </div>
+                        <Skeleton className="h-10 w-32" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {Array(5)
+                            .fill(0)
+                            .map((_, i) => (
+                              <Card key={i}>
+                                <CardHeader className="py-3">
+                                  <div className="flex justify-between">
+                                    <Skeleton className="h-5 w-36" />
+                                    <Skeleton className="h-4 w-24" />
+                                  </div>
+                                </CardHeader>
+                                <CardContent className="py-2">
+                                  <Skeleton className="h-4 w-full mb-2" />
+                                  <Skeleton className="h-4 w-5/6 mb-2" />
+                                  <Skeleton className="h-4 w-4/6" />
+                                </CardContent>
+                              </Card>
+                            ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
-
-        {/* Export Modal */}
-        <ExportModal
-          isOpen={isExportModalOpen}
-          onClose={() => setIsExportModalOpen(false)}
-          onExport={handleExport}
-          currentTab={activeTabRef.current}
-        />
       </div>
     </main>
   );

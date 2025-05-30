@@ -25,6 +25,7 @@ import {
 
 import { WardConcern, SurveySubmission } from "@/app/actions/ward-actions";
 import { ExtendedWard } from "./wards-tab";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface WardDetailsProps {
   selectedWard: ExtendedWard;
@@ -36,7 +37,12 @@ interface WardDetailsProps {
   satisfactionTrend: any[];
   onBackClick: () => void;
   valueToRating: (value: number) => string;
+  wardRecommendations?: any[]; // Optional for backward compatibility
 }
+
+// Cache keys and expiration time
+const CACHE_KEY_RECOMMENDATIONS = "wardRecommendationsData";
+const CACHE_TIME = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 export function WardDetails({
   selectedWard,
@@ -60,8 +66,8 @@ export function WardDetails({
   // Calculate metrics based on real data
   const patientSatisfaction = Math.round(selectedWard.recommendRate); // Use real data
 
-  // Get ward-specific concerns only
-  const wardSpecificFeedback = wardConcerns
+  // Get ward-specific feedback (both concerns and recommendations)
+  const wardFeedback = wardConcerns
     .filter((concern) => concern.locationName === selectedWard.name)
     .map((concern) => ({
       id: `feedback-${concern.submissionId}`,
@@ -75,7 +81,8 @@ export function WardDetails({
     .sort(
       (a, b) =>
         new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-    );
+    )
+    .slice(0, 5); // Show only the 5 most recent items
 
   // Prepare data for radar chart comparing ward to department average
   const radarData = [
@@ -376,15 +383,17 @@ export function WardDetails({
 
           <div className="space-y-2">
             <h3 className="text-lg font-medium">Comments & Feedback</h3>
-            {wardSpecificFeedback.length > 0 ? (
-              wardSpecificFeedback.map((feedback, index) => (
+            {wardFeedback.length > 0 ? (
+              wardFeedback.map((feedback, index) => (
                 <div
                   key={`${feedback.type}-${feedback.submissionId}-${index}`}
                   className={`border p-3 rounded-md border-l-4 border-l-amber-500`}
                 >
                   <div className="flex justify-between items-start mb-1">
                     <Badge variant="secondary" className="text-xs">
-                      Feedback
+                      {feedback.type === "feedback"
+                        ? "Feedback"
+                        : "Recommendation"}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {new Date(feedback.submittedAt).toLocaleDateString(

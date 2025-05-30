@@ -3,12 +3,12 @@ import Image from "next/image";
 
 export default function Home() {
   return (
-    <main className="min-h-screen p-4 md:p-8">
+    <main className="min-h-screen p-4 md:p-4">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-6 text-center">
+        <div className="mb-2 text-center">
           <div className="flex justify-center mb-4">
             <Image
-              src="/agahflogo.svg"
+              src="/agahflogo white.svg"
               alt="AGA Health Foundation Logo"
               width={120}
               height={120}

@@ -11,6 +11,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import {
   Coffee,
@@ -43,6 +52,20 @@ import {
   DepartmentConcern,
 } from "@/app/actions/canteen-actions";
 
+// Enhanced skeleton with stronger visibility during loading states
+const EnhancedSkeleton = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "animate-pulse rounded-md bg-slate-200 dark:bg-slate-900",
+      className
+    )}
+    {...props}
+  />
+);
+
 // Convert numeric value to rating text
 const valueToRating = (value: number): string => {
   if (value >= 4.5) return "Excellent";
@@ -74,9 +97,20 @@ ChartJS.register(
   ArcElement
 );
 
+// Cache keys and expiration time
+const CACHE_KEY_CANTEEN = "canteenTabData";
+const CACHE_KEY_CONCERNS = "canteenConcernsData";
+const CACHE_TIME = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 interface CanteenTabProps {
   isLoading: boolean;
   departments: any[];
+}
+
+// Before the component definition, add this helper function
+function fetchCanteenReviews(): Promise<any[]> {
+  // Mock implementation for reviews
+  return Promise.resolve([]);
 }
 
 export function CanteenTab({ isLoading, departments }: CanteenTabProps) {
@@ -87,36 +121,116 @@ export function CanteenTab({ isLoading, departments }: CanteenTabProps) {
   const [isLoadingConcerns, setIsLoadingConcerns] = useState(false);
   const [foodTypeData, setFoodTypeData] = useState<any[]>([]);
   const [submissionCount, setSubmissionCount] = useState<number>(0);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [reviews, setReviews] = useState<any[]>([]);
 
-  // Fetch canteen data
+  // Fetch canteen data when component mounts
   useEffect(() => {
-    const getCanteenData = async () => {
+    const CACHE_KEY = "canteenTabData";
+    const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+    const instanceId = Math.random().toString(36).substring(2, 9);
+    const timerName = `CanteenTab_data_loading_${instanceId}`;
+
+    const loadCanteenData = async () => {
       try {
-        const data = await fetchCanteenData(departments);
-        if (data) {
-          setCanteenData(data);
+        console.time(timerName);
+        console.log(
+          "CanteenTab: Data fetch triggered (part of shared loading)"
+        );
+
+        // Check cache first
+        const cachedData = sessionStorage.getItem(CACHE_KEY);
+        if (cachedData) {
+          const parsed = JSON.parse(cachedData);
+          if (Date.now() - parsed.timestamp < CACHE_TIME) {
+            console.log("CanteenTab: Using cached data");
+            setCanteenData(parsed.data.canteenData);
+            setSubmissionCount(parsed.data.count || 0);
+            setIsLoadingData(false);
+            try {
+              console.timeEnd(timerName);
+            } catch (e) {
+              // Ignore timer errors
+            }
+            return;
+          }
         }
 
-        // Get actual count of canteen submissions
+        setIsLoadingData(true);
+
+        // Fetch the data
+        const data = await fetchCanteenData(departments);
         const count = await getCanteenSubmissionCount();
+
+        setCanteenData(data);
         setSubmissionCount(count);
+
+        // Cache the results
+        try {
+          sessionStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({
+              data: { canteenData: data, count },
+              timestamp: Date.now(),
+            })
+          );
+        } catch (error) {
+          console.error("Error caching canteen data:", error);
+        }
+
+        try {
+          console.timeEnd(timerName);
+        } catch (e) {
+          // Ignore timer errors
+        }
       } catch (error) {
-        console.error("Error fetching canteen data:", error);
+        console.error("Error in loadCanteenData:", error);
+        try {
+          console.timeEnd(timerName);
+        } catch (e) {
+          // Ignore timer errors
+        }
+      } finally {
+        setIsLoadingData(false);
       }
     };
 
-    if (!isLoading && departments && departments.length > 0) {
-      getCanteenData();
+    if (departments && departments.length > 0) {
+      loadCanteenData();
     }
-  }, [departments, isLoading]);
+  }, [departments]);
 
-  // Fetch canteen concerns
+  // Fetch canteen concerns with caching
   useEffect(() => {
     const loadCanteenConcerns = async () => {
       setIsLoadingConcerns(true);
       try {
+        // Check for cached concerns
+        const cachedConcerns = sessionStorage.getItem(CACHE_KEY_CONCERNS);
+
+        if (cachedConcerns) {
+          const { concerns, timestamp } = JSON.parse(cachedConcerns);
+
+          // Use cached concerns if less than 5 minutes old
+          if (Date.now() - timestamp < CACHE_TIME) {
+            setCanteenConcerns(concerns);
+            setIsLoadingConcerns(false);
+            return;
+          }
+        }
+
+        // Fetch fresh concerns if no valid cache exists
         const concerns = await fetchCanteenConcerns();
         setCanteenConcerns(concerns);
+
+        // Store in cache with timestamp
+        sessionStorage.setItem(
+          CACHE_KEY_CONCERNS,
+          JSON.stringify({
+            concerns,
+            timestamp: Date.now(),
+          })
+        );
       } catch (error) {
         console.error("Error fetching canteen concerns:", error);
         setCanteenConcerns([]);
@@ -130,9 +244,88 @@ export function CanteenTab({ isLoading, departments }: CanteenTabProps) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-96">
-        <LoadingSpinner size="lg" />
-        <p className="text-muted-foreground mt-4">Loading canteen data...</p>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <EnhancedSkeleton className="h-7 w-48" />
+            <EnhancedSkeleton className="h-4 w-64 mt-1" />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Skeleton for summary cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i}>
+                  <CardHeader className="pb-2">
+                    <EnhancedSkeleton className="h-5 w-32" />
+                  </CardHeader>
+                  <CardContent>
+                    <EnhancedSkeleton className="h-9 w-16 mb-1" />
+                    <EnhancedSkeleton className="h-3 w-32" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Skeleton for detailed ratings and chart */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <EnhancedSkeleton className="h-6 w-36" />
+                  <EnhancedSkeleton className="h-4 w-48 mt-1" />
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} className="space-y-1">
+                        <div className="flex justify-between">
+                          <EnhancedSkeleton className="h-4 w-32" />
+                          <EnhancedSkeleton className="h-4 w-16" />
+                        </div>
+                        <EnhancedSkeleton className="h-2 w-full" />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <EnhancedSkeleton className="h-6 w-48" />
+                  <EnhancedSkeleton className="h-4 w-64 mt-1" />
+                </CardHeader>
+                <CardContent>
+                  <EnhancedSkeleton className="h-80 w-full" />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Skeleton for feedback */}
+            <Card>
+              <CardHeader>
+                <EnhancedSkeleton className="h-6 w-40" />
+                <EnhancedSkeleton className="h-4 w-64 mt-1" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i} className="border-l-4 border-l-amber-500/30">
+                      <CardHeader className="p-3 pb-1">
+                        <div className="flex justify-between">
+                          <EnhancedSkeleton className="h-5 w-32" />
+                          <EnhancedSkeleton className="h-4 w-24" />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-3 pt-1">
+                        <EnhancedSkeleton className="h-4 w-full mb-1" />
+                        <EnhancedSkeleton className="h-4 w-5/6 mb-1" />
+                        <EnhancedSkeleton className="h-4 w-4/6" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </CardContent>
+        </Card>
       </div>
     );
   }

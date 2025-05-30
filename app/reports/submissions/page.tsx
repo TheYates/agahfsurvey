@@ -1,44 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
-import Link from "next/link";
-import Image from "next/image";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  ChevronLeft,
-  FileText,
-  Calendar,
-  User,
-  Filter,
-  Search,
-  SortAsc,
-  SortDesc,
-  Home,
-  Download,
-  RefreshCw,
-  ChevronRight,
-  ArrowUpDown,
-} from "lucide-react";
-import { getSurveyData, SurveyData } from "@/app/actions/page-actions";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -46,6 +20,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Search,
+  Filter,
+  Eye,
+  Calendar,
+  MapPin,
+  User,
+  Download,
+  FileText,
+  FileJson,
+  FileOutput,
+  FileSpreadsheet,
+  ArrowLeft,
+  RefreshCw,
+} from "lucide-react";
+import { format } from "date-fns";
+import SubmissionDetailModal from "./components/submission-detail-modal";
+import {
+  exportToCSV,
+  exportToJSON,
+  exportToHTML,
+  exportToExcel,
+} from "./utils/export-utils";
+import { getSurveyData } from "@/app/actions/page-actions";
+import Image from "next/image";
+import Link from "next/link";
 import {
   Pagination,
   PaginationContent,
@@ -55,328 +62,409 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Update the SurveyData interface to include the new properties
-interface ExtendedSurveyData extends SurveyData {
-  patient_type?: string;
-  user_type?: string;
+interface Submission {
+  id: string;
+  submittedAt: string;
+  visitPurpose: string;
+  patientType: string;
+  userType: string;
+  visitTime: string;
+  locations: string[];
+  wouldRecommend: boolean;
+  hasConcerns: boolean;
+  overallSatisfaction: string;
+  departmentRatings?: Record<string, Record<string, string>>;
+  departmentConcerns?: Record<string, string>;
+  generalObservation?: Record<string, string>;
+  recommendation?: string;
+  whyNotRecommend?: string;
 }
 
 export default function SubmissionsPage() {
-  const { isAuthenticated } = useAuth();
-  const router = useRouter();
-  const [allSubmissions, setAllSubmissions] = useState<ExtendedSurveyData[]>(
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [filteredSubmissions, setFilteredSubmissions] = useState<Submission[]>(
     []
   );
-  const [filteredSubmissions, setFilteredSubmissions] = useState<
-    ExtendedSurveyData[]
-  >([]);
-  const [displayedSubmissions, setDisplayedSubmissions] = useState<
-    ExtendedSurveyData[]
-  >([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthChecked, setIsAuthChecked] = useState(false);
-
+  const [selectedSubmissions, setSelectedSubmissions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterRecommendation, setFilterRecommendation] = useState("all");
+  const [filterConcerns, setFilterConcerns] = useState("all");
+  const [filterVisitPurpose, setFilterVisitPurpose] = useState("all");
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<
+    string | null
+  >(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-
-  // Filtering state
-  const [searchTerm, setSearchTerm] = useState("");
-  const [purposeFilter, setPurposeFilter] = useState("all");
-  const [ratingFilter, setRatingFilter] = useState("all");
-  const [recommendFilter, setRecommendFilter] = useState("all");
-
-  // Sorting state
-  const [sortField, setSortField] = useState<string>("created_at");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
-    setIsAuthChecked(true);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const surveyData = await getSurveyData();
+
+        // Transform the data to match the expected format
+        const transformedData: Submission[] = surveyData.map((survey) => ({
+          id: String(survey.id),
+          submittedAt: survey.created_at,
+          visitPurpose: survey.visit_purpose || "Not specified",
+          patientType: survey.patient_type || "Not specified",
+          userType: survey.user_type || "Not specified",
+          visitTime: survey.visit_time || "not-specified",
+          locations: survey.locations_visited || [],
+          wouldRecommend: survey.wouldRecommend || false,
+          // Infer if there are concerns from the data
+          hasConcerns: false, // We'll need to update this once we have real concerns data
+          // Convert numeric rating to text for display
+          overallSatisfaction: convertRatingToSatisfaction(
+            survey.overall_rating
+          ),
+          // These fields might require additional API calls to get detailed data
+          departmentRatings: {},
+          departmentConcerns: {},
+          generalObservation: {
+            overall: convertRatingToSatisfaction(survey.overall_rating),
+          },
+          recommendation: survey.recommendation_rating?.toString(),
+          whyNotRecommend: survey.wouldRecommend ? "" : "Not provided",
+        }));
+
+        setSubmissions(transformedData);
+        setFilteredSubmissions(transformedData);
+      } catch (error) {
+        console.error("Error fetching survey data:", error);
+        // Fallback to mock data if API fails
+        setSubmissions([]);
+        setFilteredSubmissions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    if (isAuthChecked) {
-      if (!isAuthenticated) {
-        router.push("/");
-      }
-    }
-  }, [isAuthenticated, router, isAuthChecked]);
+  // Helper function to convert numeric rating to satisfaction text
+  const convertRatingToSatisfaction = (rating: number): string => {
+    if (rating >= 4.5) return "Excellent";
+    if (rating >= 3.5) return "Very Good";
+    if (rating >= 2.5) return "Good";
+    if (rating >= 1.5) return "Fair";
+    return "Poor";
+  };
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        setIsLoading(true);
-        const surveyData = await getSurveyData();
-        setAllSubmissions(surveyData);
-        setFilteredSubmissions(surveyData);
-      } catch (error) {
-        console.error("Error fetching submissions:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
+    let filtered = submissions;
 
-    if (isAuthenticated) {
-      fetchData();
-    }
-  }, [isAuthenticated]);
-
-  // Apply filters
-  useEffect(() => {
-    let result = [...allSubmissions];
-
-    // Apply search term (search in ID and visit purpose)
+    // Search filter
     if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      result = result.filter(
+      filtered = filtered.filter(
         (submission) =>
-          (typeof submission.id === "string" &&
-            submission.id.toLowerCase().includes(searchLower)) ||
-          (submission.visit_purpose &&
-            submission.visit_purpose.toLowerCase().includes(searchLower))
+          submission.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          submission.visitPurpose
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          submission.userType
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          submission.locations.some((loc) =>
+            loc.toLowerCase().includes(searchTerm.toLowerCase())
+          )
       );
     }
 
-    // Apply purpose filter
-    if (purposeFilter !== "all") {
-      result = result.filter(
-        (submission) => submission.visit_purpose === purposeFilter
+    // Recommendation filter
+    if (filterRecommendation !== "all") {
+      filtered = filtered.filter((submission) =>
+        filterRecommendation === "yes"
+          ? submission.wouldRecommend
+          : !submission.wouldRecommend
       );
     }
 
-    // Apply rating filter
-    if (ratingFilter !== "all") {
-      const [min, max] = ratingFilter.split("-").map(Number);
-      if (max) {
-        result = result.filter(
-          (submission) =>
-            submission.overall_rating >= min && submission.overall_rating <= max
-        );
-      } else {
-        result = result.filter(
-          (submission) => submission.overall_rating >= min
-        );
-      }
-    }
-
-    // Apply recommend filter
-    if (recommendFilter !== "all") {
-      const isRecommended = recommendFilter === "yes";
-      result = result.filter((submission) =>
-        isRecommended
-          ? submission.recommendation_rating >= 7
-          : submission.recommendation_rating < 7
+    // Concerns filter
+    if (filterConcerns !== "all") {
+      filtered = filtered.filter((submission) =>
+        filterConcerns === "yes"
+          ? submission.hasConcerns
+          : !submission.hasConcerns
       );
     }
 
-    setFilteredSubmissions(result);
-    setTotalPages(Math.ceil(result.length / itemsPerPage));
-    setCurrentPage(1); // Reset to first page when filters change
+    // Visit purpose filter
+    if (filterVisitPurpose !== "all") {
+      filtered = filtered.filter(
+        (submission) => submission.visitPurpose === filterVisitPurpose
+      );
+    }
+
+    setFilteredSubmissions(filtered);
   }, [
-    allSubmissions,
+    submissions,
     searchTerm,
-    purposeFilter,
-    ratingFilter,
-    recommendFilter,
-    itemsPerPage,
+    filterRecommendation,
+    filterConcerns,
+    filterVisitPurpose,
   ]);
 
-  // Apply sorting and pagination
-  useEffect(() => {
-    let sorted = [...filteredSubmissions];
-
-    // Apply sorting
-    sorted.sort((a: any, b: any) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
-
-      if (typeof aValue === "string") {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
-
-      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    // Apply pagination
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedSubmissions = sorted.slice(
-      startIndex,
-      startIndex + itemsPerPage
-    );
-
-    setDisplayedSubmissions(paginatedSubmissions);
-  }, [
-    filteredSubmissions,
-    currentPage,
-    itemsPerPage,
-    sortField,
-    sortDirection,
-  ]);
-
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const handleRowClick = (submissionId: string) => {
+    setSelectedSubmissionId(submissionId);
+    setIsDetailModalOpen(true);
   };
 
-  // Get unique visit purposes for filtering
-  const visitPurposes = Array.from(
-    new Set(
-      allSubmissions.map((s) => s.visit_purpose).filter(Boolean) as string[]
-    )
-  );
-
-  // Handle sort toggle
-  const toggleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+  const handleSelectSubmission = (submissionId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedSubmissions([...selectedSubmissions, submissionId]);
     } else {
-      setSortField(field);
-      setSortDirection("asc");
+      setSelectedSubmissions(
+        selectedSubmissions.filter((id) => id !== submissionId)
+      );
     }
   };
 
-  // Generate pagination items
-  const generatePaginationItems = () => {
-    const items = [];
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedSubmissions(filteredSubmissions.map((s) => s.id));
+    } else {
+      setSelectedSubmissions([]);
+    }
+  };
 
-    // Always show first page
-    items.push(
-      <PaginationItem key="first">
-        <PaginationLink
-          onClick={() => setCurrentPage(1)}
-          isActive={currentPage === 1}
-        >
-          1
-        </PaginationLink>
-      </PaginationItem>
+  const getSelectedSubmissionsData = () => {
+    return submissions.filter((s) => selectedSubmissions.includes(s.id));
+  };
+
+  const handleExport = async (
+    exportFormat: "excel" | "csv" | "json" | "html"
+  ) => {
+    if (selectedSubmissions.length === 0) {
+      alert("Please select at least one submission to export.");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const dataToExport = getSelectedSubmissionsData();
+      const filename = `submissions_export_${format(
+        new Date(),
+        "yyyy-MM-dd_HH-mm-ss"
+      )}`;
+
+      switch (exportFormat) {
+        case "excel":
+          exportToExcel(dataToExport, filename);
+          break;
+        case "csv":
+          exportToCSV(dataToExport, filename);
+          break;
+        case "json":
+          exportToJSON(dataToExport, filename);
+          break;
+        case "html":
+          exportToHTML(dataToExport, filename);
+          break;
+      }
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Export failed. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const getSatisfactionColor = (satisfaction: string) => {
+    switch (satisfaction) {
+      case "Excellent":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "Very Good":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "Good":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "Fair":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "Poor":
+        return "bg-red-100 text-red-800 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  // Add a function to truncate/format ID
+  const formatId = (id: string): string => {
+    // If it's a UUID or long ID, truncate to first 8 characters
+    if (id.length > 12) {
+      return id.substring(0, 8) + "...";
+    }
+    return id;
+  };
+
+  // Calculate pagination values
+  const totalItems = filteredSubmissions.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const currentItems = filteredSubmissions.slice(startIndex, endIndex);
+
+  // Functions for pagination
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const goToPreviousPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  const goToNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
+
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(Number(value));
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header skeleton */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <Skeleton className="h-12 w-12" />
+                <Skeleton className="h-8 w-64" />
+              </div>
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <div className="flex items-center gap-2 mt-4 md:mt-0">
+              <Skeleton className="h-9 w-32" />
+              <Skeleton className="h-9 w-32" />
+            </div>
+          </div>
+
+          {/* Filters skeleton */}
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1">
+                  <Skeleton className="h-10 w-full" />
+                </div>
+                <Skeleton className="h-10 w-full md:w-48" />
+                <Skeleton className="h-10 w-full md:w-48" />
+                <Skeleton className="h-10 w-full md:w-48" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Table skeleton */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                {/* Table header skeleton */}
+                <div className="border-b">
+                  <div className="flex py-3">
+                    <Skeleton className="h-4 w-4 mx-4" />
+                    <Skeleton className="h-4 w-32 mx-4" />
+                    <Skeleton className="h-4 w-32 mx-4" />
+                    <Skeleton className="h-4 w-32 mx-4" />
+                    <Skeleton className="h-4 w-32 mx-4" />
+                    <Skeleton className="h-4 w-32 mx-4" />
+                    <Skeleton className="h-4 w-32 mx-4" />
+                  </div>
+                </div>
+
+                {/* Table rows skeleton */}
+                {Array(5)
+                  .fill(0)
+                  .map((_, index) => (
+                    <div key={index} className="border-b">
+                      <div className="flex py-4">
+                        <Skeleton className="h-4 w-4 mx-4" />
+                        <Skeleton className="h-5 w-32 mx-4" />
+                        <Skeleton className="h-5 w-32 mx-4" />
+                        <Skeleton className="h-5 w-32 mx-4" />
+                        <Skeleton className="h-5 w-32 mx-4" />
+                        <Skeleton className="h-5 w-32 mx-4" />
+                        <Skeleton className="h-5 w-32 mx-4" />
+                      </div>
+                    </div>
+                  ))}
+
+                {/* Pagination skeleton */}
+                <div className="flex items-center justify-between py-4">
+                  <Skeleton className="h-4 w-48" />
+                  <div className="flex items-center space-x-6 lg:space-x-8">
+                    <div className="flex items-center space-x-2">
+                      <Skeleton className="h-8 w-24" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Skeleton className="h-8 w-8" />
+                      <Skeleton className="h-8 w-8" />
+                      <Skeleton className="h-8 w-8" />
+                      <Skeleton className="h-8 w-8" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     );
-
-    // Show ellipsis if current page is more than 3
-    if (currentPage > 3) {
-      items.push(
-        <PaginationItem key="ellipsis1">
-          <PaginationEllipsis />
-        </PaginationItem>
-      );
-    }
-
-    // Show pages around current page
-    for (
-      let i = Math.max(2, currentPage - 1);
-      i <= Math.min(totalPages - 1, currentPage + 1);
-      i++
-    ) {
-      if (i < 2 || i > totalPages - 1) continue;
-
-      items.push(
-        <PaginationItem key={i}>
-          <PaginationLink
-            onClick={() => setCurrentPage(i)}
-            isActive={currentPage === i}
-          >
-            {i}
-          </PaginationLink>
-        </PaginationItem>
-      );
-    }
-
-    // Show ellipsis if needed
-    if (currentPage < totalPages - 2) {
-      items.push(
-        <PaginationItem key="ellipsis2">
-          <PaginationEllipsis />
-        </PaginationItem>
-      );
-    }
-
-    // Always show last page
-    if (totalPages > 1) {
-      items.push(
-        <PaginationItem key="last">
-          <PaginationLink
-            onClick={() => setCurrentPage(totalPages)}
-            isActive={currentPage === totalPages}
-          >
-            {totalPages}
-          </PaginationLink>
-        </PaginationItem>
-      );
-    }
-
-    return items;
-  };
-
-  if (!isAuthenticated && isAuthChecked) {
-    return null;
   }
 
   return (
     <main className="min-h-screen p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <Image
-                src="/agahflogo.svg"
+                src="/agahflogo white.svg"
                 alt="AGA Health Foundation Logo"
                 width={50}
                 height={50}
+                onError={(e) => {
+                  console.error("Error loading logo image");
+                  e.currentTarget.src = "/placeholder-logo.svg";
+                }}
               />
               <h1 className="text-2xl md:text-3xl font-bold text-primary">
                 Survey Submissions
               </h1>
             </div>
             <p className="text-muted-foreground">
-              View and analyze individual survey responses with detailed
-              feedback
+              View and manage individual survey responses
             </p>
           </div>
           <div className="flex items-center gap-2 mt-4 md:mt-0">
-            <Link href="/">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-1"
-              >
-                <Home size={16} />
-                <span className="hidden md:inline">Home</span>
-              </Button>
-            </Link>
             <Link href="/reports">
               <Button
                 variant="outline"
                 size="sm"
                 className="flex items-center gap-1"
               >
-                <ChevronLeft size={16} />
-                <span className="hidden md:inline">Reports</span>
+                <ArrowLeft size={16} />
+                <span className="hidden md:inline">Back to Reports</span>
               </Button>
             </Link>
             <Button
               variant="outline"
               size="sm"
               className="flex items-center gap-1"
-            >
-              <Download size={16} />
-              <span className="hidden md:inline">Export</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1"
-              onClick={() => router.refresh()}
+              onClick={() => window.location.reload()}
             >
               <RefreshCw size={16} />
               <span className="hidden md:inline">Refresh</span>
@@ -384,61 +472,84 @@ export default function SubmissionsPage() {
           </div>
         </div>
 
+        {/* Export Controls */}
+        {selectedSubmissions.length > 0 && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Download className="h-5 w-5" />
+                  <span className="font-medium">
+                    Export {selectedSubmissions.length} selected submissions
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button disabled={isExporting} className="gap-2">
+                        <Download className="h-4 w-4" />
+                        {isExporting ? "Exporting..." : "Export"}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => handleExport("excel")}>
+                        <FileSpreadsheet className="h-4 w-4 mr-2" />
+                        Export as Excel
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport("csv")}>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Export as CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport("json")}>
+                        <FileJson className="h-4 w-4 mr-2" />
+                        Export as JSON
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport("html")}>
+                        <FileOutput className="h-4 w-4 mr-2" />
+                        Export as HTML
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectedSubmissions([])}
+                    disabled={isExporting}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Filters */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              All Submissions
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Filter className="h-5 w-5" />
+              Filters & Search
             </CardTitle>
-            <CardDescription>
-              Click on a row to view detailed submission information
-            </CardDescription>
           </CardHeader>
-
-          {/* Filters */}
-          <CardContent>
-            <div className="flex flex-wrap justify-end gap-2 mb-6">
-              <Select value={purposeFilter} onValueChange={setPurposeFilter}>
-                <SelectTrigger className="w-[250px]">
-                  <span className="flex items-center gap-1">
-                    <Filter className="h-3.5 w-3.5" />
-                    <SelectValue placeholder="Visit Purpose" />
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Purposes</SelectItem>
-                  {visitPurposes.map((purpose: string) => (
-                    <SelectItem key={purpose} value={purpose}>
-                      {purpose}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={ratingFilter} onValueChange={setRatingFilter}>
-                <SelectTrigger className="w-[250px]">
-                  <span className="flex items-center gap-1">
-                    <Filter className="h-3.5 w-3.5" />
-                    <SelectValue placeholder="Rating" />
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Ratings</SelectItem>
-                  <SelectItem value="4-5">Excellent/Very Good (4-5)</SelectItem>
-                  <SelectItem value="3-3.99">Good (3-3.99)</SelectItem>
-                  <SelectItem value="0-2.99">Fair/Poor (0-2.99)</SelectItem>
-                </SelectContent>
-              </Select>
-
+          <CardContent className="space-y-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by ID, purpose, user type, or location..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
               <Select
-                value={recommendFilter}
-                onValueChange={setRecommendFilter}
+                value={filterRecommendation}
+                onValueChange={setFilterRecommendation}
               >
-                <SelectTrigger className="w-[250px]">
-                  <span className="flex items-center gap-1">
-                    <Filter className="h-3.5 w-3.5" />
-                    <SelectValue placeholder="Recommendation" />
-                  </span>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Recommendation" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Recommendations</SelectItem>
@@ -446,260 +557,296 @@ export default function SubmissionsPage() {
                   <SelectItem value="no">Would Not Recommend</SelectItem>
                 </SelectContent>
               </Select>
-
-              <Select
-                value={itemsPerPage.toString()}
-                onValueChange={(value) => setItemsPerPage(parseInt(value))}
-              >
-                <SelectTrigger className="w-[250px]">
-                  <span className="flex items-center gap-1">
-                    <Filter className="h-3.5 w-3.5" />
-                    <SelectValue placeholder="Items per page" />
-                  </span>
+              <Select value={filterConcerns} onValueChange={setFilterConcerns}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Concerns" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="10">10 per page</SelectItem>
-                  <SelectItem value="25">25 per page</SelectItem>
-                  <SelectItem value="50">50 per page</SelectItem>
-                  <SelectItem value="100">100 per page</SelectItem>
+                  <SelectItem value="all">All Submissions</SelectItem>
+                  <SelectItem value="yes">Has Concerns</SelectItem>
+                  <SelectItem value="no">No Concerns</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={filterVisitPurpose}
+                onValueChange={setFilterVisitPurpose}
+              >
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Visit Purpose" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Purposes</SelectItem>
+                  <SelectItem value="General Practice">
+                    General Practice
+                  </SelectItem>
+                  <SelectItem value="Medicals (Occupational Health)">
+                    Medicals (Occupational Health)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : filteredSubmissions.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No submissions found</p>
-              </div>
-            ) : (
-              <>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead
-                          className="cursor-pointer"
-                          onClick={() => toggleSort("id")}
-                        >
-                          <div className="flex items-center gap-1">
-                            ID
-                            {sortField === "id" &&
-                              (sortDirection === "asc" ? (
-                                <SortAsc className="h-3.5 w-3.5" />
-                              ) : (
-                                <SortDesc className="h-3.5 w-3.5" />
-                              ))}
-                            {sortField !== "id" && (
-                              <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer"
-                          onClick={() => toggleSort("created_at")}
-                        >
-                          <div className="flex items-center gap-1">
-                            Date
-                            {sortField === "created_at" &&
-                              (sortDirection === "asc" ? (
-                                <SortAsc className="h-3.5 w-3.5" />
-                              ) : (
-                                <SortDesc className="h-3.5 w-3.5" />
-                              ))}
-                            {sortField !== "created_at" && (
-                              <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer"
-                          onClick={() => toggleSort("visit_purpose")}
-                        >
-                          <div className="flex items-center gap-1">
-                            Visit Purpose
-                            {sortField === "visit_purpose" &&
-                              (sortDirection === "asc" ? (
-                                <SortAsc className="h-3.5 w-3.5" />
-                              ) : (
-                                <SortDesc className="h-3.5 w-3.5" />
-                              ))}
-                            {sortField !== "visit_purpose" && (
-                              <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer"
-                          onClick={() => toggleSort("patient_type")}
-                        >
-                          <div className="flex items-center gap-1">
-                            Patient Type
-                            {sortField === "patient_type" &&
-                              (sortDirection === "asc" ? (
-                                <SortAsc className="h-3.5 w-3.5" />
-                              ) : (
-                                <SortDesc className="h-3.5 w-3.5" />
-                              ))}
-                            {sortField !== "patient_type" && (
-                              <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer"
-                          onClick={() => toggleSort("overall_rating")}
-                        >
-                          <div className="flex items-center gap-1">
-                            Rating
-                            {sortField === "overall_rating" &&
-                              (sortDirection === "asc" ? (
-                                <SortAsc className="h-3.5 w-3.5" />
-                              ) : (
-                                <SortDesc className="h-3.5 w-3.5" />
-                              ))}
-                            {sortField !== "overall_rating" && (
-                              <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer"
-                          onClick={() => toggleSort("recommendation_rating")}
-                        >
-                          <div className="flex items-center gap-1">
-                            Recommend
-                            {sortField === "recommendation_rating" &&
-                              (sortDirection === "asc" ? (
-                                <SortAsc className="h-3.5 w-3.5" />
-                              ) : (
-                                <SortDesc className="h-3.5 w-3.5" />
-                              ))}
-                            {sortField !== "recommendation_rating" && (
-                              <ArrowUpDown className="h-3.5 w-3.5 opacity-50" />
-                            )}
-                          </div>
-                        </TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {displayedSubmissions.map((submission) => (
-                        <Link
-                          key={submission.id}
-                          href={`/reports/submissions/${submission.id}`}
-                          legacyBehavior
-                        >
-                          <TableRow className="cursor-pointer hover:bg-muted/50">
-                            <TableCell className="font-medium">
-                              {typeof submission.id === "string"
-                                ? submission.id.substring(0, 8)
-                                : submission.id}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3 text-muted-foreground" />
-                                {formatDate(submission.created_at)}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {submission.visit_purpose || "N/A"}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <User className="h-3 w-3 text-muted-foreground" />
-                                {submission.patient_type ||
-                                  submission.user_type ||
-                                  "N/A"}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div
-                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                  submission.overall_rating >= 4
-                                    ? "bg-green-100 text-green-800"
-                                    : submission.overall_rating >= 3
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
-                              >
-                                {submission.overall_rating.toFixed(1)}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div
-                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                                  submission.recommendation_rating >= 7
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
-                              >
-                                {submission.recommendation_rating >= 7
-                                  ? "Yes"
-                                  : "No"}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button size="sm" variant="ghost">
-                                <ChevronRight className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        </Link>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Pagination */}
-                <div className="mt-4 flex justify-between items-center">
-                  <div className="text-sm text-muted-foreground">
-                    Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                    {Math.min(
-                      currentPage * itemsPerPage,
-                      filteredSubmissions.length
-                    )}{" "}
-                    of {filteredSubmissions.length} entries
-                  </div>
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={() =>
-                            setCurrentPage((p) => Math.max(1, p - 1))
-                          }
-                          className={`${
-                            currentPage === 1
-                              ? "opacity-50 cursor-not-allowed"
-                              : ""
-                          }`}
-                        />
-                      </PaginationItem>
-
-                      {generatePaginationItems()}
-
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={() =>
-                            setCurrentPage((p) => Math.min(totalPages, p + 1))
-                          }
-                          className={`${
-                            currentPage === totalPages
-                              ? "opacity-50 cursor-not-allowed"
-                              : ""
-                          }`}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              </>
-            )}
           </CardContent>
         </Card>
+
+        {/* Submissions Table */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-lg">
+              Submissions{" "}
+              <Badge variant="outline" className="ml-2 font-normal">
+                {filteredSubmissions.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={
+                          filteredSubmissions.length > 0 &&
+                          filteredSubmissions.every((s) =>
+                            selectedSubmissions.includes(s.id)
+                          )
+                        }
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </TableHead>
+                    <TableHead className="w-40">ID</TableHead>
+                    <TableHead className="w-40">Date</TableHead>
+                    <TableHead className="w-40">Visit Purpose</TableHead>
+                    <TableHead className="w-48">User Type</TableHead>
+                    <TableHead className="w-32">Locations</TableHead>
+                    <TableHead className="w-28">Recommend</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {currentItems.map((submission) => (
+                    <TableRow
+                      key={submission.id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleRowClick(submission.id)}
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedSubmissions.includes(submission.id)}
+                          onCheckedChange={(checked) =>
+                            handleSelectSubmission(
+                              submission.id,
+                              checked as boolean
+                            )
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium whitespace-nowrap">
+                        <span className="text-xs text-muted-foreground block truncate max-w-32">
+                          {submission.id}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            {format(
+                              new Date(submission.submittedAt),
+                              "MMM dd, yyyy"
+                            )}
+                            <span className="text-xs text-muted-foreground block">
+                              {format(
+                                new Date(submission.submittedAt),
+                                "h:mm a"
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="whitespace-nowrap px-2 py-1 font-normal"
+                        >
+                          {submission.visitPurpose}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">{submission.userType}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm">
+                            {submission.locations.length} locations
+                          </span>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge
+                          variant={
+                            submission.wouldRecommend
+                              ? "default"
+                              : "destructive"
+                          }
+                          className="whitespace-nowrap"
+                        >
+                          {submission.wouldRecommend ? "Yes" : "No"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {filteredSubmissions.length > 0 && (
+                <div className="flex items-center justify-between py-4">
+                  <div className="flex-1 text-sm text-muted-foreground">
+                    Showing{" "}
+                    <span className="font-medium">{startIndex + 1}</span> to{" "}
+                    <span className="font-medium">{endIndex}</span> of{" "}
+                    <span className="font-medium">{totalItems}</span>{" "}
+                    submissions
+                  </div>
+                  <div className="flex items-center space-x-6 lg:space-x-8">
+                    <div className="flex items-center space-x-2">
+                      <Select
+                        value={pageSize.toString()}
+                        onValueChange={handlePageSizeChange}
+                      >
+                        <SelectTrigger className="h-8 w-[70px]">
+                          <SelectValue placeholder={pageSize.toString()} />
+                        </SelectTrigger>
+                        <p className="text-xs font-medium">per page</p>
+                        <SelectContent side="top">
+                          {[5, 10, 20, 50, 100].map((size) => (
+                            <SelectItem key={size} value={size.toString()}>
+                              {size}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              goToPreviousPage();
+                            }}
+                            className={
+                              currentPage === 1
+                                ? "pointer-events-none opacity-50"
+                                : ""
+                            }
+                          />
+                        </PaginationItem>
+                        {Array.from({ length: Math.min(3, totalPages) }).map(
+                          (_, i) => {
+                            const pageNumber = i + 1;
+                            return (
+                              <PaginationItem key={pageNumber}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    goToPage(pageNumber);
+                                  }}
+                                  isActive={currentPage === pageNumber}
+                                >
+                                  {pageNumber}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                        )}
+                        {totalPages > 3 && (
+                          <>
+                            {currentPage > 3 && (
+                              <PaginationItem>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            )}
+                            {currentPage > 3 &&
+                              currentPage <= totalPages - 2 && (
+                                <PaginationItem>
+                                  <PaginationLink
+                                    href="#"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      goToPage(currentPage);
+                                    }}
+                                    isActive={true}
+                                  >
+                                    {currentPage}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              )}
+                            {currentPage <= totalPages - 3 && (
+                              <PaginationItem>
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            )}
+                            {totalPages > 3 && (
+                              <PaginationItem>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    goToPage(totalPages);
+                                  }}
+                                  isActive={currentPage === totalPages}
+                                >
+                                  {totalPages}
+                                </PaginationLink>
+                              </PaginationItem>
+                            )}
+                          </>
+                        )}
+                        <PaginationItem>
+                          <PaginationNext
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              goToNextPage();
+                            }}
+                            className={
+                              currentPage === totalPages
+                                ? "pointer-events-none opacity-50"
+                                : ""
+                            }
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                </div>
+              )}
+
+              {filteredSubmissions.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">
+                    No submissions found matching your criteria.
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Submission Detail Modal */}
+        <SubmissionDetailModal
+          submissionId={selectedSubmissionId || ""}
+          open={isDetailModalOpen}
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setSelectedSubmissionId(null);
+          }}
+        />
       </div>
     </main>
   );

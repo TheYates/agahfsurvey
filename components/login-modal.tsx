@@ -1,38 +1,38 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { X } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
+import { useState } from "react";
+import { X } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
 
 interface LoginModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
 export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const { login } = useAuth()
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const { login } = useAuth();
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+    e.preventDefault();
+    setError("");
 
-    const success = login(username, password)
+    const success = login(username, password);
     if (success) {
-      setUsername("")
-      setPassword("")
-      onSuccess()
+      setUsername("");
+      setPassword("");
+      onSuccess();
     } else {
-      setError("Invalid username or password")
+      setError("Invalid username or password");
     }
-  }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -47,7 +47,10 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
         <h2 className="text-xl font-bold mb-4">Admin Login</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="username"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Username
             </label>
             <input
@@ -60,7 +63,10 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
             />
           </div>
           <div className="mb-4">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Password
             </label>
             <input
@@ -73,11 +79,14 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
             />
           </div>
           {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-          <button type="submit" className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+          >
             Login
           </button>
         </form>
       </div>
     </div>
-  )
+  );
 }

@@ -417,7 +417,7 @@ export default function ReportsPage() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <Image
-                src="/agahflogo.svg"
+                src="/agahflogo white.svg"
                 alt="AGA Health Foundation Logo"
                 width={50}
                 height={50}
@@ -446,14 +446,7 @@ export default function ReportsPage() {
                 <span className="hidden md:inline">Home</span>
               </Button>
             </Link>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1"
-            >
-              <Download size={16} />
-              <span className="hidden md:inline">Export</span>
-            </Button>
+
             <Button
               variant="outline"
               size="sm"

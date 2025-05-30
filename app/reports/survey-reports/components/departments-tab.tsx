@@ -129,6 +129,11 @@ const valueToRating = (value: number): string => {
   return "Poor";
 };
 
+// Cache keys and expiration time
+const CACHE_KEY_CONCERNS = "departmentConcernsData";
+const CACHE_KEY_ADDITIONAL = "departmentAdditionalData";
+const CACHE_TIME = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 export function DepartmentsTab({
   isLoading,
   departments,
@@ -147,20 +152,58 @@ export function DepartmentsTab({
   const [patientTypeData, setPatientTypeData] = useState<any>(null);
   const [isLoadingAdditionalData, setIsLoadingAdditionalData] = useState(false);
 
-  // Fetch department concerns and recommendations
+  // Fetch department concerns and recommendations with caching
   useEffect(() => {
     const loadDepartmentFeedback = async () => {
       setIsLoadingConcerns(true);
       try {
+        console.time("DepartmentsTab data loading");
+
+        // Check for cached data first
+        const cachedData = sessionStorage.getItem(CACHE_KEY_CONCERNS);
+
+        if (cachedData) {
+          const { concerns, recommendations, timestamp } =
+            JSON.parse(cachedData);
+
+          // Use cached data if it's less than 5 minutes old
+          if (Date.now() - timestamp < CACHE_TIME) {
+            console.log("DepartmentsTab: Using cached data");
+            setDepartmentConcerns(concerns);
+            setDepartmentRecommendations(recommendations);
+            setIsLoadingConcerns(false);
+            console.timeEnd("DepartmentsTab data loading");
+            return;
+          }
+        }
+
+        // Fetch fresh data if no valid cache exists
+        console.time("fetchDepartmentConcerns");
         const concerns = await fetchDepartmentConcerns();
+        console.timeEnd("fetchDepartmentConcerns");
         setDepartmentConcerns(concerns);
 
+        console.time("fetchRecommendations");
         const recommendations = await fetchRecommendations();
-
+        console.timeEnd("fetchRecommendations");
         setDepartmentRecommendations(recommendations);
+
+        // Store in cache with timestamp
+        sessionStorage.setItem(
+          CACHE_KEY_CONCERNS,
+          JSON.stringify({
+            concerns,
+            recommendations,
+            timestamp: Date.now(),
+          })
+        );
+
+        console.timeEnd("DepartmentsTab data loading");
       } catch (error) {
+        console.error("Error fetching department feedback:", error);
         setDepartmentConcerns([]);
         setDepartmentRecommendations([]);
+        console.timeEnd("DepartmentsTab data loading");
       } finally {
         setIsLoadingConcerns(false);
       }
@@ -169,20 +212,48 @@ export function DepartmentsTab({
     loadDepartmentFeedback();
   }, []);
 
-  // Fetch additional metrics data
+  // Fetch additional data with caching
   useEffect(() => {
     const loadAdditionalData = async () => {
       setIsLoadingAdditionalData(true);
       try {
+        // Check for cached data first
+        const cachedData = sessionStorage.getItem(CACHE_KEY_ADDITIONAL);
+
+        if (cachedData) {
+          const { timeData, ptData, timestamp } = JSON.parse(cachedData);
+
+          // Use cached data if it's less than 5 minutes old
+          if (Date.now() - timestamp < CACHE_TIME) {
+            setVisitTimeData(timeData);
+            setPatientTypeData(ptData);
+            setIsLoadingAdditionalData(false);
+            return;
+          }
+        }
+
+        // Fetch fresh data if no valid cache exists
         // Fetch visit time data for calculating average visit times
         const timeData = await fetchVisitTimeData();
-
         setVisitTimeData(timeData);
 
         // Fetch patient type data for returning rates
         const ptData = await fetchPatientTypeData();
         setPatientTypeData(ptData);
+
+        // Store in cache with timestamp
+        sessionStorage.setItem(
+          CACHE_KEY_ADDITIONAL,
+          JSON.stringify({
+            timeData,
+            ptData,
+            timestamp: Date.now(),
+          })
+        );
       } catch (error) {
+        console.error("Error fetching additional department data:", error);
+        setVisitTimeData([]);
+        setPatientTypeData(null);
       } finally {
         setIsLoadingAdditionalData(false);
       }
@@ -191,10 +262,23 @@ export function DepartmentsTab({
     loadAdditionalData();
   }, []);
 
-  // Generate satisfaction trend based on available survey data
+  // Generate satisfaction trend with caching (using the same additional data cache)
   useEffect(() => {
     const generateSatisfactionTrend = async () => {
       try {
+        // Check if we already have cached data
+        const cachedData = sessionStorage.getItem(CACHE_KEY_ADDITIONAL);
+
+        if (cachedData) {
+          const { satisfactionData, timestamp } = JSON.parse(cachedData);
+
+          // Use cached data if it's less than 5 minutes old and contains satisfaction data
+          if (satisfactionData && Date.now() - timestamp < CACHE_TIME) {
+            setSatisfactionTrend(satisfactionData);
+            return;
+          }
+        }
+
         const surveyData = await fetchAllSurveyData();
 
         // Group by month and calculate average satisfaction
@@ -240,6 +324,21 @@ export function DepartmentsTab({
           .filter((item) => item.satisfaction !== null);
 
         setSatisfactionTrend(trend);
+
+        // After calculating the trend data, update the existing cache
+        try {
+          const cachedData = sessionStorage.getItem(CACHE_KEY_ADDITIONAL);
+          if (cachedData) {
+            const parsedCache = JSON.parse(cachedData);
+            parsedCache.satisfactionData = satisfactionTrend;
+            sessionStorage.setItem(
+              CACHE_KEY_ADDITIONAL,
+              JSON.stringify(parsedCache)
+            );
+          }
+        } catch (error) {
+          console.error("Error updating satisfaction trend cache:", error);
+        }
       } catch (error) {
         console.error("Error generating satisfaction trend:", error);
         // Provide minimal fallback data - just one data point for the current month
@@ -252,7 +351,7 @@ export function DepartmentsTab({
             satisfaction: selectedDepartment?.satisfaction || 3.5,
           },
         ];
-        console.log("Using fallback satisfaction trend data:", fallbackData);
+
         setSatisfactionTrend(fallbackData);
       }
     };
@@ -260,23 +359,7 @@ export function DepartmentsTab({
     generateSatisfactionTrend();
   }, []);
 
-  useEffect(() => {
-    console.log("Department concerns:", departmentConcerns);
-    console.log("Recommendations:", departmentRecommendations);
-    console.log(
-      "Combined feedback:",
-      [
-        ...departmentConcerns.map((c) => ({ type: "concern", ...c })),
-        ...departmentRecommendations.map((r) => ({
-          type: "recommendation",
-          ...r,
-        })),
-      ].sort(
-        (a, b) =>
-          new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-      )
-    );
-  }, [departmentConcerns, departmentRecommendations]);
+  useEffect(() => {}, [departmentConcerns, departmentRecommendations]);
 
   if (isLoading || isLoadingAdditionalData) {
     return (

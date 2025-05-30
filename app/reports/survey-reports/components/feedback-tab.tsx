@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   fetchRecommendations,
   fetchNotRecommendReasons,
@@ -73,9 +74,46 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
   }, [locationFilter, searchQuery, activeTab]);
 
   useEffect(() => {
+    const CACHE_KEY = "feedbackTabData";
+    const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
+    const instanceId = Math.random().toString(36).substring(2, 9); // Unique ID for this instance
+    const timerName = `FeedbackTab_data_loading_${instanceId}`;
+    const fetchTimerName = `fetchFeedbackData_concurrent_${instanceId}`;
+
     const loadFeedbackData = async () => {
+      // Check for cached data first
+      try {
+        console.time(timerName);
+        console.log(
+          "FeedbackTab: Data fetch triggered (part of shared loading)"
+        );
+
+        const cachedData = sessionStorage.getItem(CACHE_KEY);
+        if (cachedData) {
+          const { data, timestamp } = JSON.parse(cachedData);
+          // Use cache if less than 5 minutes old
+          if (Date.now() - timestamp < CACHE_TIME) {
+            console.log("FeedbackTab: Using cached data");
+            setRecommendations(data.recommendations);
+            setNotRecommendReasons(data.notRecommendReasons);
+            setConcerns(data.concerns);
+            setIsLoadingData(false);
+            try {
+              console.timeEnd(timerName);
+            } catch (e) {
+              console.error("Error ending timer (cached data):", e);
+            }
+            return;
+          }
+        }
+      } catch (err) {
+        console.log("Error reading feedback cache:", err);
+      }
+
       setIsLoadingData(true);
       try {
+        // Use Promise.all to fetch multiple data sources concurrently
+        console.time(fetchTimerName);
         const [fetchedRecommendations, fetchedReasons, fetchedConcerns] =
           await Promise.all([
             fetchRecommendations(),
@@ -83,16 +121,55 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
             fetchDepartmentConcerns(),
           ]);
 
+        try {
+          console.timeEnd(fetchTimerName);
+        } catch (e) {
+          console.error("Error ending fetch timer:", e);
+        }
+
         setRecommendations(fetchedRecommendations);
         setNotRecommendReasons(fetchedReasons);
         setConcerns(fetchedConcerns);
+
+        // Cache the data for future use
+        try {
+          const cacheData = {
+            data: {
+              recommendations: fetchedRecommendations,
+              notRecommendReasons: fetchedReasons,
+              concerns: fetchedConcerns,
+            },
+            timestamp: Date.now(),
+          };
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+        } catch (error) {
+          console.error("Error storing feedback cache:", error);
+        }
+
+        try {
+          console.timeEnd(timerName);
+        } catch (e) {
+          console.error("Error ending main timer:", e);
+        }
       } catch (error) {
-        console.error("Error fetching feedback data:", error);
+        console.error("Error loading feedback data:", error);
+        // Clean up timers even if there's an error
+        try {
+          console.timeEnd(fetchTimerName);
+        } catch (e) {
+          /* ignore */
+        }
+        try {
+          console.timeEnd(timerName);
+        } catch (e) {
+          /* ignore */
+        }
       } finally {
         setIsLoadingData(false);
       }
     };
 
+    // Only load data if this tab has been requested to be shown
     loadFeedbackData();
   }, []);
 
@@ -188,9 +265,114 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
 
   if (isLoading || isLoadingData) {
     return (
-      <div className="flex flex-col items-center justify-center h-96">
-        <LoadingSpinner size="lg" />
-        <p className="text-muted-foreground mt-4">Loading feedback data...</p>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-4 w-64 mt-1" />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Skeleton for stats cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i}>
+                  <CardHeader className="pb-2">
+                    <Skeleton className="h-5 w-32" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-8 w-8 rounded-md" />
+                      <div>
+                        <Skeleton className="h-8 w-16 mb-1" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Skeleton for feedback content */}
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                  <div>
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-56 mt-1" />
+                  </div>
+                  <div className="w-full md:w-1/3">
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Skeleton for tab list */}
+                <div className="mb-6">
+                  <div className="flex border-b">
+                    <Skeleton className="h-10 w-32 mr-2" />
+                    <Skeleton className="h-10 w-40 mr-2" />
+                    <Skeleton className="h-10 w-36" />
+                  </div>
+                </div>
+
+                {/* Skeleton for tab content */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-5 w-24" />
+                  </div>
+
+                  {/* Skeleton for filter */}
+                  <div className="mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-5 w-32" />
+                    </div>
+                    <Skeleton className="h-10 w-64" />
+                  </div>
+
+                  {/* Skeleton for feedback items */}
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Card key={i}>
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex items-center gap-2">
+                              <Skeleton className="h-4 w-4" />
+                              <Skeleton className="h-5 w-16" />
+                              <Skeleton className="h-5 w-24" />
+                            </div>
+                            <Skeleton className="h-4 w-24" />
+                          </div>
+                          <Skeleton className="h-4 w-full mb-1" />
+                          <Skeleton className="h-4 w-5/6 mb-1" />
+                          <Skeleton className="h-4 w-4/6" />
+                          <div className="flex gap-2 mt-2">
+                            <Skeleton className="h-5 w-16" />
+                            <Skeleton className="h-5 w-20" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <div className="flex items-center justify-between w-full">
+                  <Skeleton className="h-5 w-40" />
+                  <div className="flex items-center space-x-2">
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-5 w-20" />
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-8 w-24" />
+                  </div>
+                </div>
+              </CardFooter>
+            </Card>
+          </CardContent>
+        </Card>
       </div>
     );
   }
