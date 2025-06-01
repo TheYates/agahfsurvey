@@ -1,5 +1,5 @@
 {
-  "name": "my-v0-project",
+  "name": "agahfsurvey",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -41,6 +41,8 @@
     "@supabase/supabase-js": "^2.49.8",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.20",
+    "bcryptjs": "^3.0.2",
+    "canvas-confetti": "^1.9.3",
     "chart.js": "^4.4.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -72,8 +74,10 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
     "@types/file-saver": "^2.0.7",
     "@types/node": "^22",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "postcss": "^8",

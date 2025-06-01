@@ -41,14 +41,10 @@ export default function OccupationalHealthRating({
         }
 
         if (data) {
-          console.log("Found occupational health location:", data);
           setLocation(data.name);
 
           // Automatically add this location to the survey data locations
           if (!surveyData.locations.includes(data.name)) {
-            console.log(
-              "Adding occupational health location to survey data locations"
-            );
             const updatedLocations = [...surveyData.locations, data.name];
             updateSurveyData("locations", updatedLocations);
           }
@@ -104,7 +100,8 @@ export default function OccupationalHealthRating({
   const isComplete = () => {
     // We'll still log the completion status but won't require all fields
     const ratings = surveyData.departmentRatings[location] || {};
-    const complete = ratingCategories.some((category) => ratings[category.id]);
+    // All categories with asterisks must be filled in
+    const complete = ratingCategories.every((category) => ratings[category.id]);
 
     // Return true to always enable the Next button, or require at least one rating
     return complete;

@@ -598,9 +598,6 @@ export default function SurveyForm() {
         <div className="space-y-8">
           <div className="space-y-2">
             <div className="flex items-center justify-between mb-2">
-              <h1 className="text-xl font-bold text-primary">
-                AGA Health Foundation Survey
-              </h1>
               <span className="text-sm text-muted-foreground">
                 {surveyData.visitPurpose === "General Practice" &&
                 currentStep === 2 ? (

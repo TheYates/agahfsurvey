@@ -75,6 +75,9 @@ CREATE TABLE IF NOT EXISTS service_points (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   location_type VARCHAR(50) NOT NULL,
+  custom_question VARCHAR(255) DEFAULT 'How would you rate your experience?',
+  show_comments BOOLEAN DEFAULT true,
+  active BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

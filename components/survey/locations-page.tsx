@@ -57,7 +57,12 @@ export default function LocationsPage({
       const groupedLocations = {
         department: locations
           .filter((loc: any) => loc.locationType === "department")
-          .map((loc: any) => loc.name),
+          .map((loc: any) => loc.name)
+          .filter(
+            (name: string) =>
+              name !== "Occupational Health" &&
+              name !== "Occupational Health Unit (Medicals)"
+          ),
         ward: locations
           .filter((loc: any) => loc.locationType === "ward")
           .map((loc: any) => loc.name),
@@ -66,7 +71,10 @@ export default function LocationsPage({
           .map((loc: any) => loc.name),
         occupational_health: locations
           .filter((loc: any) => loc.locationType === "occupational_health")
-          .map((loc: any) => loc.name),
+          .map((loc: any) => loc.name)
+          .filter(
+            (name: string) => name !== "Occupational Health Unit (Medicals)"
+          ),
         // other location types...
       };
 
