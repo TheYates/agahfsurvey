@@ -537,13 +537,12 @@ export default function ReportsPage() {
                   Service Points
                 </CardTitle>
                 <CardDescription>
-                  Manage service locations and departments
+                  Manage service locations and reports
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  View and analyze performance across all service points,
-                  departments, and healthcare facilities.
+                  View and analyze performance across all service points.
                 </p>
                 <Button className="mt-4" size="sm">
                   View Service Points
@@ -560,9 +559,12 @@ export default function ReportsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 size={18} />
-                  Enhanced Analysis
+                  Advanced Analysis
                 </CardTitle>
-                <CardDescription>New actionable insights</CardDescription>
+                <CardDescription>
+                  Compare visit purposes, patient types, and get actionable
+                  improvement recommendations.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
@@ -941,20 +943,27 @@ export default function ReportsPage() {
                   <TableBody>
                     {submissions.map((survey) => (
                       <TableRow key={survey.id}>
-                        <TableCell className="font-medium">
+                        <TableCell className="font-medium align-middle">
                           {String(survey.id).substring(0, 8)}
                         </TableCell>
-                        <TableCell>
-                          {new Date(survey.created_at).toLocaleString()}
+                        <TableCell className="align-middle">
+                          <div className="flex flex-col">
+                            <span>
+                              {new Date(survey.created_at).toLocaleDateString()}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(survey.created_at).toLocaleTimeString()}
+                            </span>
+                          </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="align-middle">
                           {survey.visit_purpose || "General"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="align-middle">
                           {survey.locations_visited?.join(", ") ||
                             "Not specified"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="align-middle">
                           {survey.recommendation_rating > 7 ? "Yes" : "No"}
                         </TableCell>
                       </TableRow>
