@@ -203,12 +203,17 @@ export function FeedbackForm({ id }: FeedbackFormProps) {
     <div className="min-h-screen p-4 flex flex-col">
       <div className="container max-w-2xl mx-auto flex-grow flex flex-col">
         <div className="flex justify-center mb-6">
-          <Image
-            src="/agahflogo white.svg"
-            alt="AGA Health Foundation Logo"
-            width={80}
-            height={80}
-          />
+          <div className="flex flex-col items-center">
+            <Image
+              src="/agahflogo white.svg"
+              alt="AGA Health Foundation Logo"
+              width={80}
+              height={80}
+            />
+            <h1 className="text-2xl md:text-3xl font-bold text-primary">
+              Service Point Survey
+            </h1>
+          </div>
         </div>
 
         <Card className="w-full max-w-2xl">

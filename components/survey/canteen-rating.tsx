@@ -37,8 +37,6 @@ export default function CanteenRating({
   const ratingOptions = ["Excellent", "Very Good", "Good", "Fair", "Poor"];
 
   const handleRatingChange = (category: string, value: string) => {
-    console.log(`Rating changed for ${location} - ${category}: ${value}`);
-
     // Create a new object for the current location's ratings
     const updatedRatings = {
       ...surveyData.departmentRatings,
@@ -50,9 +48,6 @@ export default function CanteenRating({
 
     // Update the state with the new ratings
     updateSurveyData("departmentRatings", updatedRatings);
-
-    // Log the update
-    console.log(`Updated ratings for ${location}:`, updatedRatings[location]);
   };
 
   const handleConcernsChange = (value: string) => {
@@ -67,7 +62,7 @@ export default function CanteenRating({
     const ratings = surveyData.departmentRatings[location] || {};
     // All categories with asterisks must be filled in
     const complete = ratingCategories.every((category) => ratings[category.id]);
-    console.log(`Checking if ${location} is complete:`, complete);
+
     // Return true to always enable the Next button, or require at least one rating
     return complete;
   };

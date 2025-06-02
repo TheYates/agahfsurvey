@@ -71,11 +71,8 @@ export async function fetchCanteenRatings(): Promise<CanteenData["ratings"]> {
     if (error) throw error;
 
     if (!ratingsData || ratingsData.length === 0) {
-      console.log("No canteen ratings found for locations:", locationIds);
       return await fetchCanteenRatingsAcrossLocations();
     }
-
-    console.log(`Found ${ratingsData.length} canteen ratings`);
 
     // Calculate average ratings
     const avgRatings = {
@@ -99,7 +96,6 @@ export async function fetchCanteenRatings(): Promise<CanteenData["ratings"]> {
     };
 
     // Debug the raw rating data
-    console.log("Raw canteen ratings:", ratingsData);
 
     ratingsData.forEach((rating) => {
       // Sum up ratings, handling possible nulls

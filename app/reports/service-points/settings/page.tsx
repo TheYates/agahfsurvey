@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
-import Image from "next/image";
 import Link from "next/link";
 import { saveAs } from "file-saver";
 import QRCode from "qrcode";
@@ -108,10 +107,6 @@ export default function ServicePointSettingsPage() {
       const firstServicePoint = servicePoints[0];
       if (firstServicePoint.show_comments !== undefined) {
         setShowComments(firstServicePoint.show_comments);
-        console.log(
-          "Loaded show_comments setting:",
-          firstServicePoint.show_comments
-        );
       }
     }
   }, [servicePoints, isLoading]);
@@ -131,7 +126,6 @@ export default function ServicePointSettingsPage() {
 
   const handleCreateServicePoint = async () => {
     try {
-      console.log("Creating service point with show_comments:", showComments);
       const newServicePoint = await createServicePoint({
         name,
         location_type: "default", // Just use a default value since we're not using this field
@@ -220,8 +214,9 @@ export default function ServicePointSettingsPage() {
       const feedbackUrl = `${baseUrl}/feedback/${servicePoint.id}`;
 
       // Generate QR code as data URL (without logo first)
+      // Increased resolution to 1000px for higher quality
       const qrCodeDataUrl = await QRCode.toDataURL(feedbackUrl, {
-        width: 300,
+        width: 1000,
         margin: 2,
         color: {
           dark: "#000000",
@@ -291,7 +286,7 @@ export default function ServicePointSettingsPage() {
 
               // Draw logo on top
               ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
-              console.log("SVG logo drawn successfully");
+
               resolveSvg(true);
             } catch (err) {
               console.error("Error drawing SVG logo:", err);
@@ -306,7 +301,6 @@ export default function ServicePointSettingsPage() {
 
           // Set a timeout for SVG loading
           setTimeout(() => {
-            console.log("SVG logo load timed out");
             resolveSvg(false);
           }, 2000);
         });
@@ -337,7 +331,6 @@ export default function ServicePointSettingsPage() {
 
               // Draw PNG logo
               ctx.drawImage(pngLogo, logoX, logoY, logoSize, logoSize);
-              console.log("PNG fallback logo drawn successfully");
             } catch (err) {
               console.error("Error drawing PNG logo:", err);
             }
@@ -351,7 +344,6 @@ export default function ServicePointSettingsPage() {
 
           // Timeout for PNG loading
           setTimeout(() => {
-            console.log("PNG logo load timed out");
             resolvePng();
           }, 2000);
         });
@@ -366,6 +358,7 @@ export default function ServicePointSettingsPage() {
       // Get the final QR code with logo as data URL
       const finalQrCodeWithLogo = canvas.toDataURL("image/png");
       setCurrentQRCode(finalQrCodeWithLogo);
+
       setIsPreviewDialogOpen(true);
     } catch (error) {
       console.error("Error generating QR code:", error);
@@ -377,7 +370,7 @@ export default function ServicePointSettingsPage() {
         const feedbackUrl = `${baseUrl}/feedback/${servicePoint.id}`;
 
         const qrCodeDataUrl = await QRCode.toDataURL(feedbackUrl, {
-          width: 300,
+          width: 1000,
           margin: 2,
           color: {
             dark: "#000000",
@@ -396,17 +389,57 @@ export default function ServicePointSettingsPage() {
     }
   };
 
-  const handleDownloadQRCode = () => {
+  const handleDownloadQRCode = (format: "png" = "png", resolution?: number) => {
     if (!currentQRCode || !selectedServicePoint) return;
 
-    // Download the QR code as PNG
-    saveAs(
-      currentQRCode,
-      `${selectedServicePoint.name
-        .replace(/\s+/g, "-")
-        .toLowerCase()}-qrcode.png`
-    );
-    toast.success("QR code downloaded successfully");
+    try {
+      // Only PNG handling - remove the if/else for SVG handling
+      if (resolution && resolution !== 1000 && currentQRCode) {
+        // Resize the QR code to the requested resolution
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) throw new Error("Could not get canvas context");
+
+        // Create an image from the current QR code
+        const img = new Image();
+        img.src = currentQRCode;
+
+        // Wait for image to load
+        img.onload = () => {
+          // Set canvas to the desired resolution
+          canvas.width = resolution;
+          canvas.height = resolution;
+
+          // Draw the image scaled to the new resolution
+          ctx.drawImage(img, 0, 0, resolution, resolution);
+
+          // Download the resized image
+          const resizedQR = canvas.toDataURL("image/png");
+          const resizedBlob = dataURLtoBlob(resizedQR);
+          saveAs(
+            resizedBlob,
+            `${selectedServicePoint.name.replace(
+              /\s+/g,
+              "-"
+            )}-QR-Code-${resolution}px.png`
+          );
+          toast.success(
+            `QR code downloaded as ${resolution}x${resolution}px PNG`
+          );
+        };
+      } else {
+        // Download the original 1000px PNG
+        const originalBlob = dataURLtoBlob(currentQRCode);
+        saveAs(
+          originalBlob,
+          `${selectedServicePoint.name.replace(/\s+/g, "-")}-QR-Code.png`
+        );
+        toast.success("QR code downloaded as high-quality PNG");
+      }
+    } catch (error) {
+      console.error("Error downloading QR code:", error);
+      toast.error("Failed to download QR code");
+    }
   };
 
   const resetForm = () => {
@@ -421,6 +454,50 @@ export default function ServicePointSettingsPage() {
     setIsCreateDialogOpen(true);
   };
 
+  // Fix the dataURLtoBlob function to properly handle the conversion
+  const dataURLtoBlob = (dataURL: string): Blob => {
+    try {
+      // Split the data URL
+      const parts = dataURL.split(";base64,");
+      if (parts.length !== 2) {
+        throw new Error("Invalid data URL format");
+      }
+
+      // Get the content type from the data URL
+      const contentType = parts[0].split(":")[1];
+
+      // Convert base64 to binary
+      const byteCharacters = window.atob(parts[1]);
+
+      // Convert binary to byte array
+      const byteArrays = [];
+      const sliceSize = 512;
+
+      for (
+        let offset = 0;
+        offset < byteCharacters.length;
+        offset += sliceSize
+      ) {
+        const slice = byteCharacters.slice(offset, offset + sliceSize);
+        const byteNumbers = new Array(slice.length);
+
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i);
+        }
+
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+      }
+
+      // Create and return the Blob
+      return new Blob(byteArrays, { type: contentType });
+    } catch (error) {
+      console.error("Error converting data URL to Blob:", error);
+      // Return a default empty blob if conversion fails
+      return new Blob([], { type: "image/png" });
+    }
+  };
+
   // If user is not authenticated, don't render anything
   if (!isAuthenticated) {
     return null;
@@ -432,11 +509,12 @@ export default function ServicePointSettingsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <Image
+              <img
                 src="/agahflogo white.svg"
                 alt="AGA Health Foundation Logo"
                 width={50}
                 height={50}
+                style={{ width: "50px", height: "50px" }}
               />
               <h1 className="text-2xl md:text-3xl font-bold text-primary">
                 Service Point Settings
@@ -499,23 +577,7 @@ export default function ServicePointSettingsPage() {
           {/* QR Code Tab */}
           <TabsContent value="qr-codes" className="space-y-6">
             {process.env.NODE_ENV === "development" && (
-              <Card className="border-0 mb-4">
-                {/* <CardContent className="p-4">
-                  <details>
-                    <summary className="font-semibold cursor-pointer">
-                      Debug Info (Development Only)
-                    </summary>
-                    <div className="text-sm space-y-1 mt-2">
-                      {servicePoints.map((sp) => (
-                        <div key={sp.id} className="font-mono text-xs">
-                          {sp.name}: ID={sp.id}, active={String(sp.active)},
-                          show_comments={String(sp.show_comments)}
-                        </div>
-                      ))}
-                    </div>
-                  </details>
-                </CardContent> */}
-              </Card>
+              <Card className="border-0 mb-4"></Card>
             )}
 
             <div className="grid gap-6">
@@ -552,11 +614,26 @@ export default function ServicePointSettingsPage() {
                           <div className="p-4 rounded-lg shadow border w-full max-w-[250px] flex items-center justify-center bg-background">
                             {currentQRCode &&
                             selectedServicePoint?.id === servicePoint.id ? (
-                              <img
-                                src={currentQRCode}
-                                alt={`QR code for ${servicePoint.name}`}
-                                className="w-full h-auto"
-                              />
+                              <div
+                                style={{
+                                  width: 200,
+                                  height: 200,
+                                  position: "relative",
+                                  border: "1px solid #e2e8f0",
+                                  borderRadius: "0.375rem",
+                                  overflow: "hidden",
+                                }}
+                              >
+                                <img
+                                  src={currentQRCode}
+                                  alt={`QR code for ${servicePoint.name}`}
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              </div>
                             ) : (
                               <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
                                 <QrCode className="h-16 w-16 mb-2" />
@@ -578,7 +655,7 @@ export default function ServicePointSettingsPage() {
                             <Button
                               variant="outline"
                               className="flex items-center gap-2"
-                              onClick={handleDownloadQRCode}
+                              onClick={() => handleDownloadQRCode("png")}
                               disabled={
                                 !(
                                   currentQRCode &&
@@ -730,12 +807,6 @@ export default function ServicePointSettingsPage() {
                   try {
                     setIsLoading(true);
 
-                    // Log the current settings being saved
-                    console.log("Saving global settings:", {
-                      custom_question: customQuestion,
-                      show_comments: showComments,
-                    });
-
                     // Update all existing service points with the new global settings
                     const updatePromises = servicePoints.map((sp) =>
                       updateServicePoint(sp.id, {
@@ -837,7 +908,6 @@ export default function ServicePointSettingsPage() {
                       id="show-comments"
                       checked={showComments}
                       onCheckedChange={(checked) => {
-                        console.log("Comments toggle changed to:", checked);
                         setShowComments(checked);
                         toast(
                           checked ? "Comments enabled" : "Comments disabled",
@@ -951,10 +1021,11 @@ export default function ServicePointSettingsPage() {
                             className="p-2 border rounded text-center"
                           >
                             <div className="relative h-10 w-10 mx-auto">
-                              <Image
+                              <img
                                 src={emoji}
                                 alt={`Rating ${index + 1}`}
-                                fill
+                                width={40}
+                                height={40}
                                 className="object-contain"
                               />
                             </div>
@@ -1005,7 +1076,7 @@ export default function ServicePointSettingsPage() {
                               </p>
                             </div>
                             <div className="w-16 h-16 border rounded-lg overflow-hidden flex items-center justify-center bg-background">
-                              <Image
+                              <img
                                 src="/agahflogo.svg"
                                 alt="Logo preview"
                                 width={48}
@@ -1271,6 +1342,148 @@ export default function ServicePointSettingsPage() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteServicePoint}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog - Keep existing dialog */}
+      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>QR Code Preview</DialogTitle>
+            <DialogDescription>{selectedServicePoint?.name}</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center p-4">
+            {currentQRCode && (
+              <div
+                className="mb-4 border rounded-md overflow-hidden"
+                style={{ width: 300, height: 300 }}
+              >
+                <img
+                  src={currentQRCode}
+                  alt={`QR Code for ${
+                    selectedServicePoint?.name || "Service Point"
+                  }`}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                  }}
+                />
+              </div>
+            )}
+            <div className="flex flex-col gap-2 w-full">
+              <h4 className="text-sm font-medium mb-1">Download Options</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (currentQRCode && selectedServicePoint) {
+                      const link = document.createElement("a");
+                      link.href = currentQRCode;
+                      link.download = `${selectedServicePoint.name.replace(
+                        /\s+/g,
+                        "-"
+                      )}-QR-Code.png`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      toast.success("High quality QR code downloaded");
+                    }
+                  }}
+                  className="w-full"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  High Quality PNG
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (currentQRCode && selectedServicePoint) {
+                      // Create a new canvas for the smaller size
+                      const canvas = document.createElement("canvas");
+                      const ctx = canvas.getContext("2d");
+                      canvas.width = 300;
+                      canvas.height = 300;
+
+                      // Create an image from the QR code
+                      const img = new Image();
+                      img.onload = () => {
+                        if (ctx) {
+                          ctx.drawImage(img, 0, 0, 300, 300);
+                          const smallQR = canvas.toDataURL("image/png");
+
+                          const link = document.createElement("a");
+                          link.href = smallQR;
+                          link.download = `${selectedServicePoint.name.replace(
+                            /\s+/g,
+                            "-"
+                          )}-QR-Code-300px.png`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          toast.success("Standard QR code (300px) downloaded");
+                        }
+                      };
+                      img.src = currentQRCode;
+                    }
+                  }}
+                  className="w-full"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Standard PNG (300px)
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (currentQRCode && selectedServicePoint) {
+                      // Create a new canvas for the medium size
+                      const canvas = document.createElement("canvas");
+                      const ctx = canvas.getContext("2d");
+                      canvas.width = 500;
+                      canvas.height = 500;
+
+                      // Create an image from the QR code
+                      const img = new Image();
+                      img.onload = () => {
+                        if (ctx) {
+                          ctx.drawImage(img, 0, 0, 500, 500);
+                          const mediumQR = canvas.toDataURL("image/png");
+
+                          const link = document.createElement("a");
+                          link.href = mediumQR;
+                          link.download = `${selectedServicePoint.name.replace(
+                            /\s+/g,
+                            "-"
+                          )}-QR-Code-500px.png`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          toast.success("Medium QR code (500px) downloaded");
+                        }
+                      };
+                      img.src = currentQRCode;
+                    }
+                  }}
+                  className="w-full"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Medium PNG (500px)
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsPreviewDialogOpen(false)}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

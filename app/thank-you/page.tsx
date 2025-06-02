@@ -22,8 +22,32 @@ function ThankYouContent() {
   const label = searchParams.get("label");
   const imagePath = searchParams.get("image");
 
-  // Trigger confetti effect when the page loads
+  // Determine if we should show confetti based on rating or label
+  const shouldShowConfetti = () => {
+    // Check numeric rating (most reliable method)
+    if (rating) {
+      const numericRating = parseInt(rating);
+      // Only ratings 4 (Satisfied) and 5 (Very satisfied) should trigger confetti
+      if (!isNaN(numericRating) && numericRating >= 4) {
+        return true;
+      }
+    }
+
+    // Fallback to exact label match if needed
+    const positiveRatings = ["Satisfied", "Very satisfied"];
+
+    if (label && positiveRatings.some((term) => label === term)) {
+      return true;
+    }
+
+    return false;
+  };
+
+  // Trigger confetti effect when the page loads, but only for positive ratings
   useEffect(() => {
+    // Only show confetti for positive ratings
+    if (!shouldShowConfetti()) return;
+
     const duration = 2 * 1000;
     const end = Date.now() + duration;
 
@@ -100,9 +124,7 @@ function ThankYouContent() {
           )}
         </CardContent>
         <CardFooter className="flex justify-center">
-          <Link href="/">
-            <Button>Return Home</Button>
-          </Link>
+          <Link href="/">{/* <Button>Return Home</Button> */}</Link>
         </CardFooter>
       </Card>
     </>

@@ -139,8 +139,6 @@ export function WardsTab({
     const loadWardConcerns = async () => {
       setIsLoadingConcerns(true);
       try {
-        console.time("WardsTab concerns loading");
-
         // Check for cached data first
         const cachedData = sessionStorage.getItem(CACHE_KEY_CONCERNS);
 
@@ -149,18 +147,16 @@ export function WardsTab({
 
           // Use cached data if it's less than 5 minutes old
           if (Date.now() - timestamp < CACHE_TIME) {
-            console.log("WardsTab: Using cached concerns data");
             setWardConcerns(concerns);
             setIsLoadingConcerns(false);
-            console.timeEnd("WardsTab concerns loading");
+
             return;
           }
         }
 
         // Fetch fresh data if no valid cache exists
-        console.time("fetchWardConcerns");
+
         const concerns = await fetchWardConcerns();
-        console.timeEnd("fetchWardConcerns");
 
         setWardConcerns(concerns);
 
@@ -172,12 +168,9 @@ export function WardsTab({
             timestamp: Date.now(),
           })
         );
-
-        console.timeEnd("WardsTab concerns loading");
       } catch (error) {
         console.error("Error fetching ward concerns:", error);
         setWardConcerns([]);
-        console.timeEnd("WardsTab concerns loading");
       } finally {
         setIsLoadingConcerns(false);
       }
@@ -192,8 +185,6 @@ export function WardsTab({
     if (isLoading || wards.length === 0) return;
 
     try {
-      console.time("WardsTab caching");
-
       // Store wards data in cache with pagination info
       sessionStorage.setItem(
         CACHE_KEY_WARDS,
@@ -203,11 +194,8 @@ export function WardsTab({
           timestamp: Date.now(),
         })
       );
-
-      console.timeEnd("WardsTab caching");
     } catch (error) {
       console.error("Error caching wards data:", error);
-      console.timeEnd("WardsTab caching");
     }
   }, [wards, pagination, isLoading]);
 
@@ -717,7 +705,9 @@ export function WardsTab({
                 .sort((a, b) => b.satisfaction - a.satisfaction)
                 .map((ward, index) => {
                   // Find highest and lowest rated categories
-                  const ratings = Object.entries(ward.ratings);
+                  const ratings = Object.entries(ward.ratings).filter(([key]) =>
+                    ratingCategories.some((cat) => cat.id === key)
+                  );
                   const topRated = ratings.reduce(
                     (max, curr) => (curr[1] > max[1] ? curr : max),
                     ratings[0]

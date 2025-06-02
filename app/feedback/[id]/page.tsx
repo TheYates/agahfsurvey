@@ -6,8 +6,7 @@ export default async function FeedbackPage({
 }: {
   params: { id: string };
 }) {
-  // Ensure params are properly awaited before accessing
-  const id = params?.id;
-
+  // Await params before accessing its properties
+  const { id } = await params;
   return <FeedbackForm id={id} />;
 }

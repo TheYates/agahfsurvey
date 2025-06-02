@@ -83,37 +83,27 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
     const loadFeedbackData = async () => {
       // Check for cached data first
       try {
-        console.time(timerName);
-        console.log(
-          "FeedbackTab: Data fetch triggered (part of shared loading)"
-        );
-
         const cachedData = sessionStorage.getItem(CACHE_KEY);
         if (cachedData) {
           const { data, timestamp } = JSON.parse(cachedData);
           // Use cache if less than 5 minutes old
           if (Date.now() - timestamp < CACHE_TIME) {
-            console.log("FeedbackTab: Using cached data");
             setRecommendations(data.recommendations);
             setNotRecommendReasons(data.notRecommendReasons);
             setConcerns(data.concerns);
             setIsLoadingData(false);
             try {
-              console.timeEnd(timerName);
             } catch (e) {
               console.error("Error ending timer (cached data):", e);
             }
             return;
           }
         }
-      } catch (err) {
-        console.log("Error reading feedback cache:", err);
-      }
+      } catch (err) {}
 
       setIsLoadingData(true);
       try {
         // Use Promise.all to fetch multiple data sources concurrently
-        console.time(fetchTimerName);
         const [fetchedRecommendations, fetchedReasons, fetchedConcerns] =
           await Promise.all([
             fetchRecommendations(),
@@ -122,7 +112,6 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
           ]);
 
         try {
-          console.timeEnd(fetchTimerName);
         } catch (e) {
           console.error("Error ending fetch timer:", e);
         }
@@ -147,7 +136,6 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
         }
 
         try {
-          console.timeEnd(timerName);
         } catch (e) {
           console.error("Error ending main timer:", e);
         }
@@ -155,15 +143,9 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
         console.error("Error loading feedback data:", error);
         // Clean up timers even if there's an error
         try {
-          console.timeEnd(fetchTimerName);
-        } catch (e) {
-          /* ignore */
-        }
+        } catch (e) {}
         try {
-          console.timeEnd(timerName);
-        } catch (e) {
-          /* ignore */
-        }
+        } catch (e) {}
       } finally {
         setIsLoadingData(false);
       }

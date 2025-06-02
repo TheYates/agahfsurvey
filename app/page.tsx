@@ -20,6 +20,10 @@ export default function Home() {
           <p className="text-muted-foreground">Patient Satisfaction Survey</p>
         </div>
         <SurveyForm />
+
+        <footer className="mt-8 text-center text-sm text-muted-foreground">
+          <p>© {new Date().getFullYear()} AGA Health Foundation</p>
+        </footer>
       </div>
     </main>
   );

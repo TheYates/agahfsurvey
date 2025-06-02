@@ -238,8 +238,6 @@ export async function fetchOccupationalHealthData(): Promise<{
   ohConcerns: DepartmentConcern[];
 }> {
   try {
-    console.log("Fetching occupational health specific data...");
-
     // Get all submissions with occupational health visit purpose
     const { data: ohSubmissions, error: ohError } = await supabase
       .from("SurveySubmission")
@@ -272,10 +270,6 @@ export async function fetchOccupationalHealthData(): Promise<{
       .eq("visitPurpose", "Medicals (Occupational Health)");
 
     if (ohError) throw ohError;
-
-    console.log(
-      `Found ${ohSubmissions?.length || 0} occupational health submissions`
-    );
 
     // Get OH concerns
     const ohConcerns = await fetchOccupationalHealthConcerns();

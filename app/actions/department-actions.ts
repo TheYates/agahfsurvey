@@ -100,26 +100,22 @@ function convertRatingToNumber(rating: string | number): number {
  */
 export async function fetchDepartments(): Promise<Department[]> {
   try {
-    console.time("fetchDepartments");
-
     // Get all locations of type 'department' - only select fields we need
-    console.time("fetchDepartments:locations");
+
     const { data: locations, error: locationsError } = await supabase
       .from("Location")
       .select("id, name")
       .eq("locationType", "department");
-    console.timeEnd("fetchDepartments:locations");
 
     if (locationsError) throw locationsError;
 
     if (!locations || locations.length === 0) {
-      console.timeEnd("fetchDepartments");
       return [];
     }
 
     // Get ALL submissions for ALL locations in a SINGLE query
     // Only select the fields we actually need
-    console.time("fetchDepartments:submissions");
+
     const locationIds = locations.map((loc) => loc.id);
 
     const { data: allSubmissionLocations, error: submissionsError } =
@@ -144,16 +140,15 @@ export async function fetchDepartments(): Promise<Department[]> {
       `
         )
         .in("locationId", locationIds);
-    console.timeEnd("fetchDepartments:submissions");
 
     if (submissionsError) {
       console.error(`Error fetching submissions:`, submissionsError);
-      console.timeEnd("fetchDepartments");
+
       return [];
     }
 
     // Group submissions by locationId
-    console.time("fetchDepartments:process");
+
     const submissionsByLocation: Record<string, any[]> = {};
     locationIds.forEach((id) => {
       submissionsByLocation[id] = [];
@@ -329,16 +324,11 @@ export async function fetchDepartments(): Promise<Department[]> {
         ratings: avgRatings,
       });
     }
-    console.timeEnd("fetchDepartments:process");
 
-    console.timeEnd("fetchDepartments");
     return departmentsData;
   } catch (error) {
     console.error("Error fetching departments:", error);
-    console.timeEnd("fetchDepartments:process");
-    console.timeEnd("fetchDepartments:submissions");
-    console.timeEnd("fetchDepartments:locations");
-    console.timeEnd("fetchDepartments");
+
     return [];
   }
 }
@@ -348,8 +338,6 @@ export async function fetchDepartments(): Promise<Department[]> {
  */
 export async function fetchDepartmentConcerns(): Promise<DepartmentConcern[]> {
   try {
-    console.time("fetchDepartmentConcerns");
-
     // Get all department concerns with related data
     // Add limit to improve performance - most reports only need recent concerns
     const { data, error } = await supabase
@@ -379,7 +367,6 @@ export async function fetchDepartmentConcerns(): Promise<DepartmentConcern[]> {
     if (error) throw error;
 
     if (!data || data.length === 0) {
-      console.timeEnd("fetchDepartmentConcerns");
       // Return fallback data if no real data is available
       return [
         {
@@ -436,11 +423,10 @@ export async function fetchDepartmentConcerns(): Promise<DepartmentConcern[]> {
       };
     });
 
-    console.timeEnd("fetchDepartmentConcerns");
     return result;
   } catch (error) {
     console.error("Error fetching department concerns:", error);
-    console.timeEnd("fetchDepartmentConcerns");
+
     // Return fallback data in case of error
     return [
       {
@@ -474,8 +460,6 @@ export async function fetchDepartmentConcerns(): Promise<DepartmentConcern[]> {
  */
 export async function fetchRecommendations(): Promise<Recommendation[]> {
   try {
-    console.time("fetchRecommendations");
-
     // Get all submissions with recommendations
     const { data, error } = await supabase
       .from("SurveySubmission")
@@ -497,7 +481,6 @@ export async function fetchRecommendations(): Promise<Recommendation[]> {
     if (error) throw error;
 
     if (!data || data.length === 0) {
-      console.timeEnd("fetchRecommendations");
       // Return fallback data if no real data is available
       return [
         {
@@ -546,11 +529,10 @@ export async function fetchRecommendations(): Promise<Recommendation[]> {
       userType: submission.userType || "Unknown",
     }));
 
-    console.timeEnd("fetchRecommendations");
     return result;
   } catch (error) {
     console.error("Error fetching recommendations:", error);
-    console.timeEnd("fetchRecommendations");
+
     // Return fallback data in case of error
     return [
       {
@@ -584,8 +566,6 @@ export async function fetchRecommendations(): Promise<Recommendation[]> {
  */
 export async function fetchVisitTimeData() {
   try {
-    console.time("fetchVisitTimeData");
-
     // Get submissions with only the fields we need, limit the number
     const { data, error } = await supabase
       .from("SurveySubmission")
@@ -692,7 +672,6 @@ export async function fetchVisitTimeData() {
 
     // If no real data is available, return fallback data
     if (visitTimeData.every((item) => item.count === 0)) {
-      console.timeEnd("fetchVisitTimeData");
       return [
         {
           id: "less-than-month",
@@ -725,11 +704,10 @@ export async function fetchVisitTimeData() {
       ];
     }
 
-    console.timeEnd("fetchVisitTimeData");
     return visitTimeData;
   } catch (error) {
     console.error("Error fetching visit time data:", error);
-    console.timeEnd("fetchVisitTimeData");
+
     // Return fallback data in case of error
     return [
       {
@@ -769,8 +747,6 @@ export async function fetchVisitTimeData() {
  */
 export async function fetchPatientTypeData() {
   try {
-    console.time("fetchPatientTypeData");
-
     // Get survey submissions with patient type info
     // Limit to most recent submissions for better performance
     const { data, error } = await supabase
@@ -943,11 +919,10 @@ export async function fetchPatientTypeData() {
       returningPatients: processPatientType(returningPatients),
     };
 
-    console.timeEnd("fetchPatientTypeData");
     return result;
   } catch (error) {
     console.error("Error fetching patient type data:", error);
-    console.timeEnd("fetchPatientTypeData");
+
     return {
       newPatients: {
         count: 0,
@@ -972,8 +947,6 @@ export async function fetchPatientTypeData() {
  */
 export async function fetchAllSurveyData() {
   try {
-    console.time("fetchAllSurveyData");
-
     // Get survey submissions with ratings, limit to recent ones for better performance
     const { data, error } = await supabase
       .from("SurveySubmission")
@@ -1001,11 +974,10 @@ export async function fetchAllSurveyData() {
 
     if (error) throw error;
 
-    console.timeEnd("fetchAllSurveyData");
     return data || [];
   } catch (error) {
     console.error("Error fetching all survey data:", error);
-    console.timeEnd("fetchAllSurveyData");
+
     return [];
   }
 }
@@ -1015,22 +987,16 @@ export async function fetchAllSurveyData() {
  */
 export async function fetchDepartmentTabData() {
   try {
-    console.time("fetchDepartmentTabData:total");
-
     // Fetch all data in parallel with individual timing
-    console.time("fetchDepartmentTabData:departments");
+
     const departmentsPromise = fetchDepartments();
 
-    console.time("fetchDepartmentTabData:concerns");
     const concernsPromise = fetchDepartmentConcerns();
 
-    console.time("fetchDepartmentTabData:recommendations");
     const recommendationsPromise = fetchRecommendations();
 
-    console.time("fetchDepartmentTabData:visitTime");
     const visitTimePromise = fetchVisitTimeData();
 
-    console.time("fetchDepartmentTabData:patientType");
     const patientTypePromise = fetchPatientTypeData();
 
     // Wait for all promises to resolve
@@ -1048,13 +1014,6 @@ export async function fetchDepartmentTabData() {
       patientTypePromise,
     ]);
 
-    console.timeEnd("fetchDepartmentTabData:departments");
-    console.timeEnd("fetchDepartmentTabData:concerns");
-    console.timeEnd("fetchDepartmentTabData:recommendations");
-    console.timeEnd("fetchDepartmentTabData:visitTime");
-    console.timeEnd("fetchDepartmentTabData:patientType");
-
-    console.timeEnd("fetchDepartmentTabData:total");
     return {
       departments,
       departmentConcerns,
@@ -1064,7 +1023,7 @@ export async function fetchDepartmentTabData() {
     };
   } catch (error) {
     console.error("Error fetching department tab data:", error);
-    console.timeEnd("fetchDepartmentTabData:total");
+
     throw error;
   }
 }

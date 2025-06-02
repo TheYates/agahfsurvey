@@ -53,9 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     try {
-      // For debugging
-      console.log("Attempting login with username:", username);
-
       const result = await loginUser(username, password);
 
       if (result.success) {

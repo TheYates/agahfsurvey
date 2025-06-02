@@ -157,8 +157,6 @@ export function DepartmentsTab({
     const loadDepartmentFeedback = async () => {
       setIsLoadingConcerns(true);
       try {
-        console.time("DepartmentsTab data loading");
-
         // Check for cached data first
         const cachedData = sessionStorage.getItem(CACHE_KEY_CONCERNS);
 
@@ -168,24 +166,22 @@ export function DepartmentsTab({
 
           // Use cached data if it's less than 5 minutes old
           if (Date.now() - timestamp < CACHE_TIME) {
-            console.log("DepartmentsTab: Using cached data");
             setDepartmentConcerns(concerns);
             setDepartmentRecommendations(recommendations);
             setIsLoadingConcerns(false);
-            console.timeEnd("DepartmentsTab data loading");
+
             return;
           }
         }
 
         // Fetch fresh data if no valid cache exists
-        console.time("fetchDepartmentConcerns");
+
         const concerns = await fetchDepartmentConcerns();
-        console.timeEnd("fetchDepartmentConcerns");
+
         setDepartmentConcerns(concerns);
 
-        console.time("fetchRecommendations");
         const recommendations = await fetchRecommendations();
-        console.timeEnd("fetchRecommendations");
+
         setDepartmentRecommendations(recommendations);
 
         // Store in cache with timestamp
@@ -197,13 +193,10 @@ export function DepartmentsTab({
             timestamp: Date.now(),
           })
         );
-
-        console.timeEnd("DepartmentsTab data loading");
       } catch (error) {
         console.error("Error fetching department feedback:", error);
         setDepartmentConcerns([]);
         setDepartmentRecommendations([]);
-        console.timeEnd("DepartmentsTab data loading");
       } finally {
         setIsLoadingConcerns(false);
       }

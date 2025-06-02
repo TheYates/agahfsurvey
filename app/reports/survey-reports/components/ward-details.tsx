@@ -129,10 +129,7 @@ export function WardDetails({
   ];
 
   // Debug log
-  useEffect(() => {
-    console.log("Rendering WardDetails for:", selectedWard.name);
-    console.log("Current satisfaction trend data:", satisfactionTrend);
-  }, [selectedWard.name, satisfactionTrend]);
+  useEffect(() => {}, [selectedWard.name, satisfactionTrend]);
 
   return (
     <div className="space-y-6">

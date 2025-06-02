@@ -279,34 +279,44 @@ export default function SurveyReportsPage() {
         try {
           const cached = sessionStorage.getItem(CACHE_KEY);
           if (cached) {
-            const { data, timestamp } = JSON.parse(cached);
-            if (Date.now() - timestamp < CACHE_EXPIRY) {
-              console.log("Using cached survey reports data");
+            const parsedCache = JSON.parse(cached);
+            const { data: cachedDataObj, timestamp } = parsedCache;
 
-              // Set all the data from cache
-              setOverviewData(data.overviewData);
-              setData(data.enhancedData);
-              setDepartments(data.departments);
-              setWards(data.wards);
-              setWardPagination(data.wardPagination);
-              setLocations(data.locations);
-              setVisitPurposeData(data.visitPurposeData);
-              setPatientTypeData(data.patientTypeData);
-              setVisitTimeData(data.visitTimeData);
+            if (Date.now() - timestamp < CACHE_EXPIRY && cachedDataObj) {
+              // Check if the cached data has the required structure
+              if (cachedDataObj.overviewData) {
+                // Set all the data from cache
+                setOverviewData(cachedDataObj.overviewData);
+                setData(cachedDataObj.enhancedData || {});
+                setDepartments(cachedDataObj.departments || []);
+                setWards(cachedDataObj.wards || []);
+                setWardPagination(
+                  cachedDataObj.wardPagination || {
+                    total: 0,
+                    limit: 5,
+                    offset: 0,
+                    hasMore: false,
+                  }
+                );
+                setLocations(cachedDataObj.locations || []);
+                setVisitPurposeData(cachedDataObj.visitPurposeData || null);
+                setPatientTypeData(cachedDataObj.patientTypeData || null);
+                setVisitTimeData(cachedDataObj.visitTimeData || []);
 
-              // Mark all tabs as loaded since we have the data
-              setLoadedTabs({
-                overview: true,
-                departments: true,
-                wards: true,
-                canteen: false, // These will be loaded on demand
-                medicals: false,
-                feedback: false,
-              });
+                // Mark all tabs as loaded since we have the data
+                setLoadedTabs({
+                  overview: true,
+                  departments: true,
+                  wards: true,
+                  canteen: false, // These will be loaded on demand
+                  medicals: false,
+                  feedback: false,
+                });
 
-              setIsLoading(false);
-              console.timeEnd("Total data loading time");
-              return;
+                setIsLoading(false);
+                console.timeEnd("Total data loading time");
+                return;
+              }
             }
           }
         } catch (error) {
@@ -315,7 +325,6 @@ export default function SurveyReportsPage() {
       }
 
       // Fetch all data in parallel
-      console.log("Fetching fresh data...");
 
       // Start all fetches in parallel
       const overviewPromise = fetchOverviewTabData();
@@ -330,14 +339,27 @@ export default function SurveyReportsPage() {
       // Store the fetched data in the overviewData state
       setOverviewData(fetchedOverviewData);
 
-      // For backward compatibility, create a surveyData array
-      const surveyData = {
-        totalResponses: fetchedOverviewData.surveyData.totalResponses,
-        recommendRate: fetchedOverviewData.surveyData.recommendRate,
-        avgSatisfaction: fetchedOverviewData.surveyData.avgSatisfaction,
-        mostCommonPurpose: fetchedOverviewData.surveyData.mostCommonPurpose,
-        purposeDistribution: fetchedOverviewData.surveyData.purposeDistribution,
-      };
+      // For backward compatibility, create a surveyData array with safe access
+      const surveyData =
+        fetchedOverviewData && fetchedOverviewData.surveyData
+          ? {
+              totalResponses:
+                fetchedOverviewData.surveyData.totalResponses || 0,
+              recommendRate: fetchedOverviewData.surveyData.recommendRate || 0,
+              avgSatisfaction:
+                fetchedOverviewData.surveyData.avgSatisfaction || 0,
+              mostCommonPurpose:
+                fetchedOverviewData.surveyData.mostCommonPurpose || "",
+              purposeDistribution:
+                fetchedOverviewData.surveyData.purposeDistribution || [],
+            }
+          : {
+              totalResponses: 0,
+              recommendRate: 0,
+              avgSatisfaction: 0,
+              mostCommonPurpose: "",
+              purposeDistribution: [],
+            };
 
       // Set data state with the overview data
       const enhancedData = {
@@ -446,7 +468,6 @@ export default function SurveyReportsPage() {
 
   // Track the active tab
   const handleTabChange = (value: string) => {
-    console.log(`Tab change started: ${activeTabRef.current} -> ${value}`);
     const startTime = performance.now();
 
     // Update the active tab ref
@@ -460,12 +481,7 @@ export default function SurveyReportsPage() {
       const anyRelatedTabLoaded = relatedTabs.some((tab) => loadedTabs[tab]);
 
       if (anyRelatedTabLoaded) {
-        console.log(`Using already loaded data for ${value} tab`);
       } else {
-        console.log(
-          `Triggering shared loading for all tabs: ${relatedTabs.join(", ")}`
-        );
-
         // Mark all related tabs as loaded to trigger their data fetching
         const updatedLoadedTabs = { ...loadedTabs };
         relatedTabs.forEach((tab) => {
@@ -484,7 +500,6 @@ export default function SurveyReportsPage() {
     }
 
     const endTime = performance.now();
-    console.log(`Tab change to ${value} completed in ${endTime - startTime}ms`);
   };
 
   // Function to render tab content with loading state only on first load

@@ -129,50 +129,35 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
     const loadOccupationalHealthData = async () => {
       // Check for cached data first
       try {
-        console.time(timerName);
-        console.log(
-          "MedicalsTab: Data fetch triggered (part of shared loading)"
-        );
-
         const cachedData = sessionStorage.getItem(CACHE_KEY);
         if (cachedData) {
           const { data, timestamp } = JSON.parse(cachedData);
           // Use cache if less than 5 minutes old
           if (Date.now() - timestamp < CACHE_TIME) {
-            console.log("MedicalsTab: Using cached data");
             setOhData(data.ohData);
             setOhConcerns(data.ohConcerns);
             setIsLoadingConcerns(false);
-            console.timeEnd(timerName);
+
             return;
           }
         }
       } catch (err) {
         // If cache read fails, just continue with normal data fetching
-        console.log("Error reading cache:", err);
       }
 
       setIsLoadingConcerns(true);
       try {
-        console.log("OccupationalHealthTab: Fetching specific OH data...");
-
         const fetchTimerName = `OccupationalHealthTab_fetch_${instanceId}`;
-        console.time(fetchTimerName);
+
         const { ohData: fetchedData, ohConcerns: fetchedConcerns } =
           await fetchOccupationalHealthData();
-        console.timeEnd(fetchTimerName);
 
         // Also fetch all survey data to get user type distribution
         const surveyDataTimerName = `OccupationalHealthTab_survey_data_${instanceId}`;
-        console.time(surveyDataTimerName);
-        const allSurveyData = await fetchAllSurveyData();
-        console.timeEnd(surveyDataTimerName);
 
-        console.log("OccupationalHealthTab: Received OH data:", fetchedData);
-        console.log(
-          "OccupationalHealthTab: Received OH concerns:",
-          fetchedConcerns
-        );
+        const allSurveyData = await fetchAllSurveyData();
+
+        // If fetchedData exists, enhance it with real user type distribution
 
         // If fetchedData exists, enhance it with real user type distribution
         if (fetchedData) {
@@ -181,14 +166,9 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
           // Calculate real user type distribution from survey data
           // Filter for occupational health visits only
           const processTimerName = `Process_user_type_distribution_${instanceId}`;
-          console.time(processTimerName);
+
           const ohVisits = allSurveyData.filter(
             (survey) => survey.visitPurpose === "Medicals (Occupational Health)"
-          );
-
-          console.log(
-            "OccupationalHealthTab: Found OH visits:",
-            ohVisits.length
           );
 
           // Count user types from these visits
@@ -207,7 +187,6 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
           )
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value); // Sort by count, descending
-          console.timeEnd(processTimerName);
 
           // Ensure we have at least some data - use empty categories if no data found
           typedData.userTypeDistribution =
@@ -254,15 +233,12 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
           setOhData(null);
         }
         setOhConcerns(fetchedConcerns);
-
-        console.timeEnd(timerName);
       } catch (error) {
         console.error("Error fetching occupational health data:", error);
         setOhData(null);
         setOhConcerns([]);
         // Still end the timer to avoid orphaned timers
         try {
-          console.timeEnd(timerName);
         } catch (e) {
           console.error("Error ending timer:", e);
         }

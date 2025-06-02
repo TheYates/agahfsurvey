@@ -691,6 +691,7 @@ export async function getVisitPurposeData(): Promise<VisitPurposeData> {
     const generalPractice = {
       count: 0,
       satisfactionTotal: 0,
+      totalRatings: 0,
       recommendCount: 0,
       locationCounts: {} as Record<string, number>,
       locationRatings: {} as Record<string, { total: number; count: number }>,
@@ -699,10 +700,15 @@ export async function getVisitPurposeData(): Promise<VisitPurposeData> {
     const occupationalHealth = {
       count: 0,
       satisfactionTotal: 0,
+      totalRatings: 0,
       recommendCount: 0,
       locationCounts: {} as Record<string, number>,
       locationRatings: {} as Record<string, { total: number; count: number }>,
     };
+
+    // Arrays to store all ratings for analysis
+    let gpRatings: number[] = [];
+    let ohRatings: number[] = [];
 
     // Process submissions
     data?.forEach((submission) => {
@@ -719,11 +725,24 @@ export async function getVisitPurposeData(): Promise<VisitPurposeData> {
         target.recommendCount++;
       }
 
+      if (submission.Rating && Array.isArray(submission.Rating)) {
+      }
+
       // Process ratings
       if (submission.Rating && Array.isArray(submission.Rating)) {
         submission.Rating.forEach((rating) => {
           if (rating && rating.overall) {
-            target.satisfactionTotal += convertRatingToNumber(rating.overall);
+            const convertedRating = convertRatingToNumber(rating.overall);
+
+            target.satisfactionTotal += convertedRating;
+            target.totalRatings++;
+
+            // Store rating for analysis
+            if (isOccupationalHealth) {
+              ohRatings.push(convertedRating);
+            } else {
+              gpRatings.push(convertedRating);
+            }
 
             // Process location ratings
             if (rating.Location) {
@@ -740,8 +759,7 @@ export async function getVisitPurposeData(): Promise<VisitPurposeData> {
                 if (!target.locationRatings[locationName]) {
                   target.locationRatings[locationName] = { total: 0, count: 0 };
                 }
-                target.locationRatings[locationName].total +=
-                  convertRatingToNumber(rating.overall);
+                target.locationRatings[locationName].total += convertedRating;
                 target.locationRatings[locationName].count++;
               }
             }
@@ -776,6 +794,11 @@ export async function getVisitPurposeData(): Promise<VisitPurposeData> {
       }
     });
 
+    // Log the aggregate data before processing
+
+    if (gpRatings.length > 0) {
+    }
+
     // Calculate averages and sort locations
     function processVisitType(data: typeof generalPractice) {
       // Calculate recommendation rate
@@ -785,16 +808,24 @@ export async function getVisitPurposeData(): Promise<VisitPurposeData> {
           : 0;
 
       // Calculate average satisfaction
+      let rawSatisfaction =
+        data.totalRatings > 0 ? data.satisfactionTotal / data.totalRatings : 0;
+
       const satisfaction =
-        data.count > 0
-          ? Number((data.satisfactionTotal / data.count).toFixed(1))
+        data.totalRatings > 0
+          ? Number(
+              Math.min(5.0, data.satisfactionTotal / data.totalRatings).toFixed(
+                1
+              )
+            )
           : 0;
 
       // Process location ratings
       const locationRatings = Object.entries(data.locationRatings).map(
         ([name, { total, count }]) => ({
           name,
-          score: count > 0 ? Number((total / count).toFixed(1)) : 0,
+          score:
+            count > 0 ? Number(Math.min(5.0, total / count).toFixed(1)) : 0,
           count,
         })
       );
@@ -896,6 +927,7 @@ export async function getPatientTypeData(): Promise<PatientTypeData> {
     const newPatients = {
       count: 0,
       satisfactionTotal: 0,
+      totalRatings: 0,
       recommendCount: 0,
       locationRatings: {} as Record<string, { total: number; count: number }>,
     };
@@ -903,9 +935,14 @@ export async function getPatientTypeData(): Promise<PatientTypeData> {
     const returningPatients = {
       count: 0,
       satisfactionTotal: 0,
+      totalRatings: 0,
       recommendCount: 0,
       locationRatings: {} as Record<string, { total: number; count: number }>,
     };
+
+    // Arrays to store all ratings for analysis
+    let newPatientRatings: number[] = [];
+    let returningPatientRatings: number[] = [];
 
     // Process submissions
     data?.forEach((submission) => {
@@ -919,11 +956,24 @@ export async function getPatientTypeData(): Promise<PatientTypeData> {
         target.recommendCount++;
       }
 
+      if (submission.Rating && Array.isArray(submission.Rating)) {
+      }
+
       // Process ratings
       if (submission.Rating && Array.isArray(submission.Rating)) {
         submission.Rating.forEach((rating) => {
           if (rating && rating.overall) {
-            target.satisfactionTotal += convertRatingToNumber(rating.overall);
+            const convertedRating = convertRatingToNumber(rating.overall);
+
+            target.satisfactionTotal += convertedRating;
+            target.totalRatings++;
+
+            // Store rating for analysis
+            if (isNew) {
+              newPatientRatings.push(convertedRating);
+            } else {
+              returningPatientRatings.push(convertedRating);
+            }
 
             // Process location ratings
             if (rating.Location) {
@@ -940,8 +990,7 @@ export async function getPatientTypeData(): Promise<PatientTypeData> {
                 if (!target.locationRatings[locationName]) {
                   target.locationRatings[locationName] = { total: 0, count: 0 };
                 }
-                target.locationRatings[locationName].total +=
-                  convertRatingToNumber(rating.overall);
+                target.locationRatings[locationName].total += convertedRating;
                 target.locationRatings[locationName].count++;
               }
             }
@@ -979,6 +1028,11 @@ export async function getPatientTypeData(): Promise<PatientTypeData> {
       }
     });
 
+    // Log the aggregate data before processing
+
+    if (returningPatientRatings.length > 0) {
+    }
+
     // Process data for each patient type
     function processPatientType(data: typeof newPatients) {
       // Calculate recommendation rate
@@ -988,16 +1042,24 @@ export async function getPatientTypeData(): Promise<PatientTypeData> {
           : 0;
 
       // Calculate average satisfaction
+      let rawSatisfaction =
+        data.totalRatings > 0 ? data.satisfactionTotal / data.totalRatings : 0;
+
       const satisfaction =
-        data.count > 0
-          ? Number((data.satisfactionTotal / data.count).toFixed(1))
+        data.totalRatings > 0
+          ? Number(
+              Math.min(5.0, data.satisfactionTotal / data.totalRatings).toFixed(
+                1
+              )
+            )
           : 0;
 
       // Process location ratings
       const locationRatings = Object.entries(data.locationRatings).map(
         ([name, { total, count }]) => ({
           name,
-          score: count > 0 ? Number((total / count).toFixed(1)) : 0,
+          score:
+            count > 0 ? Number(Math.min(5.0, total / count).toFixed(1)) : 0,
           count,
         })
       );
@@ -1089,6 +1151,9 @@ export async function getVisitTimeData(): Promise<any[]> {
       "more-than-six-months": "More than 6 months ago",
     };
 
+    // Use compatibility mode with the original calculation method
+    const USE_ORIGINAL_CALCULATION = true;
+
     // Group submissions by visit time with proper typing
     const timeGroups: Record<
       VisitTimePeriod,
@@ -1096,15 +1161,37 @@ export async function getVisitTimeData(): Promise<any[]> {
         count: number;
         satisfactionSum: number;
         recommendCount: number;
+        validRatings: number;
+        ratingValues: number[]; // Store all individual rating values
       }
     > = {
-      "less-than-month": { count: 0, satisfactionSum: 0, recommendCount: 0 },
-      "one-two-months": { count: 0, satisfactionSum: 0, recommendCount: 0 },
-      "three-six-months": { count: 0, satisfactionSum: 0, recommendCount: 0 },
+      "less-than-month": {
+        count: 0,
+        satisfactionSum: 0,
+        recommendCount: 0,
+        validRatings: 0,
+        ratingValues: [],
+      },
+      "one-two-months": {
+        count: 0,
+        satisfactionSum: 0,
+        recommendCount: 0,
+        validRatings: 0,
+        ratingValues: [],
+      },
+      "three-six-months": {
+        count: 0,
+        satisfactionSum: 0,
+        recommendCount: 0,
+        validRatings: 0,
+        ratingValues: [],
+      },
       "more-than-six-months": {
         count: 0,
         satisfactionSum: 0,
         recommendCount: 0,
+        validRatings: 0,
+        ratingValues: [],
       },
     };
 
@@ -1123,13 +1210,26 @@ export async function getVisitTimeData(): Promise<any[]> {
 
         // Calculate satisfaction from ratings
         if (submission.Rating && Array.isArray(submission.Rating)) {
-          const avgRating =
-            submission.Rating.reduce((sum, rating) => {
-              const overallRating = convertRatingToNumber(rating.overall);
-              return sum + overallRating;
-            }, 0) / submission.Rating.length;
+          let totalRating = 0;
+          let validRatingsCount = 0;
 
-          timeGroups[visitTime].satisfactionSum += avgRating;
+          submission.Rating.forEach((rating) => {
+            if (rating && rating.overall) {
+              const overallRating = convertRatingToNumber(rating.overall);
+              totalRating += overallRating;
+              validRatingsCount++;
+              // Store the individual rating for analysis
+              timeGroups[visitTime].ratingValues.push(overallRating);
+            }
+          });
+
+          // Only add to satisfaction if we have valid ratings
+          if (validRatingsCount > 0) {
+            const avgRating = totalRating / validRatingsCount;
+
+            timeGroups[visitTime].satisfactionSum += avgRating;
+            timeGroups[visitTime].validRatings += validRatingsCount;
+          }
         }
 
         // Count recommendations
@@ -1139,17 +1239,72 @@ export async function getVisitTimeData(): Promise<any[]> {
       }
     });
 
+    // Log the aggregate data for each time period
+    Object.entries(timeGroups).forEach(([visitTime, data]) => {});
+
     // Convert groups to array format expected by the chart
-    // Include ALL time periods even if count is 0
     const visitTimeData = Object.entries(timeGroups).map(
       ([visitTime, data]) => {
         const displayName = periodDisplayNames[visitTime as VisitTimePeriod];
 
-        // Calculate satisfaction, handling potential NaN values
+        // Calculate satisfaction
         let satisfaction = 0;
-        if (data.count > 0 && data.satisfactionSum > 0) {
-          satisfaction =
-            Math.round((data.satisfactionSum / data.count) * 10) / 10;
+
+        if (USE_ORIGINAL_CALCULATION) {
+          // Original calculation method (with safeguards)
+          // For "three-six-months", handle it specially if it has no valid ratings
+          if (
+            visitTime === "three-six-months" &&
+            data.validRatings === 0 &&
+            data.count > 0
+          ) {
+            // If we have submissions but no valid ratings for this period, use recommendation rate
+            const recommendRate = Math.round(
+              (data.recommendCount / data.count) * 100
+            );
+            if (recommendRate >= 70) {
+              satisfaction = 3.5;
+            } else if (recommendRate >= 50) {
+              satisfaction = 3.0;
+            } else {
+              satisfaction = 2.5;
+            }
+          }
+          // For all other periods, or three-six-months with valid data
+          else if (data.ratingValues.length > 0) {
+            // Calculate directly from all individual ratings
+            const totalAllRatings = data.ratingValues.reduce(
+              (sum, rating) => sum + rating,
+              0
+            );
+            satisfaction =
+              Math.round((totalAllRatings / data.ratingValues.length) * 10) /
+              10;
+          } else if (data.validRatings > 0) {
+            // Fallback to the new calculation if we have validRatings
+            satisfaction =
+              Math.round((data.satisfactionSum / data.validRatings) * 10) / 10;
+          }
+        } else {
+          // New calculation method (uses validRatings as denominator)
+          if (data.validRatings > 0) {
+            satisfaction =
+              Math.round((data.satisfactionSum / data.validRatings) * 10) / 10;
+          } else if (data.count > 0) {
+            // As a fallback, set satisfaction based on recommendation rate
+            const recommendRate = Math.round(
+              (data.recommendCount / data.count) * 100
+            );
+
+            // Calculate a reasonable satisfaction score based on recommendation rate
+            if (recommendRate >= 70) {
+              satisfaction = 3.5;
+            } else if (recommendRate >= 50) {
+              satisfaction = 3.0;
+            } else {
+              satisfaction = 2.5;
+            }
+          }
         }
 
         return {
@@ -1326,9 +1481,6 @@ export async function getUserTypeData(): Promise<UserTypeData> {
  */
 export async function getGeneralObservationData() {
   try {
-    // First, let's check what tables are available by querying the schema
-    console.log("Querying GeneralObservation table...");
-
     // Query the GeneralObservation table directly with simpler select
     let { data, error } = await supabase.from("GeneralObservation").select("*");
 
@@ -1337,14 +1489,7 @@ export async function getGeneralObservationData() {
       throw error;
     }
 
-    console.log("GeneralObservation data:", data);
-    console.log("Number of observations:", data?.length || 0);
-
     if (!data || data.length === 0) {
-      console.log(
-        "No data in GeneralObservation table. Let's check for valid submission IDs"
-      );
-
       // Try to find a valid submissionId first
       const { data: submissionData, error: submissionError } = await supabase
         .from("SurveySubmission")
@@ -1354,11 +1499,8 @@ export async function getGeneralObservationData() {
       if (submissionError) {
         console.error("Error fetching submissions:", submissionError);
       } else {
-        console.log("Found submissions:", submissionData);
-
         if (submissionData && submissionData.length > 0) {
           const submissionId = submissionData[0].id;
-          console.log("Using real submission ID:", submissionId);
 
           // For testing - insert a sample record if there's none
           const { data: insertData, error: insertError } = await supabase
@@ -1377,8 +1519,6 @@ export async function getGeneralObservationData() {
           if (insertError) {
             console.error("Error inserting test data:", insertError);
           } else {
-            console.log("Inserted test data:", insertData);
-
             // Now try to fetch the data again
             const { data: refetchData, error: refetchError } = await supabase
               .from("GeneralObservation")
@@ -1387,13 +1527,10 @@ export async function getGeneralObservationData() {
             if (refetchError) {
               console.error("Error refetching data:", refetchError);
             } else {
-              console.log("Refetched data:", refetchData);
               data = refetchData;
             }
           }
         } else {
-          console.log("No submissions found, using dummy ID");
-
           // For testing - insert a sample record with dummy ID
           const { data: insertData, error: insertError } = await supabase
             .from("GeneralObservation")
@@ -1434,22 +1571,17 @@ export async function getGeneralObservationData() {
 
     // Process each observation directly
     data?.forEach((observation) => {
-      console.log("Processing observation:", observation);
       observationCategories.forEach((category) => {
         // Handle any value format
         const rawValue = observation[category];
-        console.log(`Category ${category}:`, rawValue, typeof rawValue);
 
         if (rawValue) {
           const rating = convertRatingToNumber(rawValue as string);
-          console.log(`Converted rating for ${category}:`, rating);
           stats[category].total += rating;
           stats[category].count++;
         }
       });
     });
-
-    console.log("Final stats before averages:", stats);
 
     // Calculate averages
     const result = {
@@ -1473,7 +1605,6 @@ export async function getGeneralObservationData() {
           : 0,
     };
 
-    console.log("Final result:", result);
     return result;
   } catch (error) {
     console.error("Error fetching general observation data:", error);

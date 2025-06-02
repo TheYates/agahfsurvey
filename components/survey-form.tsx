@@ -251,10 +251,9 @@ export default function SurveyForm() {
       if (result.success) {
         setIsSubmitted(true);
         toast({
-          title: "Survey Submitted",
+          title: "Thank You for Your Feedback!",
           description:
-            "Thank you for your feedback! Your responses have been recorded.",
-          variant: "success",
+            "Your responses have been recorded and will help us improve our services.",
         });
       } else {
         toast({
@@ -546,7 +545,7 @@ export default function SurveyForm() {
   const debugMode = false; // Set to true to see debug information
 
   return (
-    <Card className="p-6 shadow-lg border-t-4 border-t-primary">
+    <Card className="p-6 shadow-lg border-t-4 border-t-primary max-w-2xl mx-auto">
       {isSubmitted ? (
         <div className="py-12 text-center space-y-6">
           <div className="rounded-full bg-green-100 w-16 h-16 flex items-center justify-center mx-auto">
@@ -560,7 +559,7 @@ export default function SurveyForm() {
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
+                strokeWidth={4}
                 d="M5 13l4 4L19 7"
               />
             </svg>
@@ -570,31 +569,6 @@ export default function SurveyForm() {
             Your responses have been recorded and will help us improve our
             services.
           </p>
-          <Button
-            onClick={() => {
-              setIsSubmitted(false);
-              setCurrentStep(0);
-              setCurrentLocationIndex(0);
-              setSurveyData({
-                visitTime: "",
-                visitPurpose: "",
-                locations: [],
-                departmentRatings: {},
-                departmentConcerns: {},
-                visitedOtherPlaces: false,
-                otherLocations: [],
-                generalObservation: {},
-                wouldRecommend: "",
-                whyNotRecommend: "",
-                recommendation: "",
-                userType: "",
-                patientType: "",
-              });
-            }}
-            className="mt-6"
-          >
-            Submit Another Response
-          </Button>
         </div>
       ) : (
         <div className="space-y-8">
@@ -629,7 +603,7 @@ export default function SurveyForm() {
 
           {isSubmitting && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-4">
+              <div className="p-6 rounded-lg shadow-lg flex items-center space-x-4">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-lg font-medium">
                   Submitting your feedback...
@@ -641,7 +615,7 @@ export default function SurveyForm() {
       )}
 
       {debugMode && (
-        <div className="mt-8 p-4 bg-gray-100 rounded-md text-xs">
+        <div className="mt-8 p-4  rounded-md text-xs">
           <h3 className="font-bold mb-2">Debug Information</h3>
           <div>Current Step: {currentStep}</div>
           <div>Current Location Index: {currentLocationIndex}</div>
@@ -657,8 +631,8 @@ export default function SurveyForm() {
           </div>
           <div>Progress: {calculateProgress()}%</div>
           <button
-            className="mt-2 px-2 py-1 bg-gray-200 rounded text-xs"
-            onClick={() => console.log(surveyData)}
+            className="mt-2 px-2 py-1  rounded text-xs"
+            onClick={() => surveyData}
           >
             Log Survey Data
           </button>

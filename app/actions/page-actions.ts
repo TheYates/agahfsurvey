@@ -387,7 +387,6 @@ export async function getSubmissionById(
 
   // Get all ratings from the database
   let allRatings = Array.isArray(data.Rating) ? data.Rating : [];
-  console.log("All ratings from database:", allRatings);
 
   // Map each location to its ratings
   if (locations.length > 0 && allRatings.length > 0) {
@@ -537,10 +536,6 @@ export async function getSubmissionById(
       (obs) => obs && obs.submissionId === data.id
     );
 
-    console.log("All GeneralObservation records:", data.GeneralObservation);
-    console.log("Current submission ID:", data.id);
-    console.log("Matching observation found:", matchingObs);
-
     if (matchingObs) {
       generalObs.cleanliness = matchingObs.cleanliness || "";
       generalObs.facilities = matchingObs.facilities || "";
@@ -557,7 +552,6 @@ export async function getSubmissionById(
       }
     }
   } else {
-    console.log("No GeneralObservation records found for submission:", data.id);
   }
 
   // Additional fallback - try fetching ALL general observations to find a match
@@ -572,8 +566,6 @@ export async function getSubmissionById(
         .from("GeneralObservation")
         .select("*");
 
-      console.log("All GeneralObservation records from direct query:", allObs);
-
       if (allObs && allObs.length > 0 && !allObsError) {
         // Try different ID formats (case insensitive, with/without dashes)
         const normalizedId = data.id.toLowerCase().replace(/-/g, "");
@@ -587,10 +579,6 @@ export async function getSubmissionById(
         });
 
         if (matchingRecord) {
-          console.log(
-            "Found matching record with normalized ID:",
-            matchingRecord
-          );
           generalObs.cleanliness = matchingRecord.cleanliness || "";
           generalObs.facilities = matchingRecord.facilities || "";
           generalObs.security = matchingRecord.security || "";

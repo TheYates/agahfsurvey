@@ -76,10 +76,6 @@ export async function submitSurveyToSupabase(formData: SurveyFormData) {
         occupationalHealthLocation &&
         !allLocationNames.includes(occupationalHealthLocation.name)
       ) {
-        console.log(
-          "Adding occupational health location automatically:",
-          occupationalHealthLocation.name
-        );
         allLocationNames.push(occupationalHealthLocation.name);
 
         // Also add to primary locations if not already there
@@ -133,11 +129,6 @@ export async function submitSurveyToSupabase(formData: SurveyFormData) {
             transformedRatings[mapRatingCategory(category)] = value;
           });
 
-          // Log for debugging
-          console.log(
-            `Processing ratings for location: ${locationName}, ID: ${locationMap[locationName]}`
-          );
-
           return {
             locationId: locationMap[locationName],
             ...transformedRatings,
@@ -163,7 +154,6 @@ export async function submitSurveyToSupabase(formData: SurveyFormData) {
     // Submit the data using our createSurveyQuery function
     const result = await createSurveyQuery(supabase, surveyData);
 
-    console.log("Survey submitted successfully:", result);
     return { success: true, data: result };
   } catch (error) {
     console.error("Error submitting survey:", error);

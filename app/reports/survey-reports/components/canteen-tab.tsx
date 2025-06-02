@@ -133,22 +133,15 @@ export function CanteenTab({ isLoading, departments }: CanteenTabProps) {
 
     const loadCanteenData = async () => {
       try {
-        console.time(timerName);
-        console.log(
-          "CanteenTab: Data fetch triggered (part of shared loading)"
-        );
-
         // Check cache first
         const cachedData = sessionStorage.getItem(CACHE_KEY);
         if (cachedData) {
           const parsed = JSON.parse(cachedData);
           if (Date.now() - parsed.timestamp < CACHE_TIME) {
-            console.log("CanteenTab: Using cached data");
             setCanteenData(parsed.data.canteenData);
             setSubmissionCount(parsed.data.count || 0);
             setIsLoadingData(false);
             try {
-              console.timeEnd(timerName);
             } catch (e) {
               // Ignore timer errors
             }
@@ -179,14 +172,12 @@ export function CanteenTab({ isLoading, departments }: CanteenTabProps) {
         }
 
         try {
-          console.timeEnd(timerName);
         } catch (e) {
           // Ignore timer errors
         }
       } catch (error) {
         console.error("Error in loadCanteenData:", error);
         try {
-          console.timeEnd(timerName);
         } catch (e) {
           // Ignore timer errors
         }

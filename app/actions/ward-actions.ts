@@ -620,32 +620,19 @@ export async function fetchAllSurveyData(): Promise<SurveySubmission[]> {
  */
 export async function fetchWardTabData(limit: number = 5, offset: number = 0) {
   try {
-    console.time("fetchWardTabData:total");
-    console.time("fetchWardTabData:init");
-
     // Prepare fetch promises for parallel execution
-    console.time("fetchWardTabData:wards");
-    console.log("Starting fetchWards...");
+
     // Comment out pagination for the test
     const wardsPromise = fetchWards(); // Remove pagination params
 
-    console.time("fetchWardTabData:concerns");
-    console.log("Starting fetchWardConcerns...");
     const concernsPromise = fetchWardConcerns();
 
-    console.timeEnd("fetchWardTabData:init");
-
     // Wait for all promises to resolve with detailed timing for each
-    console.time("fetchWardTabData:await");
     const [wardsData, concerns] = await Promise.all([
       wardsPromise.then((result) => {
-        console.log(`fetchWards completed with ${result.wards.length} wards`);
         return result;
       }),
       concernsPromise.then((result) => {
-        console.log(
-          `fetchWardConcerns completed with ${result.length} concerns/recommendations`
-        );
         return result;
       }),
     ]);
@@ -666,21 +653,9 @@ export async function fetchWardTabData(limit: number = 5, offset: number = 0) {
         hasMore: offset + wardsData.wards.length < wardsData.total,
       },
     };
-    console.timeEnd("fetchWardTabData:prepare-response");
 
-    console.timeEnd("fetchWardTabData:total");
-    console.log(
-      `fetchWardTabData completed with ${wardsData.wards.length} wards and ${concerns.length} feedback items`
-    );
     return result;
   } catch (error) {
-    console.error("Error fetching ward tab data:", error);
-    console.timeEnd("fetchWardTabData:prepare-response");
-    console.timeEnd("fetchWardTabData:await");
-    console.timeEnd("fetchWardTabData:concerns");
-    console.timeEnd("fetchWardTabData:wards");
-    console.timeEnd("fetchWardTabData:init");
-    console.timeEnd("fetchWardTabData:total");
     throw error;
   }
 }
