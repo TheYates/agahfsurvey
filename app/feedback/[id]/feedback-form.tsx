@@ -122,10 +122,14 @@ export function FeedbackForm({ id }: FeedbackFormProps) {
       const selectedEmoji = RATING_EMOJIS.find(
         (e) => e.value === selectedRating
       );
+
+      // Make sure the image path is properly formatted for the thank-you page
+      const imagePath = selectedEmoji?.image || "";
+
       router.push(
         `/thank-you?rating=${selectedRating}&label=${encodeURIComponent(
           selectedEmoji?.label || ""
-        )}&image=${encodeURIComponent(selectedEmoji?.image || "")}`
+        )}&image=${encodeURIComponent(imagePath)}`
       );
     } catch (error) {
       console.error("Error submitting feedback:", error);

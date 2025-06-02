@@ -112,10 +112,15 @@ function ThankYouContent() {
               {imagePath && (
                 <div className="w-14 h-14 mb-1 relative">
                   <Image
-                    src={imagePath}
+                    src={decodeURIComponent(imagePath)}
                     alt={label || "Selected rating"}
-                    fill
-                    className="object-contain"
+                    width={50}
+                    height={50}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
                   />
                 </div>
               )}
