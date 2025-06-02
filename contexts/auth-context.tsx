@@ -33,14 +33,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { authenticated, user: authUser } = await checkAuth();
 
         if (authenticated && authUser) {
+          // Store in sessionStorage (tab-specific)
+          sessionStorage.setItem("isAuthenticated", "true");
+          sessionStorage.setItem("user", JSON.stringify(authUser));
+
           setIsAuthenticated(true);
           setUser(authUser);
         } else {
+          sessionStorage.removeItem("isAuthenticated");
+          sessionStorage.removeItem("user");
+
           setIsAuthenticated(false);
           setUser(null);
         }
       } catch (error) {
         console.error("Auth verification error:", error);
+
+        sessionStorage.removeItem("isAuthenticated");
+        sessionStorage.removeItem("user");
+
         setIsAuthenticated(false);
         setUser(null);
       } finally {
@@ -48,7 +59,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    verifyAuth();
+    // Check if auth data exists in sessionStorage (for tab-specific auth)
+    const checkSessionStorage = () => {
+      const storedAuth = sessionStorage.getItem("isAuthenticated");
+      const storedUser = sessionStorage.getItem("user");
+
+      if (storedAuth === "true" && storedUser) {
+        try {
+          setIsAuthenticated(true);
+          setUser(JSON.parse(storedUser));
+          setIsLoading(false);
+        } catch (e) {
+          sessionStorage.removeItem("isAuthenticated");
+          sessionStorage.removeItem("user");
+          verifyAuth();
+        }
+      } else {
+        verifyAuth();
+      }
+    };
+
+    checkSessionStorage();
+  }, []);
+
+  // Add a listener for tab visibility changes to handle tab closing
+  useEffect(() => {
+    // This will detect when the tab becomes hidden (including tab close)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        // When tab is hidden or closed, clear authentication
+        sessionStorage.removeItem("isAuthenticated");
+        sessionStorage.removeItem("user");
+        // We don't set state here as this runs during tab close
+      }
+    };
+
+    // Add the event listener
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Clean up
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   const login = async (username: string, password: string) => {
@@ -56,6 +108,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await loginUser(username, password);
 
       if (result.success) {
+        // Store in sessionStorage (tab-specific)
+        sessionStorage.setItem("isAuthenticated", "true");
+        sessionStorage.setItem("user", JSON.stringify(result.user));
+
         setIsAuthenticated(true);
         setUser(result.user);
         return true;
@@ -74,6 +130,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await logoutUser();
 
       if (result.success) {
+        // Clear sessionStorage
+        sessionStorage.removeItem("isAuthenticated");
+        sessionStorage.removeItem("user");
+
         setIsAuthenticated(false);
         setUser(null);
       }
