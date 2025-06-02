@@ -22,11 +22,10 @@ export async function loginUser(username: string, password: string) {
     // Verify password with bcrypt
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (isValid) {
-      // Set session cookie
+      // Set session cookie (expires when browser closes)
       (await cookies()).set("authToken", "admin-authenticated", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 60 * 24 * 7, // 1 week
         path: "/",
       });
 
