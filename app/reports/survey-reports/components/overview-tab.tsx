@@ -66,6 +66,14 @@ import {
   legendLabelsPlugin,
   legendValueLabelsPlugin,
 } from "../utils/chart-utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // Define custom plugins
 // const barAveragePlugin = {
@@ -1448,66 +1456,73 @@ export function OverviewTab({
                         />
                       </div>
 
-                      {userTypeData.insight && (
-                        <div className="mt-6">
-                          <Alert>
-                            <Lightbulb className="h-4 w-4" />
-                            <AlertTitle>Insight</AlertTitle>
-                            <AlertDescription>
-                              {userTypeData.insight}
-                            </AlertDescription>
-                          </Alert>
-                        </div>
-                      )}
-
                       <div className="mt-6 space-y-4">
                         <h4 className="text-sm font-medium">
-                          Key Observations
+                          Recommendation Rate by User Type
                         </h4>
-                        <ul className="space-y-2 text-sm">
-                          {userTypeData.distribution &&
-                          userTypeData.distribution.length > 0 ? (
-                            <>
-                              <li className="flex items-start">
-                                <span className="bg-[#0a6a74]/10 p-1 rounded mr-2">
-                                  <Users className="h-4 w-4 text-[#0a6a74]" />
-                                </span>
-                                <span>
-                                  {(() => {
-                                    const sorted = [
-                                      ...userTypeData.distribution,
-                                    ].sort((a, b) => b.value - a.value);
-                                    const topType = sorted[0];
-                                    const total = sorted.reduce(
-                                      (sum, item) => sum + item.value,
-                                      0
-                                    );
-                                    const percentage = total
-                                      ? ((topType.value / total) * 100).toFixed(
-                                          1
-                                        )
-                                      : "0";
-
-                                    return `${topType.name} represents ${percentage}% of all respondents, making it the largest user group.`;
-                                  })()}
-                                </span>
-                              </li>
-                              <li className="flex items-start">
-                                <span className="bg-[#0a6a74]/10 p-1 rounded mr-2">
-                                  <TrendingUp className="h-4 w-4 text-[#0a6a74]" />
-                                </span>
-                                <span>
-                                  Understanding the distribution helps tailor
-                                  services to specific workforce needs.
-                                </span>
-                              </li>
-                            </>
-                          ) : (
-                            <li className="text-muted-foreground">
-                              No user type data available
-                            </li>
-                          )}
-                        </ul>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>User Type</TableHead>
+                              <TableHead className="text-right">
+                                Recommend Rate
+                              </TableHead>
+                              <TableHead className="text-right">
+                                Count
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {satisfactionByDemographic.byUserType.map(
+                              (item, index) => (
+                                <TableRow key={`user-type-recommend-${index}`}>
+                                  <TableCell>{item.userType}</TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex flex-col items-end gap-1">
+                                      <span
+                                        className={cn(
+                                          "font-medium text-sm",
+                                          item.recommendRate >= 75
+                                            ? "text-[#22c5bf]"
+                                            : "text-[#e84e3c]"
+                                        )}
+                                      >
+                                        {item.recommendRate}%
+                                      </span>
+                                      <div className="flex items-center gap-1 w-full justify-end">
+                                        <span className="text-xs text-[#22c5bf]">
+                                          {Math.round(
+                                            (item.count * item.recommendRate) /
+                                              100
+                                          )}
+                                        </span>
+                                        <Progress
+                                          value={item.recommendRate}
+                                          className={cn(
+                                            "h-1.5 w-16",
+                                            item.recommendRate >= 75
+                                              ? "bg-[#22c5bf]/20"
+                                              : "bg-[#e84e3c]/20"
+                                          )}
+                                        />
+                                        <span className="text-xs text-[#e84e3c]">
+                                          {Math.round(
+                                            (item.count *
+                                              (100 - item.recommendRate)) /
+                                              100
+                                          )}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {item.count}
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            )}
+                          </TableBody>
+                        </Table>
                       </div>
                     </div>
 
