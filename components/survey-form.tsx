@@ -71,7 +71,7 @@ export default function SurveyForm() {
     "Eric Asubonteng Clinic (Bruno Est.)",
     "Injection Room",
     "Laboratory",
-    "Occupational Health",
+    // "Occupational Health",
     "Out-Patient Department (OPD)",
     "Pharmacy",
     "Physiotherapy",

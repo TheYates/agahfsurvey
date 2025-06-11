@@ -59,7 +59,9 @@ export default function LocationsPage({
           .filter((loc: any) => loc.locationType === "department")
           .map((loc: any) => loc.name)
           .filter(
-            (name: string) => name !== "Occupational Health Unit (Medicals)"
+            (name: string) =>
+              name !== "Occupational Health Unit (Medicals)" &&
+              name !== "Occupational Health"
           ),
         ward: locations
           .filter((loc: any) => loc.locationType === "ward")
@@ -84,10 +86,7 @@ export default function LocationsPage({
         { title: "Wards", locations: groupedLocations.ward },
         {
           title: "Other Services",
-          locations: [
-            ...groupedLocations.canteen,
-            ...groupedLocations.occupational_health,
-          ],
+          locations: [...groupedLocations.canteen],
         },
         // etc.
       ]);
