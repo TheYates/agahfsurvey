@@ -19,10 +19,16 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Session timeout in milliseconds (30 minutes)
+const SESSION_TIMEOUT = 30 * 60 * 1000;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastActivity, setLastActivity] = useState<number>(Date.now());
+  const [sessionTimeoutId, setSessionTimeoutId] =
+    useState<NodeJS.Timeout | null>(null);
 
   // Check if user is already authenticated on mount
   useEffect(() => {
@@ -36,12 +42,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Store in sessionStorage (tab-specific)
           sessionStorage.setItem("isAuthenticated", "true");
           sessionStorage.setItem("user", JSON.stringify(authUser));
+          sessionStorage.setItem("lastActivity", Date.now().toString());
 
           setIsAuthenticated(true);
           setUser(authUser);
+          setLastActivity(Date.now());
         } else {
           sessionStorage.removeItem("isAuthenticated");
           sessionStorage.removeItem("user");
+          sessionStorage.removeItem("lastActivity");
 
           setIsAuthenticated(false);
           setUser(null);
@@ -51,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         sessionStorage.removeItem("isAuthenticated");
         sessionStorage.removeItem("user");
+        sessionStorage.removeItem("lastActivity");
 
         setIsAuthenticated(false);
         setUser(null);
@@ -63,15 +73,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkSessionStorage = () => {
       const storedAuth = sessionStorage.getItem("isAuthenticated");
       const storedUser = sessionStorage.getItem("user");
+      const storedLastActivity = sessionStorage.getItem("lastActivity");
 
       if (storedAuth === "true" && storedUser) {
         try {
+          // Check if session has expired
+          if (storedLastActivity) {
+            const lastActivityTime = parseInt(storedLastActivity, 10);
+            const currentTime = Date.now();
+
+            if (currentTime - lastActivityTime > SESSION_TIMEOUT) {
+              // Session expired, clear data and verify auth
+              sessionStorage.removeItem("isAuthenticated");
+              sessionStorage.removeItem("user");
+              sessionStorage.removeItem("lastActivity");
+              verifyAuth();
+              return;
+            }
+          }
+
           setIsAuthenticated(true);
           setUser(JSON.parse(storedUser));
+          setLastActivity(
+            storedLastActivity ? parseInt(storedLastActivity, 10) : Date.now()
+          );
           setIsLoading(false);
         } catch (e) {
           sessionStorage.removeItem("isAuthenticated");
           sessionStorage.removeItem("user");
+          sessionStorage.removeItem("lastActivity");
           verifyAuth();
         }
       } else {
@@ -90,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // When tab is hidden or closed, clear authentication
         sessionStorage.removeItem("isAuthenticated");
         sessionStorage.removeItem("user");
+        sessionStorage.removeItem("lastActivity");
         // We don't set state here as this runs during tab close
       }
     };
@@ -103,17 +134,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Set up activity monitoring for session timeout
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // Reset the session timeout whenever user activity is detected
+    const resetTimeout = () => {
+      const currentTime = Date.now();
+      setLastActivity(currentTime);
+      sessionStorage.setItem("lastActivity", currentTime.toString());
+    };
+
+    // Set up activity listeners
+    const activityEvents = [
+      "mousedown",
+      "mousemove",
+      "keypress",
+      "scroll",
+      "touchstart",
+    ];
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, resetTimeout);
+    });
+
+    // Set up the session timeout checker
+    const checkSessionTimeout = () => {
+      const currentTime = Date.now();
+      if (currentTime - lastActivity > SESSION_TIMEOUT) {
+        logout();
+      }
+    };
+
+    // Check session timeout every minute
+    const timeoutId = setInterval(checkSessionTimeout, 60 * 1000);
+    setSessionTimeoutId(timeoutId);
+
+    // Cleanup
+    return () => {
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, resetTimeout);
+      });
+      if (sessionTimeoutId) {
+        clearInterval(sessionTimeoutId);
+      }
+    };
+  }, [isAuthenticated, lastActivity]);
+
   const login = async (username: string, password: string) => {
     try {
       const result = await loginUser(username, password);
 
       if (result.success) {
+        const currentTime = Date.now();
         // Store in sessionStorage (tab-specific)
         sessionStorage.setItem("isAuthenticated", "true");
         sessionStorage.setItem("user", JSON.stringify(result.user));
+        sessionStorage.setItem("lastActivity", currentTime.toString());
 
         setIsAuthenticated(true);
         setUser(result.user);
+        setLastActivity(currentTime);
         return true;
       } else {
         console.error(result.message);
@@ -133,9 +213,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Clear sessionStorage
         sessionStorage.removeItem("isAuthenticated");
         sessionStorage.removeItem("user");
+        sessionStorage.removeItem("lastActivity");
 
         setIsAuthenticated(false);
         setUser(null);
+
+        // Clear the session timeout interval
+        if (sessionTimeoutId) {
+          clearInterval(sessionTimeoutId);
+          setSessionTimeoutId(null);
+        }
       }
     } catch (error) {
       console.error("Logout error:", error);

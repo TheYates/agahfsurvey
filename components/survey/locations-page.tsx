@@ -59,9 +59,7 @@ export default function LocationsPage({
           .filter((loc: any) => loc.locationType === "department")
           .map((loc: any) => loc.name)
           .filter(
-            (name: string) =>
-              name !== "Occupational Health Unit (Medicals)" &&
-              name !== "Occupational Health"
+            (name: string) => name !== "Occupational Health Unit (Medicals)"
           ),
         ward: locations
           .filter((loc: any) => loc.locationType === "ward")

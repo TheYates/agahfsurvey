@@ -6,6 +6,7 @@ import ContextMenu from "@/components/context-menu";
 import { AuthProvider } from "@/contexts/auth-context";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/ui/theme-provider";
+import { SessionTimeoutAlert } from "@/components/ui/session-timeout-alert";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -37,6 +38,7 @@ export default function RootLayout({
           <AuthProvider>
             <ContextMenu>{children}</ContextMenu>
             <Toaster />
+            <SessionTimeoutAlert />
           </AuthProvider>
         </ThemeProvider>
       </body>

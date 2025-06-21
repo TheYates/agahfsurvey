@@ -13,6 +13,7 @@ import {
   Clipboard,
   Scissors,
   MousePointer,
+  LogOut,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { LoginModal } from "@/components/login-modal";
@@ -275,6 +276,21 @@ export default function ContextMenu({ children }: ContextMenuProps) {
             >
               <Home size={12} />
               <span>Settings</span>
+            </div>
+          )}
+
+          {/* Logout option for authenticated users */}
+          {isAuthenticated && (
+            <div
+              className="px-4 py-1.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-2 text-destructive"
+              onClick={() => {
+                setShowMenu(false);
+                logout();
+                router.push("/");
+              }}
+            >
+              <LogOut size={12} />
+              <span>Logout</span>
             </div>
           )}
         </div>
