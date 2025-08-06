@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
+import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
 import Link from "next/link";
 import { saveAs } from "file-saver";
 import QRCode from "qrcode";
@@ -67,7 +67,7 @@ import {
 } from "@/app/actions/service_point-actions";
 
 export default function ServicePointSettingsPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useSupabaseAuth();
   const router = useRouter();
   const qrCodeRef = useRef<HTMLCanvasElement>(null);
   const logoRef = useRef<HTMLImageElement>(null);

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { surveyCache, CacheKeys, CacheTTL } from "@/lib/cache/survey-cache";
 
 // Types for Overview Tab Data
 export interface SurveyOverviewData {
@@ -205,33 +206,40 @@ function userWouldRecommend(submission: SurveySubmission): boolean {
  */
 export async function getSurveyOverviewData(): Promise<SurveyOverviewData> {
   try {
-    // Get total survey submissions
-    const { count: totalCount, error: countError } = await supabase
-      .from("SurveySubmission")
-      .select("*", { count: "exact" });
+    console.time("getSurveyOverviewData");
 
-    if (countError) throw countError;
+    // Optimized: Get all data in parallel with direct queries
+    const [
+      { count: totalCount, error: countError },
+      { data: submissions, error: submissionsError },
+      { data: ratings, error: ratingsError }
+    ] = await Promise.all([
+      // Get total count
+      supabase.from("SurveySubmission").select("*", { count: "exact" }),
 
-    // Get survey data with ratings
-    const { data: surveyData, error: surveyError } = await supabase.from(
-      "SurveySubmission"
-    ).select(`
+      // Get submissions with only needed fields
+      supabase.from("SurveySubmission").select(`
         id,
         recommendation,
         wouldRecommend,
-        visitPurpose,
-        Rating (
-          overall
-        )
-      `);
+        visitPurpose
+      `),
 
-    if (surveyError) throw surveyError;
+      // Get ratings directly
+      supabase.from("Rating").select("overall")
+    ]);
 
-    // Calculate recommendation rate
+    if (countError) throw countError;
+    if (submissionsError) throw submissionsError;
+    if (ratingsError) throw ratingsError;
+
+    console.time("getSurveyOverviewData:processing");
+
+    // Calculate recommendation rate (optimized)
     let recommendCount = 0;
     let totalSubmissionsWithRecommendation = 0;
 
-    surveyData?.forEach((submission) => {
+    submissions?.forEach((submission) => {
       // Only count submissions where we can determine recommendation
       if (
         submission.recommendation !== null ||
@@ -245,24 +253,20 @@ export async function getSurveyOverviewData(): Promise<SurveyOverviewData> {
       }
     });
 
-    // Calculate average satisfaction rating
+    // Calculate average satisfaction rating (optimized - direct from ratings)
     let totalSatisfaction = 0;
     let satisfactionCount = 0;
 
-    surveyData?.forEach((submission) => {
-      if (submission.Rating && Array.isArray(submission.Rating)) {
-        submission.Rating.forEach((rating) => {
-          if (rating && rating.overall) {
-            totalSatisfaction += convertRatingToNumber(rating.overall);
-            satisfactionCount++;
-          }
-        });
+    ratings?.forEach((rating) => {
+      if (rating && rating.overall) {
+        totalSatisfaction += convertRatingToNumber(rating.overall);
+        satisfactionCount++;
       }
     });
 
-    // Calculate purpose distribution
+    // Calculate purpose distribution (optimized)
     const purposes: Record<string, number> = {};
-    surveyData?.forEach((submission) => {
+    submissions?.forEach((submission) => {
       const purpose = submission.visitPurpose || "General";
       if (!purposes[purpose]) {
         purposes[purpose] = 0;
@@ -300,6 +304,9 @@ export async function getSurveyOverviewData(): Promise<SurveyOverviewData> {
         ? Number((totalSatisfaction / satisfactionCount).toFixed(1))
         : 0;
 
+    console.timeEnd("getSurveyOverviewData:processing");
+    console.timeEnd("getSurveyOverviewData");
+
     return {
       totalResponses: totalCount || 0,
       recommendRate,
@@ -309,6 +316,7 @@ export async function getSurveyOverviewData(): Promise<SurveyOverviewData> {
     };
   } catch (error) {
     console.error("Error fetching survey overview data:", error);
+    console.timeEnd("getSurveyOverviewData");
     return {
       totalResponses: 0,
       recommendRate: 0,
@@ -323,6 +331,8 @@ export async function getSurveyOverviewData(): Promise<SurveyOverviewData> {
  */
 export async function getSatisfactionByDemographic(): Promise<DemographicSatisfaction> {
   try {
+    console.time("getSatisfactionByDemographic");
+
     // Get survey data with demographic info
     const { data, error } = await supabase.from("SurveySubmission").select(`
         id,
@@ -452,9 +462,11 @@ export async function getSatisfactionByDemographic(): Promise<DemographicSatisfa
       }
     }
 
+    console.timeEnd("getSatisfactionByDemographic");
     return { byUserType, byPatientType, insight };
   } catch (error) {
     console.error("Error fetching satisfaction by demographic:", error);
+    console.timeEnd("getSatisfactionByDemographic");
     return {
       byUserType: [],
       byPatientType: [],
@@ -1621,8 +1633,12 @@ export async function getGeneralObservationData() {
  * Fetch all overview tab data in a single function
  */
 export async function fetchOverviewTabData() {
-  try {
-    const [
+  return surveyCache.getOrSet(
+    CacheKeys.overviewTabData(),
+    async () => {
+      try {
+        console.time("fetchOverviewTabData");
+        const [
       surveyData,
       satisfactionByDemographic,
       visitTimeAnalysis,
@@ -1650,18 +1666,23 @@ export async function fetchOverviewTabData() {
       generalObservationStats: generalObservationData,
     };
 
-    return {
-      surveyData: enhancedSurveyData,
-      satisfactionByDemographic,
-      visitTimeAnalysis,
-      improvementAreas,
-      visitPurposeData,
-      patientTypeData,
-      visitTimeData,
-      userTypeData,
-    };
-  } catch (error) {
-    console.error("Error fetching overview tab data:", error);
-    throw error;
-  }
+        console.timeEnd("fetchOverviewTabData");
+        return {
+          surveyData: enhancedSurveyData,
+          satisfactionByDemographic,
+          visitTimeAnalysis,
+          improvementAreas,
+          visitPurposeData,
+          patientTypeData,
+          visitTimeData,
+          userTypeData,
+        };
+      } catch (error) {
+        console.error("Error fetching overview tab data:", error);
+        console.timeEnd("fetchOverviewTabData");
+        throw error;
+      }
+    },
+    CacheTTL.MEDIUM
+  );
 }

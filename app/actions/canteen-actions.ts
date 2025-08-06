@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
+import { surveyCache, CacheKeys, CacheTTL } from "@/lib/cache/survey-cache";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -35,13 +36,20 @@ export interface DepartmentConcern {
 }
 
 export async function fetchCanteenRatings(): Promise<CanteenData["ratings"]> {
-  try {
-    // Try to find canteen location ID first - location ID 23 is Canteen Services from the screenshot
-    const { data: locationData } = await supabase
-      .from("Location")
-      .select("id")
-      .or("id.eq.23,name.ilike.%canteen%")
-      .limit(10);
+  return surveyCache.getOrSet(
+    CacheKeys.canteenRatings(),
+    async () => {
+      try {
+        console.time("fetchCanteenRatings");
+
+        // Try to find canteen location ID first - location ID 23 is Canteen Services from the screenshot
+        console.time("fetchCanteenRatings:locations");
+        const { data: locationData } = await supabase
+          .from("Location")
+          .select("id")
+          .or("id.eq.23,name.ilike.%canteen%")
+          .limit(10);
+        console.timeEnd("fetchCanteenRatings:locations");
 
     let locationIds = [];
 
@@ -52,29 +60,33 @@ export async function fetchCanteenRatings(): Promise<CanteenData["ratings"]> {
       return await fetchCanteenRatingsAcrossLocations();
     }
 
-    // Now fetch the ratings for the canteen locations
-    const { data: ratingsData, error } = await supabase
-      .from("Rating")
-      .select(
-        `
-        reception,
-        professionalism,
-        understanding,
-        promptnessCare,
-        promptnessFeedback,
-        foodQuality,
-        overall
-      `
-      )
-      .in("locationId", locationIds);
+        // Now fetch the ratings for the canteen locations
+        console.time("fetchCanteenRatings:ratings");
+        const { data: ratingsData, error } = await supabase
+          .from("Rating")
+          .select(
+            `
+            reception,
+            professionalism,
+            understanding,
+            promptnessCare,
+            promptnessFeedback,
+            foodQuality,
+            overall
+          `
+          )
+          .in("locationId", locationIds);
+        console.timeEnd("fetchCanteenRatings:ratings");
 
-    if (error) throw error;
+        if (error) throw error;
 
-    if (!ratingsData || ratingsData.length === 0) {
-      return await fetchCanteenRatingsAcrossLocations();
-    }
+        if (!ratingsData || ratingsData.length === 0) {
+          console.timeEnd("fetchCanteenRatings");
+          return await fetchCanteenRatingsAcrossLocations();
+        }
 
-    // Calculate average ratings
+        // Calculate average ratings
+        console.time("fetchCanteenRatings:processing");
     const avgRatings = {
       reception: 0,
       professionalism: 0,
@@ -167,22 +179,29 @@ export async function fetchCanteenRatings(): Promise<CanteenData["ratings"]> {
         countByField.overall > 0
           ? avgRatings.overall / countByField.overall
           : 3,
-    };
+        };
 
-    return finalRatings;
-  } catch (error) {
-    console.error("Error fetching canteen ratings:", error);
-    // Return default ratings
-    return {
-      reception: 3,
-      professionalism: 3,
-      understanding: 3,
-      "promptness-care": 3,
-      "promptness-feedback": 3,
-      "food-quality": 3,
-      overall: 3,
-    };
-  }
+        console.timeEnd("fetchCanteenRatings:processing");
+        console.timeEnd("fetchCanteenRatings");
+        return finalRatings;
+      } catch (error) {
+        console.error("Error fetching canteen ratings:", error);
+        console.timeEnd("fetchCanteenRatings:processing");
+        console.timeEnd("fetchCanteenRatings");
+        // Return default ratings
+        return {
+          reception: 3,
+          professionalism: 3,
+          understanding: 3,
+          "promptness-care": 3,
+          "promptness-feedback": 3,
+          "food-quality": 3,
+          overall: 3,
+        };
+      }
+    },
+    CacheTTL.MEDIUM
+  );
 }
 
 /**
@@ -192,9 +211,14 @@ export async function fetchCanteenRatings(): Promise<CanteenData["ratings"]> {
 export async function fetchCanteenData(
   departments: any[]
 ): Promise<CanteenData | null> {
-  try {
-    // First, get the actual count of canteen submissions
-    const canteenSubmissionCount = await getCanteenSubmissionCount();
+  return surveyCache.getOrSet(
+    CacheKeys.canteenData(),
+    async () => {
+      try {
+        console.time("fetchCanteenData");
+
+        // First, get the actual count of canteen submissions
+        const canteenSubmissionCount = await getCanteenSubmissionCount();
 
     // Then try to fetch actual canteen ratings from the database
     const canteenRatings = await fetchCanteenRatings();
@@ -409,15 +433,18 @@ export async function fetchCanteenData(
       console.error("Error fetching survey data for canteen:", error);
     }
 
-    // No canteen data available
-    return null;
-  } catch (error) {
-    console.error("Error in fetchCanteenData:", error);
-    // Continue with existing logic if there's an error
-  }
-
-  // No canteen data available
-  return null;
+        // No canteen data available
+        console.timeEnd("fetchCanteenData");
+        return null;
+      } catch (error) {
+        console.error("Error in fetchCanteenData:", error);
+        console.timeEnd("fetchCanteenData");
+        // Continue with existing logic if there's an error
+        return null;
+      }
+    },
+    CacheTTL.MEDIUM
+  );
 }
 
 /**
@@ -751,13 +778,18 @@ function parseRating(value: any): number {
  * Get the actual count of submissions related to Canteen Services
  */
 export async function getCanteenSubmissionCount(): Promise<number> {
-  try {
-    // First, try to find the Canteen Services location ID
-    const { data: locationData } = await supabase
-      .from("Location")
-      .select("id, name")
-      .or("name.ilike.%canteen%,name.ilike.%cafeteria%,name.ilike.%dining%")
-      .limit(10);
+  return surveyCache.getOrSet(
+    CacheKeys.canteenSubmissionCount(),
+    async () => {
+      try {
+        console.time("getCanteenSubmissionCount");
+
+        // First, try to find the Canteen Services location ID
+        const { data: locationData } = await supabase
+          .from("Location")
+          .select("id, name")
+          .or("name.ilike.%canteen%,name.ilike.%cafeteria%,name.ilike.%dining%")
+          .limit(10);
 
     if (!locationData || locationData.length === 0) {
       return 0;
@@ -777,9 +809,14 @@ export async function getCanteenSubmissionCount(): Promise<number> {
       return 0;
     }
 
-    return count || 0;
-  } catch (error) {
-    console.error("Error in getCanteenSubmissionCount:", error);
-    return 3; // Fallback to the known number of submissions
-  }
+        console.timeEnd("getCanteenSubmissionCount");
+        return count || 0;
+      } catch (error) {
+        console.error("Error in getCanteenSubmissionCount:", error);
+        console.timeEnd("getCanteenSubmissionCount");
+        return 3; // Fallback to the known number of submissions
+      }
+    },
+    CacheTTL.MEDIUM
+  );
 }

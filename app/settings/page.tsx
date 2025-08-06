@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
+import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Home, Save, Bell, Shield, Database, QrCode } from "lucide-react";
 
 export default function SettingsPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useSupabaseAuth();
   const router = useRouter();
 
   useEffect(() => {

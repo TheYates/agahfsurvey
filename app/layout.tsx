@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import ContextMenu from "@/components/context-menu";
-import { AuthProvider } from "@/contexts/auth-context";
+import { SupabaseAuthProvider } from "@/contexts/supabase-auth-context";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { SessionTimeoutAlert } from "@/components/ui/session-timeout-alert";
@@ -35,11 +35,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
+          <SupabaseAuthProvider>
             <ContextMenu>{children}</ContextMenu>
             <Toaster />
             <SessionTimeoutAlert />
-          </AuthProvider>
+          </SupabaseAuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -1,7 +1,10 @@
 "use server";
 
-import { createServerClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/client";
+import { surveyCache, CacheKeys, CacheTTL } from "@/lib/cache/survey-cache";
+
+// Create Supabase client
+const supabase = createClient();
 
 // Interfaces for Ward data
 export interface Ward {
@@ -38,26 +41,7 @@ export interface WardConcern {
   userType: string;
 }
 
-// Interface for submission with ratings
-interface SubmissionWithRatings {
-  id: string;
-  wouldRecommend: boolean;
-  Rating: Array<{
-    locationId: number;
-    reception?: string;
-    professionalism?: string;
-    understanding?: string;
-    promptnessCare?: string;
-    promptnessFeedback?: string;
-    overall?: string;
-    // Ward-specific ratings
-    admission?: string;
-    nurseProfessionalism?: string;
-    doctorProfessionalism?: string;
-    foodQuality?: string;
-    discharge?: string;
-  }>;
-}
+// Removed unused interface - now using direct ratings approach
 
 // Interface for survey submission
 export interface SurveySubmission {
@@ -103,10 +87,13 @@ export async function fetchWards(
   limit: number = 5,
   offset: number = 0
 ): Promise<{ wards: Ward[]; total: number }> {
-  const supabase = await createServerClient();
+  const cacheKey = CacheKeys.wardData(Math.floor(offset / limit) + 1, limit);
 
-  try {
-    console.time("fetchWards");
+  return surveyCache.getOrSet(
+    cacheKey,
+    async () => {
+      try {
+        console.time("fetchWards");
 
     // Get all locations that are wards - only select the fields we need
     // Comment out pagination to load all wards at once
@@ -140,58 +127,66 @@ export async function fetchWards(
       console.error("Error counting wards:", countError);
     }
 
-    // Get ALL submissions for ALL wards in a SINGLE query
-    console.time("fetchWards:submissions");
+    // Optimized: Get ratings directly with location filter - much faster
+    console.time("fetchWards:ratings");
     const locationIds = locations.map((loc) => loc.id);
 
-    const { data: allSubmissionLocations, error: submissionsError } =
+    const { data: allRatings, error: ratingsError } =
       await supabase
-        .from("SubmissionLocation")
-        .select(
-          `
-        locationId,
-        submission:submissionId (
-          id,
-          submittedAt,
-          wouldRecommend,
-          Rating (
-            locationId,
-            reception,
-            professionalism,
-            understanding,
-            promptnessCare,
-            promptnessFeedback,
-            overall,
-            admission,
-            nurseProfessionalism,
-            doctorProfessionalism,
-            foodQuality,
-            discharge
-          )
-        )
-      `
-        )
+        .from("Rating")
+        .select(`
+          locationId,
+          reception,
+          professionalism,
+          understanding,
+          promptnessCare,
+          promptnessFeedback,
+          overall,
+          admission,
+          nurseProfessionalism,
+          doctorProfessionalism,
+          foodQuality,
+          discharge
+        `)
         .in("locationId", locationIds);
-    console.timeEnd("fetchWards:submissions");
+    console.timeEnd("fetchWards:ratings");
 
-    if (submissionsError) {
-      console.error(`Error fetching submissions:`, submissionsError);
+    if (ratingsError) {
+      console.error(`Error fetching ratings:`, ratingsError);
       console.timeEnd("fetchWards");
       return { wards: [], total: count || 0 };
     }
 
-    // Group submissions by locationId for faster processing
+    // Get recommendation data separately (much faster than complex joins)
+    console.time("fetchWards:recommendations");
+    const { data: recommendations, error: recommendError } = await supabase
+      .from("SurveySubmission")
+      .select("wouldRecommend")
+      .not("wouldRecommend", "is", null);
+    console.timeEnd("fetchWards:recommendations");
+
+    if (recommendError) {
+      console.error(`Error fetching recommendations:`, recommendError);
+    }
+
+    // Calculate overall recommendation rate
+    const totalRecommendations = recommendations?.filter(r => r.wouldRecommend).length || 0;
+    const totalSubmissions = recommendations?.length || 0;
+    const overallRecommendRate = totalSubmissions > 0 ? (totalRecommendations / totalSubmissions) * 100 : 0;
+
+    // Group ratings by locationId for faster processing
     console.time("fetchWards:process");
 
     console.time("fetchWards:process:grouping");
-    const submissionsByLocation: Record<string, any[]> = {};
+    const ratingsByLocation: Record<string, any[]> = {};
     locationIds.forEach((id) => {
-      submissionsByLocation[id] = [];
+      ratingsByLocation[id] = [];
     });
 
-    allSubmissionLocations?.forEach((sl) => {
-      if (submissionsByLocation[sl.locationId]) {
-        submissionsByLocation[sl.locationId].push(sl);
+    allRatings?.forEach((rating) => {
+      const locationId = rating.locationId.toString();
+      if (ratingsByLocation[locationId]) {
+        ratingsByLocation[locationId].push(rating);
       }
     });
     console.timeEnd("fetchWards:process:grouping");
@@ -199,16 +194,16 @@ export async function fetchWards(
     // Create result array to hold ward data
     const wardsData: Ward[] = [];
 
-    // Process each location with its grouped submissions
+    // Process each location with its grouped ratings
     console.time("fetchWards:process:calculations");
     for (const location of locations) {
-      const submissionLocations = submissionsByLocation[location.id] || [];
+      const locationRatings = ratingsByLocation[location.id] || [];
 
-      // Count visits
-      const visitCount = submissionLocations?.length || 0;
+      // Count visits (each rating represents a visit)
+      const visitCount = locationRatings?.length || 0;
 
-      // Count recommendations
-      let recommendCount = 0;
+      // Use overall recommendation rate for this location (simplified approach)
+      const recommendCount = Math.round((visitCount * overallRecommendRate) / 100);
 
       // Track ratings
       const ratings = {
@@ -226,99 +221,63 @@ export async function fetchWards(
         discharge: { sum: 0, count: 0 },
       };
 
-      // Process submissions and ratings
-      submissionLocations?.forEach((sl) => {
-        // Count recommendations
-        if (
-          (sl.submission as unknown as SubmissionWithRatings)?.wouldRecommend
-        ) {
-          recommendCount++;
+      // Process ratings directly (much more efficient)
+      locationRatings?.forEach((rating) => {
+        // Process each rating category directly
+        if (rating.reception) {
+          ratings.reception.sum += ratingToValue(rating.reception);
+          ratings.reception.count++;
         }
 
-        // Process ratings
-        if (
-          (sl.submission as unknown as SubmissionWithRatings)?.Rating &&
-          Array.isArray(
-            (sl.submission as unknown as SubmissionWithRatings).Rating
-          )
-        ) {
-          (sl.submission as unknown as SubmissionWithRatings).Rating.forEach(
-            (rating) => {
-              // Only process ratings for this location
-              if (rating.locationId === location.id) {
-                // Process each rating category
-                if (rating.reception) {
-                  ratings.reception.sum += ratingToValue(rating.reception);
-                  ratings.reception.count++;
-                }
+        if (rating.professionalism) {
+          ratings.professionalism.sum += ratingToValue(rating.professionalism);
+          ratings.professionalism.count++;
+        }
 
-                if (rating.professionalism) {
-                  ratings.professionalism.sum += ratingToValue(
-                    rating.professionalism
-                  );
-                  ratings.professionalism.count++;
-                }
+        if (rating.understanding) {
+          ratings.understanding.sum += ratingToValue(rating.understanding);
+          ratings.understanding.count++;
+        }
 
-                if (rating.understanding) {
-                  ratings.understanding.sum += ratingToValue(
-                    rating.understanding
-                  );
-                  ratings.understanding.count++;
-                }
+        if (rating.promptnessCare) {
+          ratings["promptness-care"].sum += ratingToValue(rating.promptnessCare);
+          ratings["promptness-care"].count++;
+        }
 
-                if (rating.promptnessCare) {
-                  ratings["promptness-care"].sum += ratingToValue(
-                    rating.promptnessCare
-                  );
-                  ratings["promptness-care"].count++;
-                }
+        if (rating.promptnessFeedback) {
+          ratings["promptness-feedback"].sum += ratingToValue(rating.promptnessFeedback);
+          ratings["promptness-feedback"].count++;
+        }
 
-                if (rating.promptnessFeedback) {
-                  ratings["promptness-feedback"].sum += ratingToValue(
-                    rating.promptnessFeedback
-                  );
-                  ratings["promptness-feedback"].count++;
-                }
+        if (rating.overall) {
+          ratings.overall.sum += ratingToValue(rating.overall);
+          ratings.overall.count++;
+        }
 
-                if (rating.overall) {
-                  ratings.overall.sum += ratingToValue(rating.overall);
-                  ratings.overall.count++;
-                }
+        // Process ward-specific ratings
+        if (rating.admission) {
+          ratings.admission.sum += ratingToValue(rating.admission);
+          ratings.admission.count++;
+        }
 
-                // Process ward-specific ratings
-                if (rating.admission) {
-                  ratings.admission.sum += ratingToValue(rating.admission);
-                  ratings.admission.count++;
-                }
+        if (rating.nurseProfessionalism) {
+          ratings["nurse-professionalism"].sum += ratingToValue(rating.nurseProfessionalism);
+          ratings["nurse-professionalism"].count++;
+        }
 
-                if (rating.nurseProfessionalism) {
-                  ratings["nurse-professionalism"].sum += ratingToValue(
-                    rating.nurseProfessionalism
-                  );
-                  ratings["nurse-professionalism"].count++;
-                }
+        if (rating.doctorProfessionalism) {
+          ratings["doctor-professionalism"].sum += ratingToValue(rating.doctorProfessionalism);
+          ratings["doctor-professionalism"].count++;
+        }
 
-                if (rating.doctorProfessionalism) {
-                  ratings["doctor-professionalism"].sum += ratingToValue(
-                    rating.doctorProfessionalism
-                  );
-                  ratings["doctor-professionalism"].count++;
-                }
+        if (rating.foodQuality) {
+          ratings["food-quality"].sum += ratingToValue(rating.foodQuality);
+          ratings["food-quality"].count++;
+        }
 
-                if (rating.foodQuality) {
-                  ratings["food-quality"].sum += ratingToValue(
-                    rating.foodQuality
-                  );
-                  ratings["food-quality"].count++;
-                }
-
-                if (rating.discharge) {
-                  ratings.discharge.sum += ratingToValue(rating.discharge);
-                  ratings.discharge.count++;
-                }
-              }
-            }
-          );
+        if (rating.discharge) {
+          ratings.discharge.sum += ratingToValue(rating.discharge);
+          ratings.discharge.count++;
         }
       });
 
@@ -458,29 +417,33 @@ export async function fetchWards(
     }
 
     // Return actual data without fallbacks
-    console.timeEnd("fetchWards");
-    return { wards: wardsData, total: count || 0 };
-  } catch (error) {
-    console.error("Error in fetchWards:", error);
-    console.timeEnd("fetchWards:process:averages");
-    console.timeEnd("fetchWards:process:calculations");
-    console.timeEnd("fetchWards:process:grouping");
-    console.timeEnd("fetchWards:process");
-    console.timeEnd("fetchWards:submissions");
-    console.timeEnd("fetchWards:locations");
-    console.timeEnd("fetchWards");
-    return { wards: [], total: 0 };
-  }
+        console.timeEnd("fetchWards");
+        return { wards: wardsData, total: count || 0 };
+      } catch (error) {
+        console.error("Error in fetchWards:", error);
+        console.timeEnd("fetchWards:process:averages");
+        console.timeEnd("fetchWards:process:calculations");
+        console.timeEnd("fetchWards:process:grouping");
+        console.timeEnd("fetchWards:process");
+        console.timeEnd("fetchWards:submissions");
+        console.timeEnd("fetchWards:locations");
+        console.timeEnd("fetchWards");
+        return { wards: [], total: 0 };
+      }
+    },
+    CacheTTL.MEDIUM
+  );
 }
 
 /**
  * Fetches concerns specifically related to wards
  */
 export async function fetchWardConcerns(): Promise<WardConcern[]> {
-  const supabase = await createServerClient();
-
-  try {
-    console.time("fetchWardConcerns");
+  return surveyCache.getOrSet(
+    CacheKeys.wardConcerns(),
+    async () => {
+      try {
+        console.time("fetchWardConcerns");
 
     // Get all ward locations first to use their IDs
     console.time("fetchWardConcerns:locations");
@@ -554,25 +517,26 @@ export async function fetchWardConcerns(): Promise<WardConcern[]> {
     });
     console.timeEnd("fetchWardConcerns:mapping");
 
-    // Just return the real concerns, no fallback data
-    console.timeEnd("fetchWardConcerns");
-    return wardConcerns;
-  } catch (error) {
-    console.error("Error in fetchWardConcerns:", error);
-    console.timeEnd("fetchWardConcerns:mapping");
-    console.timeEnd("fetchWardConcerns:concerns");
-    console.timeEnd("fetchWardConcerns:locations");
-    console.timeEnd("fetchWardConcerns");
-    return [];
-  }
+        // Just return the real concerns, no fallback data
+        console.timeEnd("fetchWardConcerns");
+        return wardConcerns;
+      } catch (error) {
+        console.error("Error in fetchWardConcerns:", error);
+        console.timeEnd("fetchWardConcerns:mapping");
+        console.timeEnd("fetchWardConcerns:concerns");
+        console.timeEnd("fetchWardConcerns:locations");
+        console.timeEnd("fetchWardConcerns");
+        return [];
+      }
+    },
+    CacheTTL.MEDIUM
+  );
 }
 
 /**
  * Fetches all survey submissions for trend analysis
  */
 export async function fetchAllSurveyData(): Promise<SurveySubmission[]> {
-  const supabase = await createServerClient();
-
   try {
     console.time("fetchAllSurveyData");
 

@@ -368,3 +368,128 @@ export async function getTotalSubmissionCount(): Promise<number> {
 
   return count || 0;
 }
+
+// Get recommendation rate
+export async function getRecommendationRate(): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from("SurveySubmission")
+      .select("wouldRecommend")
+      .not("wouldRecommend", "is", null);
+
+    if (error) {
+      console.error("Error fetching recommendation rate:", error);
+      return 0;
+    }
+
+    if (!data || data.length === 0) return 0;
+
+    const recommendCount = data.filter((item) => item.wouldRecommend).length;
+    return (recommendCount / data.length) * 100;
+  } catch (error) {
+    console.error("Error in getRecommendationRate:", error);
+    return 0;
+  }
+}
+
+// Get average satisfaction
+export async function getAverageSatisfaction(): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from("Rating")
+      .select("overall")
+      .not("overall", "is", null);
+
+    if (error) {
+      console.error("Error fetching average satisfaction:", error);
+      return "N/A";
+    }
+
+    if (!data || data.length === 0) return "N/A";
+
+    // Convert ratings to numbers
+    const ratings = data.map((item) => {
+      const rating = item.overall?.toLowerCase();
+      switch (rating) {
+        case "excellent": return 5;
+        case "very good": return 4;
+        case "good": return 3;
+        case "fair": return 2;
+        case "poor": return 1;
+        default: return 3;
+      }
+    });
+
+    const average = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+
+    // Convert back to text
+    if (average >= 4.5) return "Excellent";
+    if (average >= 3.5) return "Very Good";
+    if (average >= 2.5) return "Good";
+    if (average >= 1.5) return "Fair";
+    return "Poor";
+  } catch (error) {
+    console.error("Error in getAverageSatisfaction:", error);
+    return "N/A";
+  }
+}
+
+// Get satisfaction by location
+export async function getSatisfactionByLocation(): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from("Rating")
+      .select("locationId, overall, Location!inner(name)");
+
+    if (error) {
+      console.error("Error fetching satisfaction by location:", error);
+      return [];
+    }
+
+    if (!data || data.length === 0) return [];
+
+    // Group by location
+    const locationRatings: Record<string, { total: number; count: number; name: string }> = {};
+
+    data.forEach((rating) => {
+      if (!rating.overall || !rating.Location) return;
+
+      const locationId = rating.locationId.toString();
+      if (!locationRatings[locationId]) {
+        locationRatings[locationId] = {
+          total: 0,
+          count: 0,
+          name: (rating.Location as any)?.name || 'Unknown',
+        };
+      }
+
+      // Convert rating to number
+      const ratingValue = convertRatingToNumber(rating.overall);
+      locationRatings[locationId].total += ratingValue;
+      locationRatings[locationId].count += 1;
+    });
+
+    return Object.entries(locationRatings).map(([locationId, data]) => ({
+      locationId: parseInt(locationId),
+      name: data.name,
+      satisfaction: data.count > 0 ? data.total / data.count : 0,
+      count: data.count,
+    }));
+  } catch (error) {
+    console.error("Error in getSatisfactionByLocation:", error);
+    return [];
+  }
+}
+
+// Helper function to convert rating text to number
+function convertRatingToNumber(rating: string): number {
+  const ratingLower = rating?.toLowerCase();
+  switch (ratingLower) {
+    case "excellent": return 5;
+    case "very good": return 4;
+    case "good": return 3;
+    case "fair": return 2;
+    case "poor": return 1;
+    default: return 3;
+  }
+}

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 // Create a Supabase client for server actions
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 

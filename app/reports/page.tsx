@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
+import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -66,6 +66,9 @@ import {
   getDepartmentRatings,
   fetchOverallSatisfactionDistribution,
   getTotalSubmissionCount,
+  getRecommendationRate,
+  getAverageSatisfaction,
+  getSatisfactionByLocation,
 } from "../actions/report-actions";
 
 // Register Chart.js components
@@ -92,7 +95,7 @@ const COLORS = [
 ];
 
 export default function ReportsPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useSupabaseAuth();
   const router = useRouter();
 
   const [dateRange, setDateRange] = useState("all");
@@ -160,18 +163,32 @@ export default function ReportsPage() {
     try {
       setIsLoading(true);
 
-      // Get all submission data
-      const surveyData = await getSurveyData();
-      // Get the actual total count without filtering
-      const totalCount = await getTotalSubmissionCount();
+      // Execute all API calls in parallel for better performance
+      const [
+        surveyData,
+        totalCount,
+        locationVisits,
+        departmentRatings,
+        satisfactionDistribution,
+        recommendationRateData,
+        averageSatisfactionData,
+        satisfactionByLocationData,
+      ] = await Promise.all([
+        getSurveyData(),
+        getTotalSubmissionCount(),
+        getLocationVisits(),
+        getDepartmentRatings(),
+        fetchOverallSatisfactionDistribution(),
+        getRecommendationRate(),
+        getAverageSatisfaction(),
+        getSatisfactionByLocation(),
+      ]);
 
       // Set the TOTAL number of responses without filtering
       setTotalResponses(totalCount);
-
-      const locationVisits = await getLocationVisits();
-      const departmentRatings = await getDepartmentRatings();
-      const satisfactionDistribution =
-        await fetchOverallSatisfactionDistribution();
+      setRecommendationRate(recommendationRateData);
+      setAverageSatisfaction(averageSatisfactionData);
+      setSatisfactionByLocation(satisfactionByLocationData);
 
       if (surveyData?.length > 0) {
         // For debugging, examine the first few survey records
@@ -212,15 +229,8 @@ export default function ReportsPage() {
           setLocationData([]);
         }
 
-        // Calculate recommendation rate
-        const totalRecommendations = surveyData.filter(
-          (survey) => survey.wouldRecommend === true
-        ).length;
-        const recommendationPercentage =
-          surveyData.length > 0
-            ? Math.round((totalRecommendations / surveyData.length) * 100)
-            : 0;
-        setRecommendationRate(recommendationPercentage);
+        // Use the pre-fetched recommendation rate
+        // (No need to calculate again since it's fetched in parallel)
 
         // Calculate recommendation rate change compared to last month
         const currentDate = new Date();
@@ -405,10 +415,7 @@ export default function ReportsPage() {
     return null;
   }
 
-  // Format date for display
-  const formatDate = (date: Date) => {
-    return date.toISOString().split("T")[0];
-  };
+
 
   return (
     <main className="min-h-screen p-4 md:p-8 ">
@@ -949,7 +956,14 @@ export default function ReportsPage() {
                         <TableCell className="align-middle">
                           <div className="flex flex-col">
                             <span>
-                              {new Date(survey.created_at).toLocaleDateString()}
+                              {new Date(survey.created_at).toLocaleDateString(
+                                "en-US",
+                                {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                }
+                              )}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {new Date(survey.created_at).toLocaleTimeString()}

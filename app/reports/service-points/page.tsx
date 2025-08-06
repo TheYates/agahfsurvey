@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
+import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -97,7 +97,7 @@ const RATING_EMOJIS = {
 };
 
 export default function ServicePointReportsPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useSupabaseAuth();
   const router = useRouter();
 
   const [selectedTimeframe, setSelectedTimeframe] = useState("30days");

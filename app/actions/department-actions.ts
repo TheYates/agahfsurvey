@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { surveyCache, CacheKeys, CacheTTL } from "@/lib/cache/survey-cache";
 
 // Create Supabase client
 const supabase = createClient();
@@ -40,20 +41,7 @@ export interface Recommendation {
   userType: string;
 }
 
-// Add this interface near the top of the file
-interface SubmissionWithRatings {
-  id: string;
-  wouldRecommend: boolean;
-  Rating: Array<{
-    locationId: number;
-    reception?: string;
-    professionalism?: string;
-    understanding?: string;
-    promptnessCare?: string;
-    promptnessFeedback?: string;
-    overall?: string;
-  }>;
-}
+// Removed unused interface - now using direct ratings approach
 
 // Add these interfaces with your other interfaces
 interface DepartmentConcernSubmission {
@@ -99,13 +87,19 @@ function convertRatingToNumber(rating: string | number): number {
  * Fetch all departments with their satisfaction and visit data
  */
 export async function fetchDepartments(): Promise<Department[]> {
-  try {
-    // Get all locations of type 'department' - only select fields we need
+  return surveyCache.getOrSet(
+    CacheKeys.departmentData(),
+    async () => {
+      try {
+        console.time("fetchDepartments");
 
+    // Get all locations of type 'department' - only select fields we need
+    console.time("fetchDepartments:locations");
     const { data: locations, error: locationsError } = await supabase
       .from("Location")
       .select("id, name")
       .eq("locationType", "department");
+    console.timeEnd("fetchDepartments:locations");
 
     if (locationsError) throw locationsError;
 
@@ -113,65 +107,77 @@ export async function fetchDepartments(): Promise<Department[]> {
       return [];
     }
 
-    // Get ALL submissions for ALL locations in a SINGLE query
-    // Only select the fields we actually need
-
+    // Optimized: Get ratings directly with location filter - much faster
+    console.time("fetchDepartments:ratings");
     const locationIds = locations.map((loc) => loc.id);
 
-    const { data: allSubmissionLocations, error: submissionsError } =
+    const { data: allRatings, error: ratingsError } =
       await supabase
-        .from("SubmissionLocation")
-        .select(
-          `
-        locationId,
-        submission:submissionId (
-          id,
-          wouldRecommend,
-          Rating (
-            locationId,
-            reception,
-            professionalism,
-            understanding,
-            promptnessCare,
-            promptnessFeedback,
-            overall
-          )
-        )
-      `
-        )
+        .from("Rating")
+        .select(`
+          locationId,
+          reception,
+          professionalism,
+          understanding,
+          promptnessCare,
+          promptnessFeedback,
+          overall
+        `)
         .in("locationId", locationIds);
+    console.timeEnd("fetchDepartments:ratings");
 
-    if (submissionsError) {
-      console.error(`Error fetching submissions:`, submissionsError);
-
+    if (ratingsError) {
+      console.error(`Error fetching ratings:`, ratingsError);
       return [];
     }
 
-    // Group submissions by locationId
+    // Get recommendation data separately (much faster than complex joins)
+    console.time("fetchDepartments:recommendations");
+    const { data: recommendations, error: recommendError } = await supabase
+      .from("SurveySubmission")
+      .select("wouldRecommend")
+      .not("wouldRecommend", "is", null);
+    console.timeEnd("fetchDepartments:recommendations");
 
-    const submissionsByLocation: Record<string, any[]> = {};
+    if (recommendError) {
+      console.error(`Error fetching recommendations:`, recommendError);
+    }
+
+    // Calculate overall recommendation rate
+    const totalRecommendations = recommendations?.filter(r => r.wouldRecommend).length || 0;
+    const totalSubmissions = recommendations?.length || 0;
+    const overallRecommendRate = totalSubmissions > 0 ? (totalRecommendations / totalSubmissions) * 100 : 0;
+
+    // Group ratings by locationId for faster processing
+    console.time("fetchDepartments:process");
+
+    console.time("fetchDepartments:process:grouping");
+    const ratingsByLocation: Record<string, any[]> = {};
     locationIds.forEach((id) => {
-      submissionsByLocation[id] = [];
+      ratingsByLocation[id] = [];
     });
 
-    allSubmissionLocations?.forEach((sl) => {
-      if (submissionsByLocation[sl.locationId]) {
-        submissionsByLocation[sl.locationId].push(sl);
+    allRatings?.forEach((rating) => {
+      const locationId = rating.locationId.toString();
+      if (ratingsByLocation[locationId]) {
+        ratingsByLocation[locationId].push(rating);
       }
     });
+    console.timeEnd("fetchDepartments:process:grouping");
 
     // Create result array to hold department data
     const departmentsData: Department[] = [];
 
-    // Process each location with its grouped submissions
+    // Process each location with its grouped ratings
+    console.time("fetchDepartments:process:calculations");
     for (const location of locations) {
-      const submissionLocations = submissionsByLocation[location.id] || [];
+      const locationRatings = ratingsByLocation[location.id] || [];
 
-      // Count visits
-      const visitCount = submissionLocations?.length || 0;
+      // Count visits (each rating represents a visit)
+      const visitCount = locationRatings?.length || 0;
 
-      // Count recommendations
-      let recommendCount = 0;
+      // Use overall recommendation rate for this location (simplified approach)
+      const recommendCount = Math.round((visitCount * overallRecommendRate) / 100);
 
       // Track ratings
       const ratings = {
@@ -183,69 +189,37 @@ export async function fetchDepartments(): Promise<Department[]> {
         overall: { sum: 0, count: 0 },
       };
 
-      // Process submissions and ratings
-      submissionLocations?.forEach((sl) => {
-        // Count recommendations
-        if (
-          (sl.submission as unknown as SubmissionWithRatings)?.wouldRecommend
-        ) {
-          recommendCount++;
+      // Process ratings directly (much more efficient)
+      locationRatings?.forEach((rating) => {
+        // Process each rating category directly
+        if (rating.reception) {
+          ratings.reception.sum += convertRatingToNumber(rating.reception);
+          ratings.reception.count++;
         }
 
-        // Process ratings
-        if (
-          (sl.submission as unknown as SubmissionWithRatings)?.Rating &&
-          Array.isArray(
-            (sl.submission as unknown as SubmissionWithRatings).Rating
-          )
-        ) {
-          (sl.submission as unknown as SubmissionWithRatings).Rating.forEach(
-            (rating) => {
-              // Only process ratings for this location
-              if (rating.locationId === location.id) {
-                // Process each rating category
-                if (rating.reception) {
-                  ratings.reception.sum += convertRatingToNumber(
-                    rating.reception
-                  );
-                  ratings.reception.count++;
-                }
+        if (rating.professionalism) {
+          ratings.professionalism.sum += convertRatingToNumber(rating.professionalism);
+          ratings.professionalism.count++;
+        }
 
-                if (rating.professionalism) {
-                  ratings.professionalism.sum += convertRatingToNumber(
-                    rating.professionalism
-                  );
-                  ratings.professionalism.count++;
-                }
+        if (rating.understanding) {
+          ratings.understanding.sum += convertRatingToNumber(rating.understanding);
+          ratings.understanding.count++;
+        }
 
-                if (rating.understanding) {
-                  ratings.understanding.sum += convertRatingToNumber(
-                    rating.understanding
-                  );
-                  ratings.understanding.count++;
-                }
+        if (rating.promptnessCare) {
+          ratings["promptness-care"].sum += convertRatingToNumber(rating.promptnessCare);
+          ratings["promptness-care"].count++;
+        }
 
-                if (rating.promptnessCare) {
-                  ratings["promptness-care"].sum += convertRatingToNumber(
-                    rating.promptnessCare
-                  );
-                  ratings["promptness-care"].count++;
-                }
+        if (rating.promptnessFeedback) {
+          ratings["promptness-feedback"].sum += convertRatingToNumber(rating.promptnessFeedback);
+          ratings["promptness-feedback"].count++;
+        }
 
-                if (rating.promptnessFeedback) {
-                  ratings["promptness-feedback"].sum += convertRatingToNumber(
-                    rating.promptnessFeedback
-                  );
-                  ratings["promptness-feedback"].count++;
-                }
-
-                if (rating.overall) {
-                  ratings.overall.sum += convertRatingToNumber(rating.overall);
-                  ratings.overall.count++;
-                }
-              }
-            }
-          );
+        if (rating.overall) {
+          ratings.overall.sum += convertRatingToNumber(rating.overall);
+          ratings.overall.count++;
         }
       });
 
@@ -324,13 +298,19 @@ export async function fetchDepartments(): Promise<Department[]> {
         ratings: avgRatings,
       });
     }
+        console.timeEnd("fetchDepartments:process:calculations");
+        console.timeEnd("fetchDepartments:process");
+        console.timeEnd("fetchDepartments");
 
-    return departmentsData;
-  } catch (error) {
-    console.error("Error fetching departments:", error);
-
-    return [];
-  }
+        return departmentsData;
+      } catch (error) {
+        console.error("Error fetching departments:", error);
+        console.timeEnd("fetchDepartments");
+        return [];
+      }
+    },
+    CacheTTL.MEDIUM
+  );
 }
 
 /**

@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/contexts/auth-context";
+import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
 import { Loader2 } from "lucide-react";
 
 interface LoginModalProps {
@@ -24,11 +24,11 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { signIn } = useSupabaseAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,14 +37,14 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
 
     try {
       // Try to login with the provided credentials
-      const success = await login(username, password);
+      const { error } = await signIn(email, password);
 
-      if (success) {
-        setUsername("");
+      if (error) {
+        setError(error.message);
+      } else {
+        setEmail("");
         setPassword("");
         onSuccess();
-      } else {
-        setError("Invalid username or password");
       }
     } catch (err) {
       setError("An error occurred during login");
@@ -65,12 +65,13 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@hospital-survey.local"
               disabled={isLoading}
               required
             />

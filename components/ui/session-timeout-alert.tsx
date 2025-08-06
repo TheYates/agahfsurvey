@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/auth-context";
+import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +20,7 @@ const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 export function SessionTimeoutAlert() {
   const [showWarning, setShowWarning] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
-  const { logout, isAuthenticated } = useAuth();
+  const { signOut, isAuthenticated } = useSupabaseAuth();
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -62,7 +62,7 @@ export function SessionTimeoutAlert() {
           // If session has timed out, logout
           if (newTimeLeft <= 0) {
             if (countdownInterval) clearInterval(countdownInterval);
-            logout();
+            signOut();
           }
         }, 1000);
       } else {
@@ -81,7 +81,7 @@ export function SessionTimeoutAlert() {
       if (warningTimer) clearInterval(warningTimer);
       if (countdownInterval) clearInterval(countdownInterval);
     };
-  }, [isAuthenticated, logout]);
+  }, [isAuthenticated, signOut]);
 
   const handleStayLoggedIn = () => {
     // Update the last activity time

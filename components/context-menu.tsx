@@ -15,7 +15,7 @@ import {
   MousePointer,
   LogOut,
 } from "lucide-react";
-import { useAuth } from "@/contexts/auth-context";
+import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
 import { LoginModal } from "@/components/login-modal";
 
 interface ContextMenuProps {
@@ -31,7 +31,7 @@ export default function ContextMenu({ children }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, signOut } = useSupabaseAuth();
 
   const isFirstPage = pathname === "/";
 
@@ -283,9 +283,9 @@ export default function ContextMenu({ children }: ContextMenuProps) {
           {isAuthenticated && (
             <div
               className="px-4 py-1.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-2 text-destructive"
-              onClick={() => {
+              onClick={async () => {
                 setShowMenu(false);
-                logout();
+                await signOut();
                 router.push("/");
               }}
             >

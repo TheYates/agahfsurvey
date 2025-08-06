@@ -1,0 +1,29 @@
+name: Keep Supabase Database Active
+
+on:
+  schedule:
+    # Run every 3 days at 2 AM UTC (adjust timezone as needed)
+    - cron: '0 2 */3 * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Database
+        run: |
+          echo "Pinging database to keep it active..."
+          response=$(curl -s -w "%{http_code}" -o /tmp/response.json "${{ secrets.APP_URL }}/api/ping")
+          
+          if [ "$response" = "200" ]; then
+            echo "✅ Database ping successful"
+            cat /tmp/response.json
+          else
+            echo "❌ Database ping failed with status: $response"
+            cat /tmp/response.json
+            exit 1
+          fi
+
+      - name: Log Result
+        run: |
+          echo "Keep-alive job completed at $(date)"

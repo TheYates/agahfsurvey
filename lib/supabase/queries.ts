@@ -1,11 +1,5 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
-
-// Create a Supabase client for server-side operations
-const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export type SurveyStats = {
   totalSubmissions: number;
@@ -391,7 +385,7 @@ export async function getSatisfactionByLocationQuery(
 ) {
   const { data: ratings, error: ratingsError } = await supabase
     .from("Rating")
-    .select("locationId, overall, Location(name)");
+    .select("locationId, overall, Location!inner(name)");
 
   if (ratingsError) throw ratingsError;
 
@@ -408,7 +402,7 @@ export async function getSatisfactionByLocationQuery(
       locationRatings[locationId] = {
         total: 0,
         count: 0,
-        name: rating.Location.name,
+        name: (rating.Location as any).name,
       };
     }
 
@@ -578,7 +572,7 @@ export async function getTopConcernsQuery(supabase: SupabaseClient<Database>) {
 }
 
 // Get satisfaction by demographic (user type, patient type)
-export async function getSatisfactionByDemographic(): Promise<DemographicSatisfaction> {
+export async function getSatisfactionByDemographic(supabase: SupabaseClient<Database>): Promise<DemographicSatisfaction> {
   // Get user types with satisfaction and recommendation data
   const { data: userTypeData } = await supabase
     .from("survey_submissions")
@@ -610,7 +604,7 @@ export async function getSatisfactionByDemographic(): Promise<DemographicSatisfa
       `
       submission_id,
       rating,
-      survey_submissions (
+      survey_submissions!inner (
         user_type,
         patient_type
       )
@@ -675,8 +669,8 @@ export async function getSatisfactionByDemographic(): Promise<DemographicSatisfa
   // Process satisfaction data
   satisfactionData?.forEach((s) => {
     if (s.survey_submissions) {
-      const userType = s.survey_submissions.user_type;
-      const patientType = s.survey_submissions.patient_type;
+      const userType = (s.survey_submissions as any).user_type;
+      const patientType = (s.survey_submissions as any).patient_type;
 
       let score = 0;
       if (s.rating === "Excellent") score = 5;
@@ -729,7 +723,7 @@ export async function getSatisfactionByDemographic(): Promise<DemographicSatisfa
 }
 
 // Get visit time analysis
-export async function getVisitTimeAnalysis(): Promise<VisitTimeAnalysis> {
+export async function getVisitTimeAnalysis(supabase: SupabaseClient<Database>): Promise<VisitTimeAnalysis> {
   // Get all submissions with visit time
   const { data: submissions } = await supabase
     .from("survey_submissions")
@@ -749,7 +743,7 @@ export async function getVisitTimeAnalysis(): Promise<VisitTimeAnalysis> {
       `
       submission_id,
       rating,
-      survey_submissions (
+      survey_submissions!inner (
         visit_time
       )
     `
@@ -785,8 +779,8 @@ export async function getVisitTimeAnalysis(): Promise<VisitTimeAnalysis> {
 
   // Process satisfaction data
   satisfactionData?.forEach((s) => {
-    if (s.survey_submissions?.visit_time) {
-      const visitTime = s.survey_submissions.visit_time;
+    if ((s.survey_submissions as any)?.visit_time) {
+      const visitTime = (s.survey_submissions as any).visit_time;
 
       if (visitTimeStats[visitTime]) {
         let score = 0;
@@ -816,15 +810,16 @@ export async function getVisitTimeAnalysis(): Promise<VisitTimeAnalysis> {
 }
 
 // Get top improvement areas
-export async function getTopImprovementAreas(): Promise<ImprovementArea[]> {
+export async function getTopImprovementAreas(supabase: SupabaseClient<Database>): Promise<ImprovementArea[]> {
   // Get location visits
-  const locationVisits = await getLocationVisits();
+  const locationVisitsResult = await getLocationVisitsQueryUpdated(supabase);
+  const locationVisits = locationVisitsResult.data || [];
 
   // Filter to locations with at least 10 visits
-  const frequentLocations = locationVisits.filter((loc) => loc.count >= 10);
+  const frequentLocations = locationVisits.filter((loc: any) => loc.count >= 10);
 
   // Calculate impact score (lower satisfaction + higher visit count = higher priority)
-  const improvementAreas = frequentLocations.map((loc) => {
+  const improvementAreas = frequentLocations.map((loc: any) => {
     const satisfaction = loc.satisfaction;
     const visitCount = loc.count;
     const impactScore = (5 - satisfaction) * Math.log(visitCount + 1); // Log scale to prevent very high-traffic areas from dominating
@@ -848,7 +843,7 @@ export async function getTopImprovementAreas(): Promise<ImprovementArea[]> {
 
   // Sort by impact score (highest first)
   return improvementAreas
-    .sort((a, b) => b.impactScore - a.impactScore)
+    .sort((a: any, b: any) => b.impactScore - a.impactScore)
     .slice(0, 10);
 }
 
@@ -856,6 +851,7 @@ export async function getTopImprovementAreas(): Promise<ImprovementArea[]> {
 
 // Get service point feedback statistics
 export async function getServicePointFeedbackStats(
+  supabase: SupabaseClient<Database>,
   timeRange = "all",
   servicePointId = "all"
 ): Promise<ServicePointFeedbackStats> {
@@ -865,7 +861,7 @@ export async function getServicePointFeedbackStats(
     service_point_id,
     rating,
     created_at,
-    service_points (
+    service_points!inner (
       name
     )
   `);
@@ -944,7 +940,7 @@ export async function getServicePointFeedbackStats(
     { total: number; count: number }
   > = {};
   feedbackData?.forEach((item) => {
-    const name = item.service_points?.name || "Unknown";
+    const name = (item.service_points as any)?.name || "Unknown";
     if (!servicePointPerformance[name]) {
       servicePointPerformance[name] = { total: 0, count: 0 };
     }
@@ -1000,7 +996,7 @@ export async function getServicePointFeedbackStats(
   > = {};
 
   feedbackData?.forEach((item) => {
-    const name = item.service_points?.name || "Unknown";
+    const name = (item.service_points as any)?.name || "Unknown";
     if (!servicePointComparison[name]) {
       servicePointComparison[name] = {
         excellent: 0,
@@ -1058,6 +1054,7 @@ export async function getServicePointFeedbackStats(
 
 // Get service point feedback items
 export async function getServicePointFeedbackItems(
+  supabase: SupabaseClient<Database>,
   timeRange = "all",
   servicePointId = "all",
   limit = 50
@@ -1069,7 +1066,7 @@ export async function getServicePointFeedbackItems(
     rating,
     comment,
     created_at,
-    service_points (
+    service_points!inner (
       id,
       name
     )
@@ -1114,7 +1111,7 @@ export async function getServicePointFeedbackItems(
     data?.map((item) => ({
       id: item.id,
       servicePointId: item.service_point_id,
-      servicePointName: item.service_points?.name || "Unknown",
+      servicePointName: (item.service_points as any)?.name || "Unknown",
       rating: item.rating,
       comment: item.comment,
       createdAt: item.created_at,
@@ -1123,7 +1120,7 @@ export async function getServicePointFeedbackItems(
 }
 
 // Get all service points
-export async function getServicePoints(): Promise<
+export async function getServicePoints(supabase: SupabaseClient<Database>): Promise<
   { id: number; name: string; location_type?: string }[]
 > {
   const { data } = await supabase
