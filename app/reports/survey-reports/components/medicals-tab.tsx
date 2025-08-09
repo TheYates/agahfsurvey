@@ -101,6 +101,7 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
     { name: "AGAG/Contractor Dependant", value: 0 },
     { name: "Other Corporate Employee", value: 0 },
     { name: "Contractor Employee", value: 0 },
+    { name: "Community", value: 0 },
   ];
 
   // Use useMemo for userTypeData to ensure all user types are included
@@ -197,6 +198,7 @@ export function MedicalsTab({ isLoading }: OccupationalHealthTabProps) {
                   { name: "AGAG/Contractor Dependant", value: 0 },
                   { name: "Other Corporate Employee", value: 0 },
                   { name: "Contractor Employee", value: 0 },
+                  { name: "Community", value: 0 },
                 ];
 
           // Generate insight based on the real data

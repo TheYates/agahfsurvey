@@ -41,9 +41,12 @@ import {
   FileSpreadsheet,
   ArrowLeft,
   RefreshCw,
+  Trash2,
+  MoreHorizontal,
 } from "lucide-react";
 import { format } from "date-fns";
 import SubmissionDetailModal from "./components/submission-detail-modal";
+import DeleteSubmissionDialog from "@/components/submissions/delete-submission-dialog";
 import {
   exportToCSV,
   exportToJSON,
@@ -98,6 +101,8 @@ export default function SubmissionsPage() {
   >(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [deleteSubmissionId, setDeleteSubmissionId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -215,6 +220,17 @@ export default function SubmissionsPage() {
   const handleRowClick = (submissionId: string) => {
     setSelectedSubmissionId(submissionId);
     setIsDetailModalOpen(true);
+  };
+
+  const handleDeleteClick = (submissionId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent row click
+    setDeleteSubmissionId(submissionId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteSuccess = () => {
+    // Refresh the data after successful deletion
+    window.location.reload();
   };
 
   const handleSelectSubmission = (submissionId: string, checked: boolean) => {
@@ -620,6 +636,7 @@ export default function SubmissionsPage() {
                     <TableHead className="w-48">User Type</TableHead>
                     <TableHead className="w-32">Locations</TableHead>
                     <TableHead className="w-28">Recommend</TableHead>
+                    <TableHead className="w-20">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -695,6 +712,37 @@ export default function SubmissionsPage() {
                         >
                           {submission.wouldRecommend ? "Yes" : "No"}
                         </Badge>
+                      </TableCell>
+
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleRowClick(submission.id)}
+                              className="cursor-pointer"
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => handleDeleteClick(submission.id, e)}
+                              className="cursor-pointer text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -846,6 +894,17 @@ export default function SubmissionsPage() {
             setIsDetailModalOpen(false);
             setSelectedSubmissionId(null);
           }}
+        />
+
+        {/* Delete Submission Dialog */}
+        <DeleteSubmissionDialog
+          submissionId={deleteSubmissionId}
+          open={isDeleteDialogOpen}
+          onClose={() => {
+            setIsDeleteDialogOpen(false);
+            setDeleteSubmissionId(null);
+          }}
+          onDeleted={handleDeleteSuccess}
         />
       </div>
     </main>

@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 export async function GET() {
   try {
     const startTime = Date.now();
+    const supabase = createClient();
 
     // Make a simple query to keep the database active
     const { count, error } = await supabase
-      .from("users")
+      .from("Location")
       .select("*", { count: "exact", head: true });
 
     if (error) {
@@ -27,9 +28,11 @@ export async function GET() {
     return NextResponse.json({
       status: "ok",
       timestamp,
-      message: "Database is active",
+      message: "Database is active and responding",
       responseTime: `${responseTime}ms`,
-      userCount: count || 0,
+      locationCount: count || 0,
+      service: "AGA Health Foundation Survey",
+      version: "1.0.0"
     });
   } catch (error) {
     console.error("Ping error:", error);

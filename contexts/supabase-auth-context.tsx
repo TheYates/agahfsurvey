@@ -76,10 +76,31 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       const result = await authClient.signIn(email, password);
       if (result.error) {
         console.error("Sign in error:", result.error);
+
+        // Add specific handling for rate limit errors
+        if (result.error.message?.includes("rate limit") ||
+            result.error.message?.includes("429")) {
+          return {
+            error: {
+              message: "Too many login attempts. Please wait a few minutes before trying again."
+            }
+          };
+        }
       }
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Sign in exception:", error);
+
+      // Handle rate limit errors in catch block too
+      if (error?.message?.includes("rate limit") ||
+          error?.message?.includes("429")) {
+        return {
+          error: {
+            message: "Too many login attempts. Please wait a few minutes before trying again."
+          }
+        };
+      }
+
       return { error };
     } finally {
       setLoading(false);

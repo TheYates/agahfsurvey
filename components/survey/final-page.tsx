@@ -249,17 +249,18 @@ export default function FinalPage({
                     AGAG/Contractor Dependant
                   </Label>
                 </div>
+                
                 <div className="flex items-center space-x-2 bg-muted/30 p-3 rounded-md hover:bg-muted/50 transition-colors">
                   <RadioGroupItem
-                    value="Other Corporate Employee"
-                    id="corporate-employee"
+                    value="Community"
+                    id="community"
                     className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                   />
                   <Label
-                    htmlFor="corporate-employee"
+                    htmlFor="community"
                     className="w-full cursor-pointer"
                   >
-                    Other Corporate Employee
+                    Community
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2 bg-muted/30 p-3 rounded-md hover:bg-muted/50 transition-colors">
@@ -275,6 +276,20 @@ export default function FinalPage({
                     Contractor Employee
                   </Label>
                 </div>
+                <div className="flex items-center space-x-2 bg-muted/30 p-3 rounded-md hover:bg-muted/50 transition-colors">
+                  <RadioGroupItem
+                    value="Other Corporate Employee"
+                    id="corporate-employee"
+                    className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                  />
+                  <Label
+                    htmlFor="corporate-employee"
+                    className="w-full cursor-pointer"
+                  >
+                    Other Corporate Employee
+                  </Label>
+                </div>
+                
               </RadioGroup>
             </div>
 

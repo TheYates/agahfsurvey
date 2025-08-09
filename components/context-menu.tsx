@@ -14,6 +14,7 @@ import {
   Scissors,
   MousePointer,
   LogOut,
+  Settings,
 } from "lucide-react";
 import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
 import { LoginModal } from "@/components/login-modal";
@@ -37,7 +38,25 @@ export default function ContextMenu({ children }: ContextMenuProps) {
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    setPosition({ x: e.clientX, y: e.clientY });
+
+    // Calculate position to ensure menu stays within viewport
+    const menuWidth = 192; // w-48 = 12rem = 192px
+    const menuHeight = 400; // Approximate height
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let x = e.clientX;
+    let y = e.clientY;
+
+    // Adjust if menu would go off-screen
+    if (x + menuWidth > viewportWidth) {
+      x = viewportWidth - menuWidth - 10;
+    }
+    if (y + menuHeight > viewportHeight) {
+      y = viewportHeight - menuHeight - 10;
+    }
+
+    setPosition({ x, y });
 
     // Check if text is selected
     const selection = window.getSelection();
@@ -196,7 +215,7 @@ export default function ContextMenu({ children }: ContextMenuProps) {
       {showMenu && (
         <div
           ref={menuRef}
-          className="fixed bg-background shadow-lg rounded-md py-1 z-50 w-40 border border-border text-xs"
+          className="fixed bg-background shadow-lg rounded-md py-2 z-50 w-48 border border-border text-sm"
           style={{
             top: `${position.y}px`,
             left: `${position.x}px`,
@@ -204,66 +223,75 @@ export default function ContextMenu({ children }: ContextMenuProps) {
         >
           {/* Edit operations */}
           <div
-            className={`px-4 py-2 ${
+            className={`px-4 py-2.5 ${
               canCopyPaste
                 ? "hover:bg-accent hover:text-accent-foreground cursor-pointer"
                 : "text-muted-foreground cursor-not-allowed"
-            } flex items-center gap-2`}
+            } flex items-center gap-3`}
             onClick={canCopyPaste ? handleCopy : undefined}
           >
-            <Copy size={12} />
+            <Copy size={14} />
             <span>Copy</span>
           </div>
           <div
-            className="px-4 py-1.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-2"
+            className="px-4 py-2.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-3"
             onClick={handlePaste}
           >
-            <Clipboard size={12} />
+            <Clipboard size={14} />
             <span>Paste</span>
           </div>
           <div
-            className={`px-4 py-2 ${
+            className={`px-4 py-2.5 ${
               canCopyPaste
                 ? "hover:bg-accent hover:text-accent-foreground cursor-pointer"
                 : "text-muted-foreground cursor-not-allowed"
-            } flex items-center gap-2`}
+            } flex items-center gap-3`}
             onClick={canCopyPaste ? handleCut : undefined}
           >
-            <Scissors size={12} />
+            <Scissors size={14} />
             <span>Cut</span>
           </div>
           <div
-            className="px-4 py-1.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-2"
+            className="px-4 py-2.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-3"
             onClick={handleSelectAll}
           >
-            <MousePointer size={12} />
+            <MousePointer size={14} />
             <span>Select All</span>
           </div>
 
-          <div className="border-t my-0.5"></div>
+          <div className="border-t my-1"></div>
+
+          {/* Navigation */}
+          <div
+            className="px-4 py-2.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-3"
+            onClick={() => navigateTo("/")}
+          >
+            <Home size={14} />
+            <span>Home</span>
+          </div>
 
           <div
-            className="px-4 py-1.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-2"
+            className="px-4 py-2.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-3"
             onClick={handleRefresh}
           >
-            <RefreshCw size={12} />
+            <RefreshCw size={14} />
             <span>Refresh</span>
           </div>
           {/* Show Login for unauthenticated users, Reports for authenticated users */}
           {!isAuthenticated ? (
             <div
-              className="px-4 py-1.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-2"
+              className="px-4 py-2.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-3"
               onClick={handleLogin}
             >
-              <LogIn size={12} />
+              <LogIn size={14} />
               <span>Login</span>
             </div>
           ) : (
             <div
-              className="px-4 py-1.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-2"
+              className="px-4 py-2.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-3"
               onClick={() => navigateTo("/reports")}
             >
-              <BarChart3 size={12} />
+              <BarChart3 size={14} />
               <span>Reports</span>
             </div>
           )}
@@ -271,27 +299,30 @@ export default function ContextMenu({ children }: ContextMenuProps) {
           {/* Settings only shown for authenticated users */}
           {isAuthenticated && (
             <div
-              className="px-4 py-1.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-2"
+              className="px-4 py-2.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-3"
               onClick={() => navigateTo("/settings")}
             >
-              <Home size={12} />
+              <Settings size={14} />
               <span>Settings</span>
             </div>
           )}
 
           {/* Logout option for authenticated users */}
           {isAuthenticated && (
-            <div
-              className="px-4 py-1.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-2 text-destructive"
-              onClick={async () => {
-                setShowMenu(false);
-                await signOut();
-                router.push("/");
-              }}
-            >
-              <LogOut size={12} />
-              <span>Logout</span>
-            </div>
+            <>
+              <div className="border-t my-1"></div>
+              <div
+                className="px-4 py-2.5 hover:bg-accent hover:text-accent-foreground cursor-pointer flex items-center gap-3 text-destructive"
+                onClick={async () => {
+                  setShowMenu(false);
+                  await signOut();
+                  router.push("/");
+                }}
+              >
+                <LogOut size={14} />
+                <span>Logout</span>
+              </div>
+            </>
           )}
         </div>
       )}

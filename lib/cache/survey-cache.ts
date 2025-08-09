@@ -186,9 +186,12 @@ export const CacheKeys = {
 
   canteenSubmissionCount: () => 'canteen-submission-count',
 
+  // Survey locations for forms
+  surveyLocations: () => 'survey-locations',
+
   // Dynamic keys with parameters
   wardsByLocation: (locationId: string) => `wards:location:${locationId}`,
-  
+
   ratingsByLocation: (locationId: string) => `ratings:location:${locationId}`,
   
   // Date-based keys for time-sensitive data

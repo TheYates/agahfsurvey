@@ -10,20 +10,51 @@ jobs:
   keep-alive:
     runs-on: ubuntu-latest
     steps:
+      - name: Check Environment
+        run: |
+          echo "🔍 Checking environment..."
+          echo "APP_URL is set: ${{ secrets.APP_URL != '' }}"
+          echo "Current time: $(date)"
+
       - name: Ping Database
         run: |
-          echo "Pinging database to keep it active..."
-          response=$(curl -s -w "%{http_code}" -o /tmp/response.json "${{ secrets.APP_URL }}/api/ping")
-          
+          echo "🚀 Pinging database to keep it active..."
+
+          # Check if APP_URL is set
+          if [ -z "${{ secrets.APP_URL }}" ]; then
+            echo "❌ APP_URL secret is not set in repository settings"
+            echo "Please add APP_URL secret with your deployed application URL"
+            exit 1
+          fi
+
+          echo "📡 Pinging: ${{ secrets.APP_URL }}/api/ping"
+
+          # Make the request with more verbose output
+          response=$(curl -s -w "%{http_code}" -o /tmp/response.json \
+            -H "User-Agent: GitHub-Actions-KeepAlive/1.0" \
+            -H "Accept: application/json" \
+            --max-time 30 \
+            "${{ secrets.APP_URL }}/api/ping")
+
+          echo "📊 HTTP Status Code: $response"
+          echo "📄 Response Body:"
+          cat /tmp/response.json
+          echo ""
+
           if [ "$response" = "200" ]; then
-            echo "✅ Database ping successful"
-            cat /tmp/response.json
+            echo "✅ Database ping successful!"
+            echo "🎯 Database is active and responding"
           else
-            echo "❌ Database ping failed with status: $response"
-            cat /tmp/response.json
+            echo "❌ Database ping failed with HTTP status: $response"
+            echo "🔧 This might indicate:"
+            echo "   - Application is not deployed or accessible"
+            echo "   - APP_URL secret points to wrong URL"
+            echo "   - Database connection issues"
+            echo "   - API endpoint issues"
             exit 1
           fi
 
       - name: Log Result
         run: |
-          echo "Keep-alive job completed at $(date)"
+          echo "✨ Keep-alive job completed successfully at $(date)"
+          echo "🔄 Next run scheduled in 3 days"

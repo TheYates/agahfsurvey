@@ -175,7 +175,7 @@ export type Database = {
     Enums: {
       visit_time_enum: "less-than-month" | "one-two-months" | "three-six-months" | "more-than-six-months"
       visit_purpose_enum: "General Practice" | "Medicals (Occupational Health)"
-      user_type_enum: "AGAG Employee" | "AGAG/Contractor Dependant" | "Other Corporate Employee" | "Contractor Employee"
+      user_type_enum: "AGAG Employee" | "AGAG/Contractor Dependant" | "Other Corporate Employee" | "Contractor Employee" | "Community"
       patient_type_enum: "New Patient" | "Returning Patient"
       rating_enum: "Excellent" | "Very Good" | "Good" | "Fair" | "Poor"
     }

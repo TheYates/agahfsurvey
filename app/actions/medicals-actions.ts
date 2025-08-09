@@ -445,6 +445,7 @@ export async function fetchOccupationalHealthData(): Promise<{
       "AGAG/Contractor Dependant",
       "Other Corporate Employee",
       "Contractor Employee",
+      "Community",
     ];
 
     // Initialize all default user types with 0

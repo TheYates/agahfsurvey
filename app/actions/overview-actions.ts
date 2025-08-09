@@ -1423,6 +1423,7 @@ export async function getUserTypeData(): Promise<UserTypeData> {
       "AGAG/Contractor Dependant",
       "Other Corporate Employee",
       "Contractor Employee",
+      "Community",
     ];
 
     // Initialize counters with all expected types set to 0
@@ -1482,6 +1483,7 @@ export async function getUserTypeData(): Promise<UserTypeData> {
         { name: "AGAG/Contractor Dependant", value: 0 },
         { name: "Other Corporate Employee", value: 0 },
         { name: "Contractor Employee", value: 0 },
+        { name: "Community", value: 0 },
       ],
       insight: "Unable to load user type data.",
     };
