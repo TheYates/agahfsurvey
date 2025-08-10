@@ -243,7 +243,7 @@ export function FeedbackForm({ id }: FeedbackFormProps) {
                         ? "bg-primary/10 scale-110 ring-2 ring-primary"
                         : selectedRating !== null
                         ? "hover:bg-gray-100 opacity-50"
-                        : "hover:bg-gray-100"
+                        : "hover:bg-accent"
                     }`}
                   >
                     <div className="w-12 h-12 mb-2 relative">
@@ -263,12 +263,12 @@ export function FeedbackForm({ id }: FeedbackFormProps) {
             {servicePoint?.show_comments && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  Additional Comments (Optional)
+                  {servicePoint.comments_title || "Additional Comments (Optional)"}
                 </label>
                 <Textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder="Please share any additional comments or suggestions..."
+                  placeholder={servicePoint.comments_placeholder || "Please share any additional comments or suggestions..."}
                   className="resize-none min-h-[100px]"
                 />
               </div>

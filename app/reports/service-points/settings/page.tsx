@@ -36,6 +36,14 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -56,6 +64,8 @@ import {
   Settings,
   Check,
   X,
+  ChevronDown,
+  MoreHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -83,6 +93,13 @@ export default function ServicePointSettingsPage() {
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [viewType, setViewType] = useState<"table" | "grid">("table");
 
+  // Bulk actions state
+  const [selectedServicePoints, setSelectedServicePoints] = useState<number[]>([]);
+  const [isBulkActionsOpen, setIsBulkActionsOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState<string>("");
+  const [bulkCommentsTitle, setBulkCommentsTitle] = useState("Any additional comments?");
+  const [bulkCommentsPlaceholder, setBulkCommentsPlaceholder] = useState("Share your thoughts...");
+
   // Form state
   const [name, setName] = useState("");
   const [customQuestion, setCustomQuestion] = useState(
@@ -91,6 +108,10 @@ export default function ServicePointSettingsPage() {
   const [showComments, setShowComments] = useState(true);
   const [isActive, setIsActive] = useState(true);
   const [currentQRCode, setCurrentQRCode] = useState<string | null>(null);
+
+  // Service point-specific comment settings
+  const [commentsTitle, setCommentsTitle] = useState("Any additional comments?");
+  const [commentsPlaceholder, setCommentsPlaceholder] = useState("Share your thoughts...");
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -131,6 +152,8 @@ export default function ServicePointSettingsPage() {
         location_type: "default", // Just use a default value since we're not using this field
         custom_question: customQuestion,
         show_comments: showComments,
+        comments_title: commentsTitle,
+        comments_placeholder: commentsPlaceholder,
         active: isActive,
       });
 
@@ -150,14 +173,15 @@ export default function ServicePointSettingsPage() {
     if (!selectedServicePoint) return;
 
     try {
-      // For individual service point updates, only update name and active status
-      // The show_comments setting is managed globally through the Survey Features tab
+      // Update service point with individual settings
       const updatedServicePoint = await updateServicePoint(
         selectedServicePoint.id,
         {
           name,
           active: isActive,
-          // Not updating global settings here
+          show_comments: showComments,
+          comments_title: commentsTitle,
+          comments_placeholder: commentsPlaceholder,
         }
       );
 
@@ -196,6 +220,12 @@ export default function ServicePointSettingsPage() {
     setSelectedServicePoint(servicePoint);
     setName(servicePoint.name);
     setIsActive(servicePoint.active);
+
+    // Load service point-specific settings
+    setShowComments(servicePoint.show_comments ?? true);
+    setCommentsTitle(servicePoint.comments_title || "Any additional comments?");
+    setCommentsPlaceholder(servicePoint.comments_placeholder || "Share your thoughts...");
+
     setIsEditDialogOpen(true);
   };
 
@@ -447,11 +477,91 @@ export default function ServicePointSettingsPage() {
     setCustomQuestion("How would you rate your experience?");
     setShowComments(true);
     setIsActive(true);
+    setCommentsTitle("Any additional comments?");
+    setCommentsPlaceholder("Share your thoughts...");
   };
 
   const openCreateDialog = () => {
     resetForm();
     setIsCreateDialogOpen(true);
+  };
+
+  // Bulk actions handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedServicePoints(servicePoints.map(sp => sp.id));
+    } else {
+      setSelectedServicePoints([]);
+    }
+  };
+
+  const handleSelectServicePoint = (id: number, checked: boolean) => {
+    if (checked) {
+      setSelectedServicePoints(prev => [...prev, id]);
+    } else {
+      setSelectedServicePoints(prev => prev.filter(spId => spId !== id));
+    }
+  };
+
+  const handleBulkAction = async () => {
+    if (selectedServicePoints.length === 0 || !bulkAction) return;
+
+    try {
+      setIsLoading(true);
+
+      const updatePromises = selectedServicePoints.map(async (id) => {
+        const updateData: Partial<ServicePoint> = {};
+
+        switch (bulkAction) {
+          case 'activate':
+            updateData.active = true;
+            break;
+          case 'deactivate':
+            updateData.active = false;
+            break;
+          case 'enable-comments':
+            updateData.show_comments = true;
+            break;
+          case 'disable-comments':
+            updateData.show_comments = false;
+            break;
+          case 'update-comment-settings':
+            updateData.show_comments = true;
+            updateData.comments_title = bulkCommentsTitle;
+            updateData.comments_placeholder = bulkCommentsPlaceholder;
+            break;
+        }
+
+        return updateServicePoint(id, updateData);
+      });
+
+      await Promise.all(updatePromises);
+
+      toast.success(`Bulk action applied to ${selectedServicePoints.length} service point${selectedServicePoints.length !== 1 ? 's' : ''}`, {
+        description: getBulkActionDescription(bulkAction),
+      });
+
+      await fetchServicePoints();
+      setSelectedServicePoints([]);
+      setIsBulkActionsOpen(false);
+      setBulkAction("");
+    } catch (error) {
+      console.error("Error applying bulk action:", error);
+      toast.error("Failed to apply bulk action");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getBulkActionDescription = (action: string) => {
+    switch (action) {
+      case 'activate': return 'Service points activated';
+      case 'deactivate': return 'Service points deactivated';
+      case 'enable-comments': return 'Comments enabled';
+      case 'disable-comments': return 'Comments disabled';
+      case 'update-comment-settings': return 'Comment settings updated';
+      default: return 'Action completed';
+    }
   };
 
   // Fix the dataURLtoBlob function to properly handle the conversion
@@ -574,188 +684,116 @@ export default function ServicePointSettingsPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* QR Code Tab */}
+          {/* QR Code Tab - Compact Multi-Column Layout */}
           <TabsContent value="qr-codes" className="space-y-6">
-            {process.env.NODE_ENV === "development" && (
-              <Card className="border-0 mb-4"></Card>
-            )}
-
-            <div className="grid gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
               {servicePoints.map((servicePoint) => (
                 <Card
                   key={servicePoint.id}
-                  className="border-2 backdrop-blur-sm  transition-all hover:shadow-lg"
+                  className="border transition-all hover:shadow-md"
                 >
-                  <CardHeader>
+                  <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base truncate">
                           {servicePoint.name}
-                          <div
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              servicePoint.active
-                                ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100"
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {servicePoint.active ? "Active" : "Inactive"}
-                          </div>
                         </CardTitle>
-                        <CardDescription>
-                          Service Point {servicePoint.id}
+                        <CardDescription className="text-xs">
+                          ID: {servicePoint.id}
                         </CardDescription>
+                      </div>
+                      <div
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          servicePoint.active
+                            ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-100"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {servicePoint.active ? "Active" : "Inactive"}
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid md:grid-cols-3 gap-6">
-                      <div className="md:col-span-1">
-                        <div className="flex flex-col items-center space-y-4">
-                          <div className="p-4 rounded-lg shadow border w-full max-w-[250px] flex items-center justify-center bg-background">
-                            {currentQRCode &&
-                            selectedServicePoint?.id === servicePoint.id ? (
-                              <div
-                                style={{
-                                  width: 200,
-                                  height: 200,
-                                  position: "relative",
-                                  border: "1px solid #e2e8f0",
-                                  borderRadius: "0.375rem",
-                                  overflow: "hidden",
-                                }}
-                              >
-                                <img
-                                  src={currentQRCode}
-                                  alt={`QR code for ${servicePoint.name}`}
-                                  style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    objectFit: "contain",
-                                  }}
-                                />
-                              </div>
-                            ) : (
-                              <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
-                                <QrCode className="h-16 w-16 mb-2" />
-                                <span className="text-sm">
-                                  Click Generate to create QR Code
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              className="flex items-center gap-2"
-                              onClick={() => handleGenerateQRCode(servicePoint)}
-                            >
-                              <QrCode className="h-4 w-4" />
-                              Generate
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="flex items-center gap-2"
-                              onClick={() => handleDownloadQRCode("png")}
-                              disabled={
-                                !(
-                                  currentQRCode &&
-                                  selectedServicePoint?.id === servicePoint.id
-                                )
-                              }
-                            >
-                              <Download className="h-4 w-4" />
-                              Download
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
 
-                      <div className="md:col-span-2 space-y-4">
-                        <div>
-                          <h4 className="font-semibold mb-2">Feedback URL</h4>
-                          <div className="bg-muted p-3 rounded-lg">
-                            <code className="text-sm break-all">{`${window.location.origin}/feedback/${servicePoint.id}`}</code>
+                  <CardContent className="space-y-3">
+                    {/* QR Code Display */}
+                    <div className="flex justify-center">
+                      <div className="p-3 rounded-lg border bg-background w-32 h-32 flex items-center justify-center">
+                        {currentQRCode && selectedServicePoint?.id === servicePoint.id ? (
+                          <img
+                            src={currentQRCode}
+                            alt={`QR code for ${servicePoint.name}`}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center text-muted-foreground">
+                            <QrCode className="h-8 w-8 mb-1" />
+                            <span className="text-xs text-center">Not Generated</span>
                           </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-semibold mb-2">
-                            QR Code Instructions
-                          </h4>
-                          <div className="flex flex-row gap-4 items-start">
-                            <div className="flex-1">
-                              <p className="text-sm text-muted-foreground mb-2">
-                                Generate and print QR codes (min 4x4 inches) to
-                                collect feedback. Place them where customers can
-                                easily scan with instructions "Scan to rate your
-                                experience".
-                              </p>
-                              <div className="flex gap-2 mt-3">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex items-center gap-1"
-                                  onClick={() =>
-                                    window.open(
-                                      `/feedback/${servicePoint.id}`,
-                                      "_blank"
-                                    )
-                                  }
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="h-3 w-3 mr-1"
-                                  >
-                                    <path d="m21 7-8-4-8 4" />
-                                    <path d="M3 7v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7" />
-                                    <path d="M7 15h0M17 15h0" />
-                                  </svg>
-                                  Test Form
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="min-w-[140px] bg-accent p-3 rounded-lg border text-center">
-                              <h5 className="font-bold text-sm">
-                                Rate Your Experience
-                              </h5>
-                              <p className="text-xs mb-1">Scan the QR code</p>
-                              <div className="bg-background p-2 rounded border border-dashed inline-block">
-                                <QrCode className="h-6 w-6 text-muted-foreground" />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </div>
+
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => handleGenerateQRCode(servicePoint)}
+                      >
+                        <QrCode className="h-3 w-3 mr-1" />
+                        Generate
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => handleDownloadQRCode("png")}
+                        disabled={!(currentQRCode && selectedServicePoint?.id === servicePoint.id)}
+                      >
+                        <Download className="h-3 w-3 mr-1" />
+                        Download
+                      </Button>
+                    </div>
+
+                    {/* Feedback URL */}
+                    <div>
+                      <div className="text-xs font-medium mb-1">Feedback URL:</div>
+                      <div className="bg-muted p-2 rounded text-xs">
+                        <code className="break-all">
+                          {`${window.location.origin}/feedback/${servicePoint.id}`}
+                        </code>
+                      </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="grid grid-cols-3 gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-8"
+                        onClick={() => window.open(`/feedback/${servicePoint.id}`, "_blank")}
+                      >
+                        Test
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-8"
+                        onClick={() => handleEdit(servicePoint)}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-8 text-destructive hover:text-destructive"
+                        onClick={() => handleDelete(servicePoint)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </CardContent>
-                  <CardFooter className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                      onClick={() => handleEdit(servicePoint)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2 text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(servicePoint)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </Button>
-                  </CardFooter>
                 </Card>
               ))}
             </div>
@@ -793,217 +831,108 @@ export default function ServicePointSettingsPage() {
 
           {/* Survey Features Tab */}
           <TabsContent value="survey-features" className="space-y-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-2xl font-bold">Survey Configuration</h2>
-                <p className="text-muted-foreground">
-                  Customize how your feedback forms work across all service
-                  points
-                </p>
-              </div>
-              <Button
-                id="save-settings-button"
-                onClick={async () => {
-                  try {
-                    setIsLoading(true);
-
-                    // Update all existing service points with the new global settings
-                    const updatePromises = servicePoints.map((sp) =>
-                      updateServicePoint(sp.id, {
-                        custom_question: customQuestion,
-                        show_comments: showComments,
-                      })
-                    );
-
-                    await Promise.all(updatePromises);
-                    toast.success("Settings saved successfully", {
-                      description: `Applied to ${
-                        servicePoints.length
-                      } service point${servicePoints.length !== 1 ? "s" : ""}`,
-                      duration: 3000,
-                    });
-                    await fetchServicePoints();
-                  } catch (error) {
-                    console.error("Error updating settings:", error);
-                    toast.error("Failed to save settings", {
-                      description: "Please try again or contact support",
-                    });
-                  } finally {
-                    setIsLoading(false);
-                  }
-                }}
-                className="flex items-center gap-2"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <svg
-                      className="animate-spin -ml-1 mr-2 h-4 w-4"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="mr-2"
-                    >
-                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                      <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                      <polyline points="7 3 7 8 15 8"></polyline>
-                    </svg>
-                    Save Settings
-                  </>
-                )}
-              </Button>
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold mb-2">Global Survey Settings</h2>
+              <p className="text-sm text-muted-foreground">
+                Configure default settings for new service points. Individual service points can override these settings.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Survey Features</CardTitle>
-                  <CardDescription>
-                    Control which features are shown in your surveys
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Label
-                        htmlFor="show-comments"
-                        className="text-base font-medium"
-                      >
-                        Comments Section
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Allow customers to leave additional comments
-                      </p>
+            <Card>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Left Column - Settings */}
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="font-medium mb-4">Default Settings</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="show-comments" className="font-medium">
+                              Comments Section
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                              Default comments setting for new service points
+                            </p>
+                          </div>
+                          <Switch
+                            id="show-comments"
+                            checked={showComments}
+                            onCheckedChange={setShowComments}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="service-point-active" className="font-medium">
+                              Active Status
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                              Default active status for new service points
+                            </p>
+                          </div>
+                          <Switch
+                            id="service-point-active"
+                            checked={isActive}
+                            onCheckedChange={setIsActive}
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <Switch
-                      id="show-comments"
-                      checked={showComments}
-                      onCheckedChange={(checked) => {
-                        setShowComments(checked);
-                        toast(
-                          checked ? "Comments enabled" : "Comments disabled",
-                          {
-                            description: checked
-                              ? "Customers can leave additional feedback"
-                              : "Comment section will be hidden",
-                            action: {
-                              label: "Save",
-                              onClick: () =>
-                                document
-                                  .getElementById("save-settings-button")
-                                  ?.click(),
-                            },
-                          }
-                        );
-                      }}
-                    />
-                  </div>
 
-                  <div className="flex items-center justify-between border-t pt-4">
-                    <div className="space-y-1">
-                      <Label
-                        htmlFor="service-point-active"
-                        className="text-base font-medium"
-                      >
-                        Default Service Point Status
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Set the default active status for new service points
-                      </p>
+                    <div>
+                      <h3 className="font-medium mb-4">Default Content</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="custom-question" className="font-medium">
+                            Survey Question
+                          </Label>
+                          <Textarea
+                            id="custom-question"
+                            value={customQuestion}
+                            onChange={(e) => setCustomQuestion(e.target.value)}
+                            placeholder="How would you rate your experience?"
+                            className="min-h-[60px] mt-2"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label htmlFor="default-comments-title" className="text-sm">
+                              Comments Title
+                            </Label>
+                            <Input
+                              id="default-comments-title"
+                              value={commentsTitle}
+                              onChange={(e) => setCommentsTitle(e.target.value)}
+                              placeholder="Any additional comments?"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="default-comments-placeholder" className="text-sm">
+                              Comments Placeholder
+                            </Label>
+                            <Input
+                              id="default-comments-placeholder"
+                              value={commentsPlaceholder}
+                              onChange={(e) => setCommentsPlaceholder(e.target.value)}
+                              placeholder="Share your thoughts..."
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <Switch
-                      id="service-point-active"
-                      checked={isActive}
-                      onCheckedChange={setIsActive}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Survey Content</CardTitle>
-                  <CardDescription>
-                    Customize the text and messages shown in your surveys
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label
-                      htmlFor="custom-question"
-                      className="text-base font-medium"
-                    >
-                      Survey Question
-                    </Label>
-                    <Textarea
-                      id="custom-question"
-                      value={customQuestion}
-                      onChange={(e) => setCustomQuestion(e.target.value)}
-                      placeholder="How would you rate your experience?"
-                      className="min-h-[80px] mt-2"
-                    />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      This question will appear on all service point feedback
-                      forms
-                    </p>
                   </div>
 
-                  <div>
-                    <Label htmlFor="thankYouMessage">Thank You Message</Label>
-                    <Input
-                      id="thankYouMessage"
-                      placeholder="Thank you for your feedback!"
-                      className="mt-2"
-                    />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      The message displayed after users submit their feedback
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle>Preview</CardTitle>
-                  <CardDescription>
-                    See how your survey will look to customers
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="border rounded-lg p-6 mx-auto w-full max-w-md">
+                  {/* Right Column - Preview */}
+                  <div className="space-y-4">
+                    <h3 className="font-medium">Preview</h3>
+                    <div className="border rounded-lg p-4 bg-muted/20">
                       <div className="text-center mb-4">
-                        <h3 className="text-xl font-semibold">Feedback Form</h3>
-                        <p className="text-muted-foreground text-sm">
+                        <h4 className="font-medium text-sm">Feedback Form Preview</h4>
+                        <p className="text-sm text-muted-foreground mt-1">
                           {customQuestion}
                         </p>
                       </div>
@@ -1016,16 +945,13 @@ export default function ServicePointSettingsPage() {
                           "/service-points-emojis/Satisfied.svg",
                           "/service-points-emojis/Very Satisfied.svg",
                         ].map((emoji, index) => (
-                          <div
-                            key={index}
-                            className="p-2 border rounded text-center"
-                          >
-                            <div className="relative h-10 w-10 mx-auto">
+                          <div key={index} className="p-2 border rounded text-center bg-background">
+                            <div className="relative h-8 w-8 mx-auto">
                               <img
                                 src={emoji}
                                 alt={`Rating ${index + 1}`}
-                                width={40}
-                                height={40}
+                                width={32}
+                                height={32}
                                 className="object-contain"
                               />
                             </div>
@@ -1034,93 +960,99 @@ export default function ServicePointSettingsPage() {
                       </div>
 
                       {showComments && (
-                        <div className="mb-4">
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium">
+                            {commentsTitle}
+                          </label>
                           <textarea
-                            className="w-full p-2 border rounded text-sm bg-background"
-                            placeholder="Any additional comments?"
+                            className="w-full p-2 border rounded text-sm bg-background resize-none"
+                            placeholder={commentsPlaceholder}
                             rows={2}
                             disabled
                           />
                         </div>
                       )}
 
-                      <Button className="w-full" disabled>
+                      <Button className="w-full mt-4" size="sm" disabled>
                         Submit Feedback
                       </Button>
                     </div>
 
-                    <div>
-                      <div className="mb-4">
-                        <h3 className="text-xl font-semibold mb-2">
-                          QR Code Settings
-                        </h3>
-                        <p className="text-muted-foreground">
-                          Configure appearance of your QR codes
-                        </p>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="logo">Company Logo</Label>
-                          <div className="mt-2 flex items-center gap-4">
-                            <div className="flex-1">
-                              <Input
-                                id="logo"
-                                type="file"
-                                accept="image/*"
-                                className="cursor-pointer"
-                              />
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Recommended: Square image, max 200x200px, PNG or
-                                JPG format
-                              </p>
-                            </div>
-                            <div className="w-16 h-16 border rounded-lg overflow-hidden flex items-center justify-center bg-background">
-                              <img
-                                src="/agahflogo.svg"
-                                alt="Logo preview"
-                                width={48}
-                                height={48}
-                                className="object-contain"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="pt-4">
-                          <Label htmlFor="qrColor">QR Code Color</Label>
-                          <div className="mt-2 flex items-center gap-2">
-                            <div className="flex-1 grid grid-cols-5 gap-2">
-                              {[
-                                "#000000",
-                                "#2563eb",
-                                "#059669",
-                                "#dc2626",
-                                "#7c3aed",
-                              ].map((color) => (
-                                <div
-                                  key={color}
-                                  className="h-8 w-8 rounded-full cursor-pointer border-2 border-transparent hover:border-gray-300"
-                                  style={{ backgroundColor: color }}
-                                ></div>
-                              ))}
-                            </div>
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Choose a color for your QR code
-                          </p>
-                        </div>
-                      </div>
+                    <div className="text-center">
+                      <Button
+                        onClick={async () => {
+                          try {
+                            setIsLoading(true);
+                            const updatePromises = servicePoints.map((sp) =>
+                              updateServicePoint(sp.id, {
+                                custom_question: customQuestion,
+                                show_comments: showComments,
+                              })
+                            );
+                            await Promise.all(updatePromises);
+                            toast.success("Global settings saved", {
+                              description: `Applied to ${servicePoints.length} service points`,
+                            });
+                            await fetchServicePoints();
+                          } catch (error) {
+                            toast.error("Failed to save settings");
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        disabled={isLoading}
+                        className="w-full"
+                      >
+                        {isLoading ? "Saving..." : "Save Global Settings"}
+                      </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Service Points Tab */}
           <TabsContent value="service-points" className="space-y-6">
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                {selectedServicePoints.length > 0 && (
+                  <>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedServicePoints.length} selected
+                    </span>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          <MoreHorizontal className="h-4 w-4 mr-2" />
+                          Bulk Actions
+                          <ChevronDown className="h-4 w-4 ml-2" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => { setBulkAction('activate'); setIsBulkActionsOpen(true); }}>
+                          <Check className="h-4 w-4 mr-2" />
+                          Activate Selected
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setBulkAction('deactivate'); setIsBulkActionsOpen(true); }}>
+                          <X className="h-4 w-4 mr-2" />
+                          Deactivate Selected
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => { setBulkAction('enable-comments'); setIsBulkActionsOpen(true); }}>
+                          Enable Comments
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setBulkAction('disable-comments'); setIsBulkActionsOpen(true); }}>
+                          Disable Comments
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setBulkAction('update-comment-settings'); setIsBulkActionsOpen(true); }}>
+                          Update Comment Settings
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                )}
+              </div>
               <Button onClick={openCreateDialog}>
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Add Service Point
@@ -1132,15 +1064,30 @@ export default function ServicePointSettingsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedServicePoints.length === servicePoints.length && servicePoints.length > 0}
+                          onCheckedChange={handleSelectAll}
+                          aria-label="Select all service points"
+                        />
+                      </TableHead>
                       <TableHead>ID</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Comments</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {servicePoints.map((servicePoint) => (
                       <TableRow key={servicePoint.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedServicePoints.includes(servicePoint.id)}
+                            onCheckedChange={(checked) => handleSelectServicePoint(servicePoint.id, checked as boolean)}
+                            aria-label={`Select ${servicePoint.name}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-mono">
                           {servicePoint.id}
                         </TableCell>
@@ -1161,6 +1108,24 @@ export default function ServicePointSettingsPage() {
                               <X className="h-3 w-3 mr-1" />
                             )}
                             {servicePoint.active ? "Active" : "Inactive"}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div
+                              className={`inline-flex items-center px-2 py-1 rounded text-xs ${
+                                servicePoint.show_comments
+                                  ? "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100"
+                                  : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                              }`}
+                            >
+                              {servicePoint.show_comments ? "Enabled" : "Disabled"}
+                            </div>
+                            {servicePoint.show_comments && (
+                              <div className="text-xs text-muted-foreground">
+                                "{servicePoint.comments_title || "Any additional comments?"}"
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
@@ -1265,38 +1230,104 @@ export default function ServicePointSettingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog - Keep existing dialog */}
+      {/* Edit Dialog - Compact version */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Service Point</DialogTitle>
             <DialogDescription>
-              Update the selected service point details
+              Update service point details and survey settings
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="service-point-name-edit">Name</Label>
-              <Input
-                id="service-point-name-edit"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter service point name"
-              />
+            {/* Basic Settings */}
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="service-point-name-edit">Name</Label>
+                <Input
+                  id="service-point-name-edit"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter service point name"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="service-point-active-edit">Active Status</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Enable feedback collection
+                  </p>
+                </div>
+                <Switch
+                  id="service-point-active-edit"
+                  checked={isActive}
+                  onCheckedChange={setIsActive}
+                />
+              </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="service-point-active-edit">Active</Label>
-                <p className="text-sm text-muted-foreground">
-                  Enable feedback collection for this service point
-                </p>
+            {/* Survey Features */}
+            <div className="space-y-3 border-t pt-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="service-point-comments-edit">Comments Section</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Allow additional feedback
+                  </p>
+                </div>
+                <Switch
+                  id="service-point-comments-edit"
+                  checked={showComments}
+                  onCheckedChange={setShowComments}
+                />
               </div>
-              <Switch
-                id="service-point-active-edit"
-                checked={isActive}
-                onCheckedChange={setIsActive}
-              />
+
+              {showComments && (
+                <div className="space-y-3 ml-3 pl-3 border-l-2 border-muted">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="comments-title-edit" className="text-sm">Title</Label>
+                      <Input
+                        id="comments-title-edit"
+                        value={commentsTitle}
+                        onChange={(e) => setCommentsTitle(e.target.value)}
+                        placeholder="Any additional comments?"
+                        className="text-sm"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="comments-placeholder-edit" className="text-sm">Placeholder</Label>
+                      <Input
+                        id="comments-placeholder-edit"
+                        value={commentsPlaceholder}
+                        onChange={(e) => setCommentsPlaceholder(e.target.value)}
+                        placeholder="Share your thoughts..."
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Compact Preview */}
+                  <div className="border rounded p-3 bg-muted/10">
+                    <div className="text-xs text-muted-foreground mb-2">Preview:</div>
+                    <div className="space-y-2">
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((rating) => (
+                          <div key={rating} className="h-4 w-4 bg-muted rounded-full"></div>
+                        ))}
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-xs font-medium">{commentsTitle}</div>
+                        <div className="text-xs p-1 border rounded bg-background text-muted-foreground">
+                          {commentsPlaceholder}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -1342,6 +1373,61 @@ export default function ServicePointSettingsPage() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteServicePoint}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Actions Dialog */}
+      <Dialog open={isBulkActionsOpen} onOpenChange={setIsBulkActionsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bulk Action</DialogTitle>
+            <DialogDescription>
+              Apply action to {selectedServicePoints.length} selected service point{selectedServicePoints.length !== 1 ? 's' : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {bulkAction === 'update-comment-settings' && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="bulk-comments-title">Comments Title</Label>
+                  <Input
+                    id="bulk-comments-title"
+                    value={bulkCommentsTitle}
+                    onChange={(e) => setBulkCommentsTitle(e.target.value)}
+                    placeholder="Any additional comments?"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="bulk-comments-placeholder">Comments Placeholder</Label>
+                  <Input
+                    id="bulk-comments-placeholder"
+                    value={bulkCommentsPlaceholder}
+                    onChange={(e) => setBulkCommentsPlaceholder(e.target.value)}
+                    placeholder="Share your thoughts..."
+                  />
+                </div>
+              </div>
+            )}
+
+            {bulkAction && bulkAction !== 'update-comment-settings' && (
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm">
+                  {getBulkActionDescription(bulkAction)} for the selected service points.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsBulkActionsOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleBulkAction} disabled={isLoading}>
+              {isLoading ? "Applying..." : "Apply Action"}
             </Button>
           </DialogFooter>
         </DialogContent>

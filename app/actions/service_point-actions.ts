@@ -12,6 +12,8 @@ export interface ServicePoint {
   location_type: string;
   custom_question: string;
   show_comments: boolean;
+  comments_title?: string;
+  comments_placeholder?: string;
   active: boolean;
   created_at: string;
   updated_at: string;
