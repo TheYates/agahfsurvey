@@ -20,6 +20,7 @@ import {
 } from "@/lib/supabase/survey-submission";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useLocations } from "@/hooks/use-locations";
 
 // Define the survey data structure
 interface SurveyData {
@@ -45,6 +46,7 @@ export default function SurveyForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { toast } = useToast();
+  const { locationGroups, loading: locationsLoading } = useLocations();
   const [surveyData, setSurveyData] = useState<SurveyData>({
     visitTime: "",
     visitPurpose: "",
@@ -61,35 +63,22 @@ export default function SurveyForm() {
     patientType: "",
   });
 
-  // Group locations by type
-  const departmentLocations = [
-    "Audiology Unit",
-    "Dental Clinic",
-    "Dressing Room",
-    "Emergency Unit",
-    "Eye Clinic",
-    "Eric Asubonteng Clinic (Bruno Est.)",
-    "Injection Room",
-    "Laboratory",
-    // "Occupational Health",
-    "Out-Patient Department (OPD)",
-    "Pharmacy",
-    "Physiotherapy",
-    "RCH",
-    "Ultrasound Unit",
-    "X-Ray Unit",
+  // Use dynamic location data from the database with immediate fallback
+  const departmentLocations = locationGroups.department?.length > 0 ? locationGroups.department : [
+    'Audiology Unit', 'Dental Clinic', 'Dressing Room', 'Emergency Unit',
+    'Eye Clinic', 'Eric Asubonteng Clinic (Bruno Est.)', 'Injection Room',
+    'Laboratory', 'Out-Patient Department (OPD)', 'Out-Patient Department (OPD) Records',
+    'Out-Patient Department (OPD) Triage', 'Pharmacy', 'Physiotherapy', 'RCH', 
+    'Ultrasound Unit', 'X-Ray Unit'
   ];
-
-  const canteenLocations = ["Canteen Services"];
-
-  const wardLocations = [
-    "Female's Ward",
-    "Intensive Care Unit (ICU)",
-    "Kids Ward",
-    "Lying-In Ward",
-    "Male's Ward",
-    "Maternity Ward",
-    "Neonatal Intensive Care Unit (NICU)",
+  const canteenLocations = locationGroups.canteen?.length > 0 ? locationGroups.canteen : ['Canteen Services'];
+  const wardLocations = locationGroups.ward?.length > 0 ? locationGroups.ward : [
+    'Female\'s Ward', 'Intensive Care Unit (ICU)', 'Kids Ward',
+    'Lying-In Ward', 'Male\'s Ward', 'Maternity Ward',
+    'Neonatal Intensive Care Unit (NICU)'
+  ];
+  const occupationalHealthLocations = locationGroups.occupational_health?.length > 0 ? locationGroups.occupational_health : [
+    'Occupational Health Unit (Medicals)'
   ];
 
   // Define the required categories for each location type
@@ -139,14 +128,18 @@ export default function SurveyForm() {
 
     let requiredCategories: string[] = [];
 
+    // Use dynamic location data from database
     if (departmentLocations.includes(location)) {
       requiredCategories = departmentCategories;
     } else if (canteenLocations.includes(location)) {
       requiredCategories = canteenCategories;
     } else if (wardLocations.includes(location)) {
       requiredCategories = wardCategories;
-    } else if (location === "Occupational Health Unit (Medicals)") {
+    } else if (occupationalHealthLocations.includes(location)) {
       requiredCategories = occupationalHealthCategories;
+    } else {
+      // Default to department categories for unknown locations
+      requiredCategories = departmentCategories;
     }
 
     // Check if at least one rating exists (not requiring all)
@@ -281,13 +274,19 @@ export default function SurveyForm() {
     if (currentLocationIndex < allLocations.length) {
       const location = allLocations[currentLocationIndex];
 
+      // Use dynamic location data from database
       if (departmentLocations.includes(location)) {
         return { type: "department", location };
       } else if (canteenLocations.includes(location)) {
         return { type: "canteen", location };
       } else if (wardLocations.includes(location)) {
         return { type: "ward", location };
+      } else if (occupationalHealthLocations.includes(location)) {
+        return { type: "occupational_health", location };
       }
+      
+      // Fallback: treat unknown locations as departments by default
+      return { type: "department", location };
     }
 
     return null;
@@ -385,6 +384,15 @@ export default function SurveyForm() {
             return (
               <WardRating
                 location={locationToRate.location}
+                surveyData={surveyData}
+                updateSurveyData={updateSurveyData}
+                onNext={handleNext}
+                onBack={handleBack}
+              />
+            );
+          } else if (locationToRate.type === "occupational_health") {
+            return (
+              <OccupationalHealthRating
                 surveyData={surveyData}
                 updateSurveyData={updateSurveyData}
                 onNext={handleNext}
@@ -515,6 +523,15 @@ export default function SurveyForm() {
                 onBack={handleBack}
               />
             );
+          } else if (locationToRate.type === "occupational_health") {
+            return (
+              <OccupationalHealthRating
+                surveyData={surveyData}
+                updateSurveyData={updateSurveyData}
+                onNext={handleNext}
+                onBack={handleBack}
+              />
+            );
           }
         }
       }
@@ -543,6 +560,8 @@ export default function SurveyForm() {
 
   // Add this right before the return statement in the SurveyForm component
   const debugMode = false; // Set to true to see debug information
+
+  // No loading screen needed - we have immediate fallback data
 
   return (
     <Card className="p-6 shadow-lg border-t-4 border-t-primary max-w-2xl mx-auto">

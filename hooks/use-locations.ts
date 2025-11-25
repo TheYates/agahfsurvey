@@ -54,8 +54,9 @@ export function useLocations() {
             department: [
               'Audiology Unit', 'Dental Clinic', 'Dressing Room', 'Emergency Unit',
               'Eye Clinic', 'Eric Asubonteng Clinic (Bruno Est.)', 'Injection Room',
-              'Laboratory', 'Out-Patient Department (OPD)', 'Pharmacy',
-              'Physiotherapy', 'RCH', 'Ultrasound Unit', 'X-Ray Unit'
+              'Laboratory', 'Out-Patient Department (OPD)', 'Out-Patient Department (OPD) Records',
+              'Out-Patient Department (OPD) Triage', 'Pharmacy', 'Physiotherapy', 'RCH', 
+              'Ultrasound Unit', 'X-Ray Unit'
             ],
             ward: [
               'Female\'s Ward', 'Intensive Care Unit (ICU)', 'Kids Ward',
@@ -82,14 +83,7 @@ export function useLocations() {
         locations.forEach((loc) => {
           const type = loc.locationType as keyof LocationGroups
           if (groups[type]) {
-            // Apply filters for specific exclusions
-            if (type === "department" && loc.name === "Occupational Health Unit (Medicals)") {
-              return // Skip this one
-            }
-            if (type === "occupational_health" &&
-                (loc.name === "Occupational Health Unit (Medicals)" || loc.name === "Occupational Health")) {
-              return // Skip these
-            }
+            // No filters needed - include all locations as they are in the database
             groups[type].push(loc.name)
           }
         })
