@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(cat:*)",
+      "Bash(pnpm install:*)",
+      "Bash(del /F /Q \"\\?\\C:\\Users\\AGAHF USER\\Desktop\\BUILDS\\hospitalsurvey\\NUL\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -43,6 +43,7 @@ function mapRatingCategory(category: string): string {
     "nurse-professionalism": "nurseProfessionalism",
     "doctor-professionalism": "doctorProfessionalism",
     discharge: "discharge",
+    wouldRecommend: "wouldRecommend",
   };
 
   return mappings[category] || category;
@@ -124,9 +125,15 @@ export async function submitSurveyToSupabase(formData: SurveyFormData) {
       ratings: Object.entries(formData.departmentRatings).map(
         ([locationName, ratings]) => {
           // Convert rating categories to the proper database columns
-          const transformedRatings: Record<string, string> = {};
+          const transformedRatings: Record<string, string | boolean> = {};
           Object.entries(ratings).forEach(([category, value]) => {
-            transformedRatings[mapRatingCategory(category)] = value;
+            const mappedCategory = mapRatingCategory(category);
+            // Convert "Yes"/"No" to boolean for wouldRecommend field
+            if (mappedCategory === "wouldRecommend") {
+              transformedRatings[mappedCategory] = value === "Yes";
+            } else {
+              transformedRatings[mappedCategory] = value;
+            }
           });
 
           return {

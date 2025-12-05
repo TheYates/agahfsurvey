@@ -12,8 +12,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -53,6 +59,7 @@ import {
   TrendingUp,
   BarChart3,
   FileText,
+  Info,
 } from "lucide-react";
 import {
   SurveyData,
@@ -94,8 +101,24 @@ const COLORS = [
   "#e84e3c", // red
 ];
 
+// Helper function to shorten location names
+const shortenLocationName = (name: string): string => {
+  // Remove common prefixes in parentheses
+  let shortened = name.replace(/Out-Patient Department \(OPD\)/gi, "OPD");
+  shortened = shortened.replace(/In-Patient Department \(IPD\)/gi, "IPD");
+  shortened = shortened.replace(
+    /Occupational Health Unit \(Medicals\)/gi,
+    "Occupational Health"
+  );
+
+  // Remove "Department" if it comes after the main location name
+  shortened = shortened.replace(/Department/gi, "Dept");
+
+  return shortened;
+};
+
 export default function ReportsPage() {
-  const { isAuthenticated } = useSupabaseAuth();
+  const { isAuthenticated, loading: authLoading } = useSupabaseAuth();
   const router = useRouter();
 
   const [dateRange, setDateRange] = useState("all");
@@ -109,16 +132,8 @@ export default function ReportsPage() {
   const [recommendationRate, setRecommendationRate] = useState(0);
   const [averageSatisfaction, setAverageSatisfaction] = useState("");
   const [totalResponses, setTotalResponses] = useState(0);
-  const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [actualAvgRating, setActualAvgRating] = useState<number | null>(null);
   const [weeklyResponses, setWeeklyResponses] = useState(0);
-  const [recommendationRateChange, setRecommendationRateChange] = useState<
-    number | null
-  >(null);
-  const [previousSatisfaction, setPreviousSatisfaction] = useState<
-    string | null
-  >(null);
   const [satisfactionByLocation, setSatisfactionByLocation] = useState<
     {
       name: string;
@@ -136,17 +151,12 @@ export default function ReportsPage() {
     }
   }, [satisfactionData]);
 
+  // Redirect to home if not authenticated (only after auth check completes)
   useEffect(() => {
-    setIsAuthChecked(true);
-  }, []);
-
-  useEffect(() => {
-    if (isAuthChecked) {
-      if (!isAuthenticated) {
-        router.push("/");
-      }
+    if (!authLoading && !isAuthenticated) {
+      router.push("/");
     }
-  }, [isAuthenticated, router, isAuthChecked]);
+  }, [authLoading, isAuthenticated, router]);
 
   // Fetch data once when authenticated
   useEffect(() => {
@@ -188,7 +198,14 @@ export default function ReportsPage() {
       setTotalResponses(totalCount);
       setRecommendationRate(recommendationRateData);
       setAverageSatisfaction(averageSatisfactionData);
-      setSatisfactionByLocation(satisfactionByLocationData);
+      // Apply location name shortening to satisfaction by location data
+      const shortenedSatisfactionByLocation = satisfactionByLocationData.map(
+        (loc: any) => ({
+          ...loc,
+          name: shortenLocationName(loc.name),
+        })
+      );
+      setSatisfactionByLocation(shortenedSatisfactionByLocation);
 
       if (surveyData?.length > 0) {
         // For debugging, examine the first few survey records
@@ -220,7 +237,7 @@ export default function ReportsPage() {
             )
             .slice(0, 5) // Top 5 locations
             .map((location: LocationVisit) => ({
-              name: location.location,
+              name: shortenLocationName(location.location),
               count: location.visit_count,
             }));
 
@@ -229,111 +246,8 @@ export default function ReportsPage() {
           setLocationData([]);
         }
 
-        // Use the pre-fetched recommendation rate
-        // (No need to calculate again since it's fetched in parallel)
-
-        // Calculate recommendation rate change compared to last month
-        const currentDate = new Date();
-        const lastMonthDate = new Date();
-        lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
-
-        // Current month data
-        const currentMonthData = surveyData.filter((survey: SurveyData) => {
-          const surveyDate = new Date(survey.created_at);
-          return (
-            surveyDate.getMonth() === currentDate.getMonth() &&
-            surveyDate.getFullYear() === currentDate.getFullYear()
-          );
-        });
-
-        // Last month data
-        const lastMonthData = surveyData.filter((survey: SurveyData) => {
-          const surveyDate = new Date(survey.created_at);
-          return (
-            surveyDate.getMonth() === lastMonthDate.getMonth() &&
-            surveyDate.getFullYear() === lastMonthDate.getFullYear()
-          );
-        });
-
-        // Calculate current month recommendation rate
-        const currentMonthRecommendations = currentMonthData.reduce(
-          (total: number, survey: SurveyData) => {
-            return total + (survey.recommendation_rating || 0);
-          },
-          0
-        );
-
-        const currentMonthRate =
-          currentMonthData.length > 0
-            ? (currentMonthRecommendations / currentMonthData.length) * 10
-            : 0;
-
-        // Calculate last month recommendation rate
-        const lastMonthRecommendations = lastMonthData.reduce(
-          (total: number, survey: SurveyData) => {
-            return total + (survey.recommendation_rating || 0);
-          },
-          0
-        );
-
-        const lastMonthRate =
-          lastMonthData.length > 0
-            ? (lastMonthRecommendations / lastMonthData.length) * 10
-            : 0;
-
-        // Calculate the change
-        if (lastMonthRate > 0) {
-          const change = currentMonthRate - lastMonthRate;
-          setRecommendationRateChange(change);
-        } else {
-          // If no data for last month
-          setRecommendationRateChange(null);
-        }
-
-        // Calculate average satisfaction
-        const totalSatisfaction = surveyData.reduce(
-          (total: number, survey: SurveyData) => {
-            return total + survey.overall_rating;
-          },
-          0
-        );
-        const avgRating = totalSatisfaction / surveyData.length;
-        setActualAvgRating(avgRating);
-
-        // Convert numeric rating to text
-        let ratingText = "Good";
-        if (avgRating >= 4.5) ratingText = "Excellent";
-        else if (avgRating >= 3.5) ratingText = "Very Good";
-        else if (avgRating >= 2.5) ratingText = "Good";
-        else if (avgRating >= 1.5) ratingText = "Fair";
-        else ratingText = "Poor";
-
-        setAverageSatisfaction(ratingText);
-
-        // Calculate previous month's average satisfaction
-        const lastMonthSatisfaction = lastMonthData.reduce(
-          (total: number, survey: SurveyData) => {
-            return total + survey.overall_rating;
-          },
-          0
-        );
-
-        if (lastMonthData.length > 0) {
-          const lastMonthAvgRating =
-            lastMonthSatisfaction / lastMonthData.length;
-
-          // Convert numeric rating to text
-          let lastMonthRatingText = "Good";
-          if (lastMonthAvgRating >= 4.5) lastMonthRatingText = "Excellent";
-          else if (lastMonthAvgRating >= 3.5) lastMonthRatingText = "Very Good";
-          else if (lastMonthAvgRating >= 2.5) lastMonthRatingText = "Good";
-          else if (lastMonthAvgRating >= 1.5) lastMonthRatingText = "Fair";
-          else lastMonthRatingText = "Poor";
-
-          setPreviousSatisfaction(lastMonthRatingText);
-        } else {
-          setPreviousSatisfaction(null);
-        }
+        // Use the pre-fetched recommendation rate and average satisfaction from API
+        // These values are already set from the parallel API calls above
       }
 
       // Process department ratings data for location satisfaction
@@ -384,7 +298,7 @@ export default function ReportsPage() {
         // Update the sort logic to include all five categories
         const satisfactionChartData = Object.entries(locationSatisfaction)
           .map(([name, ratings]) => ({
-            name,
+            name: shortenLocationName(name),
             ...ratings,
           }))
           .sort((a, b) => {
@@ -410,12 +324,14 @@ export default function ReportsPage() {
     }
   }, [locationData]);
 
-  // If not authenticated, don't render the page content
-  if (!isAuthenticated && isAuthChecked) {
+  // Show nothing while auth is loading or if not authenticated
+  if (authLoading) {
     return null;
   }
 
-
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <main className="min-h-screen p-4 md:p-8 ">
@@ -482,9 +398,39 @@ export default function ReportsPage() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Recommendation Rate
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">
+                  Recommendation Rate
+                </CardTitle>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-2">
+                      <h4 className="font-semibold">How it's calculated:</h4>
+                      <ol className="text-sm space-y-1 list-decimal list-inside">
+                        <li>
+                          Fetches all survey submissions with recommendation
+                          data
+                        </li>
+                        <li>
+                          Counts how many respondents said "Yes" to recommending
+                        </li>
+                        <li>
+                          Divides by total submissions and multiplies by 100
+                        </li>
+                      </ol>
+                      <div className="text-xs text-muted-foreground mt-2">
+                        Example: If 85 out of 100 respondents would recommend,
+                        the rate is 85%
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
               <CardDescription>Patients who would recommend</CardDescription>
             </CardHeader>
             <CardContent>
@@ -492,41 +438,47 @@ export default function ReportsPage() {
                 {recommendationRate.toFixed(1)}%
               </div>
               <p className="text-xs text-muted-foreground">
-                {recommendationRateChange !== null ? (
-                  <>
-                    {recommendationRateChange > 0 ? "+" : ""}
-                    {recommendationRateChange.toFixed(1)}% from last month
-                  </>
-                ) : (
-                  "No prior month data"
-                )}
+                Percentage of patients who would recommend
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Average Satisfaction
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">
+                  Average Satisfaction
+                </CardTitle>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-2">
+                      <h4 className="font-semibold">How it's calculated:</h4>
+                      <ol className="text-sm space-y-1 list-decimal list-inside">
+                        <li>Fetches all ratings from the database</li>
+                        <li>
+                          Converts text ratings to numbers (Excellent=5, Very
+                          Good=4, Good=3, Fair=2, Poor=1)
+                        </li>
+                        <li>Calculates the average of all ratings</li>
+                        <li>Converts the numeric average back to text</li>
+                      </ol>
+                      <div className="text-xs text-muted-foreground mt-2">
+                        Example: If average is 4.3, it shows "Very Good"
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
               <CardDescription>Overall impression</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{averageSatisfaction}</div>
-              {actualAvgRating !== null && (
-                <div className="text-sm text-muted-foreground">
-                  {/* Avg: {actualAvgRating.toFixed(2)} / 5 */}
-                </div>
-              )}
               <p className="text-xs text-muted-foreground">
-                {previousSatisfaction
-                  ? averageSatisfaction === previousSatisfaction
-                    ? `Same as last month (${previousSatisfaction})`
-                    : `${
-                        averageSatisfaction > previousSatisfaction
-                          ? "Improved"
-                          : "Decreased"
-                      } from "${previousSatisfaction}"`
-                  : "No prior month data"}
+                Based on all ratings across all locations
               </p>
             </CardContent>
           </Card>
@@ -537,7 +489,7 @@ export default function ReportsPage() {
             href="/reports/service-points"
             className="col-span-1 md:col-span-1"
           >
-            <Card className="h-full transition-all hover:shadow-md">
+            <Card className="h-full transition-all hover:shadow-lg hover:border-primary hover:bg-accent/50 cursor-pointer">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Map size={18} />
@@ -562,7 +514,7 @@ export default function ReportsPage() {
             href="/reports/survey-reports"
             className="col-span-1 md:col-span-1"
           >
-            <Card className="h-full transition-all hover:shadow-md text-green-500">
+            <Card className="h-full transition-all hover:shadow-lg hover:border-primary hover:bg-accent/50 cursor-pointer text-green-500">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 size={18} />
@@ -589,7 +541,7 @@ export default function ReportsPage() {
             href="/reports/submissions"
             className="col-span-1 md:col-span-1"
           >
-            <Card className="h-full transition-all hover:shadow-md">
+            <Card className="h-full transition-all hover:shadow-lg hover:border-primary hover:bg-accent/50 cursor-pointer">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText size={18} />
@@ -645,10 +597,45 @@ export default function ReportsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Overall Satisfaction</CardTitle>
-                  <CardDescription>
-                    Distribution of satisfaction ratings
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Overall Satisfaction</CardTitle>
+                      <CardDescription>
+                        Distribution of satisfaction ratings
+                      </CardDescription>
+                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                        >
+                          <Info className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80">
+                        <div className="space-y-2">
+                          <h4 className="font-semibold">
+                            How it's calculated:
+                          </h4>
+                          <ol className="text-sm space-y-1 list-decimal list-inside">
+                            <li>Fetches all ratings from the database</li>
+                            <li>
+                              Converts text ratings to numbers (Excellent=5,
+                              Very Good=4, etc.)
+                            </li>
+                            <li>Counts how many times each rating appears</li>
+                            <li>Shows the distribution as a pie chart</li>
+                          </ol>
+                          <div className="text-xs text-muted-foreground mt-2">
+                            Example: If you have 50 "Excellent" and 30 "Very
+                            Good", the chart shows 50% and 30%
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="h-80">
@@ -824,8 +811,46 @@ export default function ReportsPage() {
           <TabsContent value="locations">
             <Card>
               <CardHeader>
-                <CardTitle>Location Satisfaction Ratings</CardTitle>
-                <CardDescription>Average ratings by location</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Location Satisfaction Ratings</CardTitle>
+                    <CardDescription>
+                      Average ratings by location
+                    </CardDescription>
+                  </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80">
+                      <div className="space-y-2">
+                        <h4 className="font-semibold">How it's calculated:</h4>
+                        <ol className="text-sm space-y-1 list-decimal list-inside">
+                          <li>
+                            Fetches all ratings with their associated locations
+                          </li>
+                          <li>
+                            Groups ratings by location and rating level (1-5)
+                          </li>
+                          <li>
+                            Counts each rating type (Excellent, Very Good, Good,
+                            Fair, Poor) per location
+                          </li>
+                          <li>
+                            Displays as a stacked horizontal bar chart showing
+                            the breakdown
+                          </li>
+                        </ol>
+                        <div className="text-xs text-muted-foreground mt-2">
+                          This shows the distribution of satisfaction levels
+                          across different service locations
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
@@ -935,9 +960,6 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 <Table>
-                  <TableCaption>
-                    A list of recent survey responses.
-                  </TableCaption>
                   <TableHeader>
                     <TableRow>
                       <TableHead>ID</TableHead>
@@ -974,16 +996,55 @@ export default function ReportsPage() {
                           {survey.visit_purpose || "General"}
                         </TableCell>
                         <TableCell className="align-middle">
-                          {survey.locations_visited?.join(", ") ||
-                            "Not specified"}
+                          {survey.locations_visited &&
+                          survey.locations_visited.length > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">
+                                {survey.locations_visited.length <= 2
+                                  ? survey.locations_visited.join(", ")
+                                  : `${survey.locations_visited
+                                      .slice(0, 2)
+                                      .join(", ")}...`}
+                              </span>
+                              {survey.locations_visited.length > 2 && (
+                                <Link href="/reports/submissions">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 px-2 text-xs"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    +{survey.locations_visited.length - 2} more
+                                  </Button>
+                                </Link>
+                              )}
+                            </div>
+                          ) : (
+                            "Not specified"
+                          )}
                         </TableCell>
                         <TableCell className="align-middle">
-                          {survey.recommendation_rating > 7 ? "Yes" : "No"}
+                          <Badge
+                            variant={
+                              survey.wouldRecommend ? "default" : "destructive"
+                            }
+                            className="whitespace-nowrap"
+                          >
+                            {survey.wouldRecommend ? "Yes" : "No"}
+                          </Badge>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
+                <div className="mt-4 flex justify-center">
+                  <Link href="/reports/submissions">
+                    <Button variant="outline" className="gap-2">
+                      <FileText size={16} />
+                      View All Submissions
+                    </Button>
+                  </Link>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

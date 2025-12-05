@@ -62,9 +62,11 @@ export default function DepartmentRating({
     const ratings = surveyData.departmentRatings[location] || {};
     // All categories with asterisks must be filled in
     const complete = ratingCategories.every((category) => ratings[category.id]);
+    // Also check if recommendation is filled
+    const hasRecommendation = !!ratings.wouldRecommend;
 
-    // Return true to always enable the Next button, or require at least one rating
-    return complete;
+    // Return true only if all ratings and recommendation are complete
+    return complete && hasRecommendation;
   };
 
   return (
@@ -125,6 +127,44 @@ export default function DepartmentRating({
                   })}
                 </tbody>
               </table>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <Label className="text-base font-medium">
+                Would you recommend this department to others?{" "}
+                <span className="text-red-500">*</span>
+              </Label>
+              <RadioGroup
+                value={
+                  surveyData.departmentRatings[location]?.wouldRecommend || ""
+                }
+                onValueChange={(value) =>
+                  handleRatingChange("wouldRecommend", value)
+                }
+                className="flex gap-6"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem
+                    value="Yes"
+                    id={`${location}-recommend-yes`}
+                  />
+                  <Label
+                    htmlFor={`${location}-recommend-yes`}
+                    className="cursor-pointer font-normal"
+                  >
+                    Yes
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="No" id={`${location}-recommend-no`} />
+                  <Label
+                    htmlFor={`${location}-recommend-no`}
+                    className="cursor-pointer font-normal"
+                  >
+                    No
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
 
             <div className="space-y-2">

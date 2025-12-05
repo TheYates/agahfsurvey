@@ -66,7 +66,7 @@ const hideButtonsStyle = `
 `;
 
 // Simple component to display only selected locations
-function LocationsList({ locations }: { locations: string[] }) {
+function LocationsList({ locations, title }: { locations: string[]; title?: string }) {
   // Group locations by type
   const clinicsAndDepartments = [
     "Audiology Unit",
@@ -97,6 +97,7 @@ function LocationsList({ locations }: { locations: string[] }) {
 
   const otherServices = [
     "Canteen Services",
+    "Occupational Health",
     "Occupational Health Unit (Medicals)",
   ];
 
@@ -106,12 +107,17 @@ function LocationsList({ locations }: { locations: string[] }) {
   const selectedWards = locations.filter((loc) => wards.includes(loc));
   const selectedOthers = locations.filter((loc) => otherServices.includes(loc));
 
+  // If no locations to show, return null
+  if (selectedClinics.length === 0 && selectedWards.length === 0 && selectedOthers.length === 0) {
+    return null;
+  }
+
   return (
     <div className="space-y-6">
       <Card className="border-none shadow-none">
         <CardHeader className="px-0 pt-0">
           <CardTitle className="text-xl font-bold">
-            Where did you visit? <span className="text-red-500">*</span>
+            {title || "Where did you visit?"} <span className="text-red-500">*</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="px-0 pb-0">
@@ -564,6 +570,9 @@ export default function SubmissionDetailModal({
                 ratingObj["food-quality"] = ratingAny.foodQuality;
               if (ratingAny.discharge)
                 ratingObj.discharge = ratingAny.discharge;
+              // Add location-specific recommendation
+              if (ratingAny.wouldRecommend !== undefined && ratingAny.wouldRecommend !== "")
+                ratingObj.wouldRecommend = ratingAny.wouldRecommend;
 
               departmentRatings[rating.locationName] = ratingObj;
             }
@@ -667,7 +676,9 @@ export default function SubmissionDetailModal({
     if (wards.includes(location)) return "ward";
     if (departments.includes(location)) return "department";
     if (location === "Canteen Services") return "canteen";
-    if (location === "Occupational Health") return "occupational";
+    if (location === "Occupational Health" ||
+        location === "Occupational Health Unit (Medicals)" ||
+        location.toLowerCase().includes("occupational health")) return "occupational";
     return "department";
   };
 
@@ -697,11 +708,33 @@ export default function SubmissionDetailModal({
     (loc) => getLocationType(loc) === "ward"
   );
   const hasCanteen = submission.locations.includes("Canteen Services");
-  const hasOccupational = submission.locations.includes("Occupational Health");
+  const hasOccupational = submission.locations.some(loc =>
+    loc === "Occupational Health" ||
+    loc === "Occupational Health Unit (Medicals)" ||
+    loc.toLowerCase().includes("occupational health")
+  );
+
+  // Check if visit purpose is Medical Surveillance (Occupational Health)
+  const isMedicalSurveillance = submission.visitPurpose?.toLowerCase().includes("occupational health") ||
+                                 submission.visitPurpose?.toLowerCase().includes("medicals");
+
+  // Get other locations (excluding Occupational Health if it's the main purpose)
+  const otherLocations = isMedicalSurveillance
+    ? submission.locations.filter(loc =>
+        loc !== "Occupational Health" &&
+        loc !== "Occupational Health Unit (Medicals)" &&
+        !loc.toLowerCase().includes("occupational health")
+      )
+    : submission.locations;
+
+  // Check if canteen is in the other locations for Medical Surveillance case
+  const hasCanteenInOtherLocations = isMedicalSurveillance
+    ? otherLocations.includes("Canteen Services")
+    : hasCanteen;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-w-3xl max-h-[90vh]">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -709,7 +742,7 @@ export default function SubmissionDetailModal({
               <div>
                 <DialogTitle>Submission Details</DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
-                  {submission.id}
+                  {/* {submission.id} */}
                 </DialogDescription>
                 <p className="text-sm text-muted-foreground">
                   Submitted on{" "}
@@ -720,11 +753,11 @@ export default function SubmissionDetailModal({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   disabled={isExporting}
                   className="gap-2"
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className="h-3 w-3" />
                   {isExporting ? "Exporting..." : "Export"}
                 </Button>
               </DropdownMenuTrigger>
@@ -772,82 +805,151 @@ export default function SubmissionDetailModal({
 
             <Separator className="my-8" />
 
-            {/* Custom Locations Page that only shows selected locations */}
-            <LocationsList locations={submission.locations} />
-
-            <Separator className="my-8" />
-
-            {/* Department Ratings */}
-            {departments.map((department, index) => (
-              <div key={department}>
-                <div className="pointer-events-none">
-                  <DepartmentRating
-                    location={department}
-                    surveyData={submission}
-                    updateSurveyData={dummyUpdate}
-                    onNext={dummyNext}
-                    onBack={dummyBack}
-                  />
-                </div>
-                {index < departments.length - 1 && (
-                  <Separator className="my-8" />
+            {/* Conditional rendering based on visit purpose */}
+            {isMedicalSurveillance ? (
+              <>
+                {/* If Medical Surveillance, show Occupational Health first */}
+                {hasOccupational && (
+                  <div>
+                    <div className="pointer-events-none">
+                      <OccupationalHealthRating
+                        surveyData={submission}
+                        updateSurveyData={dummyUpdate}
+                        onNext={dummyNext}
+                        onBack={dummyBack}
+                      />
+                    </div>
+                    <Separator className="my-8" />
+                  </div>
                 )}
-              </div>
-            ))}
 
-            {/* Ward Ratings */}
-            {wards.map((ward, index) => (
-              <div key={ward}>
-                {(departments.length > 0 || index > 0) && (
-                  <Separator className="my-8" />
+                {/* Then show "Where Else Did You Visit" if there are other locations */}
+                {otherLocations.length > 0 && (
+                  <>
+                    <LocationsList
+                      locations={otherLocations}
+                      title="Where Else Did You Visit?"
+                    />
+                    <Separator className="my-8" />
+                  </>
                 )}
-                <div className="pointer-events-none">
-                  <WardRating
-                    location={ward}
-                    surveyData={submission}
-                    updateSurveyData={dummyUpdate}
-                    onNext={dummyNext}
-                    onBack={dummyBack}
-                  />
-                </div>
-              </div>
-            ))}
 
-            {/* Canteen Rating */}
-            {hasCanteen && (
-              <div>
-                {(departments.length > 0 || wards.length > 0) && (
-                  <Separator className="my-8" />
+                {/* Department Ratings for other locations */}
+                {departments.map((department, index) => (
+                  <div key={department}>
+                    <div className="pointer-events-none">
+                      <DepartmentRating
+                        location={department}
+                        surveyData={submission}
+                        updateSurveyData={dummyUpdate}
+                        onNext={dummyNext}
+                        onBack={dummyBack}
+                      />
+                    </div>
+                    <Separator className="my-8" />
+                  </div>
+                ))}
+
+                {/* Ward Ratings for other locations */}
+                {wards.map((ward) => (
+                  <div key={ward}>
+                    <div className="pointer-events-none">
+                      <WardRating
+                        location={ward}
+                        surveyData={submission}
+                        updateSurveyData={dummyUpdate}
+                        onNext={dummyNext}
+                        onBack={dummyBack}
+                      />
+                    </div>
+                    <Separator className="my-8" />
+                  </div>
+                ))}
+
+                {/* Canteen Rating for other locations */}
+                {hasCanteenInOtherLocations && (
+                  <div>
+                    <div className="pointer-events-none">
+                      <CanteenRating
+                        surveyData={submission}
+                        updateSurveyData={dummyUpdate}
+                        onNext={dummyNext}
+                        onBack={dummyBack}
+                      />
+                    </div>
+                    <Separator className="my-8" />
+                  </div>
                 )}
-                <div className="pointer-events-none">
-                  <CanteenRating
-                    surveyData={submission}
-                    updateSurveyData={dummyUpdate}
-                    onNext={dummyNext}
-                    onBack={dummyBack}
-                  />
-                </div>
-              </div>
+              </>
+            ) : (
+              <>
+                {/* If General Practice, show "Where did you visit" with all locations */}
+                <LocationsList locations={submission.locations} />
+                <Separator className="my-8" />
+
+                {/* Department Ratings */}
+                {departments.map((department, index) => (
+                  <div key={department}>
+                    <div className="pointer-events-none">
+                      <DepartmentRating
+                        location={department}
+                        surveyData={submission}
+                        updateSurveyData={dummyUpdate}
+                        onNext={dummyNext}
+                        onBack={dummyBack}
+                      />
+                    </div>
+                    <Separator className="my-8" />
+                  </div>
+                ))}
+
+                {/* Ward Ratings */}
+                {wards.map((ward) => (
+                  <div key={ward}>
+                    <div className="pointer-events-none">
+                      <WardRating
+                        location={ward}
+                        surveyData={submission}
+                        updateSurveyData={dummyUpdate}
+                        onNext={dummyNext}
+                        onBack={dummyBack}
+                      />
+                    </div>
+                    <Separator className="my-8" />
+                  </div>
+                ))}
+
+                {/* Canteen Rating */}
+                {hasCanteen && (
+                  <div>
+                    <div className="pointer-events-none">
+                      <CanteenRating
+                        surveyData={submission}
+                        updateSurveyData={dummyUpdate}
+                        onNext={dummyNext}
+                        onBack={dummyBack}
+                      />
+                    </div>
+                    <Separator className="my-8" />
+                  </div>
+                )}
+
+                {/* Occupational Health Rating (if not main purpose but visited) */}
+                {hasOccupational && (
+                  <div>
+                    <div className="pointer-events-none">
+                      <OccupationalHealthRating
+                        surveyData={submission}
+                        updateSurveyData={dummyUpdate}
+                        onNext={dummyNext}
+                        onBack={dummyBack}
+                      />
+                    </div>
+                    <Separator className="my-8" />
+                  </div>
+                )}
+              </>
             )}
-
-            {/* Occupational Health Rating */}
-            {hasOccupational && (
-              <div>
-                {(departments.length > 0 || wards.length > 0 || hasCanteen) && (
-                  <Separator className="my-8" />
-                )}
-                <div className="pointer-events-none">
-                  <OccupationalHealthRating
-                    surveyData={submission}
-                    updateSurveyData={dummyUpdate}
-                    onNext={dummyNext}
-                    onBack={dummyBack}
-                  />
-                </div>
-              </div>
-            )}
-
-            <Separator className="my-8" />
 
             {/* Custom General Observation Section */}
             <GeneralObservationSection submission={submission} />

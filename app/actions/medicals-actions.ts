@@ -23,6 +23,7 @@ export interface OccupationalHealthData {
   name: string;
   satisfaction: number;
   visitCount: number;
+  recommendRate: number;
   ratings: {
     reception: number;
     professionalism: number;
@@ -52,10 +53,12 @@ export interface DepartmentConcern {
  * Fetch all survey data from the database
  * Can be filtered by location and date range
  */
-export async function fetchAllSurveyData(): Promise<any[]> {
+export async function fetchAllSurveyData(
+  dateRange?: { from: string; to: string } | null
+): Promise<any[]> {
   try {
-    // Query all submissions without filtering
-    const { data, error } = await supabase
+    // Query all submissions with optional date filter
+    let query = supabase
       .from("SurveySubmission")
       .select(
         `
@@ -78,20 +81,56 @@ export async function fetchAllSurveyData(): Promise<any[]> {
       )
       .order("submittedAt", { ascending: false });
 
+    // Apply date filter if provided
+    if (dateRange) {
+      query = query
+        .gte("submittedAt", dateRange.from)
+        .lte("submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
+
     if (error) throw error;
 
     // Map the data to return
-    const mappedData = (data || []).map((s) => ({
-      submissionId: s.id,
-      submittedAt: s.submittedAt,
-      recommendation: s.recommendation || "",
-      visitPurpose: s.visitPurpose,
-      patientType: s.patientType,
-      userType: s.userType,
-      wouldRecommend: s.wouldRecommend,
-      satisfaction:
-        s.Rating && s.Rating.length > 0 ? parseRating(s.Rating[0].overall) : 0,
-    }));
+    const mappedData = (data || []).map((s) => {
+      // Calculate satisfaction from ALL rating categories
+      let totalRating = 0;
+      let ratingCount = 0;
+
+      if (s.Rating && s.Rating.length > 0) {
+        s.Rating.forEach((rating) => {
+          const ratingCategories = [
+            'reception',
+            'professionalism',
+            'understanding',
+            'promptnessCare',
+            'promptnessFeedback',
+            'overall'
+          ];
+
+          ratingCategories.forEach((category) => {
+            if (rating[category]) {
+              totalRating += parseRating(rating[category]);
+              ratingCount++;
+            }
+          });
+        });
+      }
+
+      const satisfaction = ratingCount > 0 ? totalRating / ratingCount : 0;
+
+      return {
+        submissionId: s.id,
+        submittedAt: s.submittedAt,
+        recommendation: s.recommendation || "",
+        visitPurpose: s.visitPurpose,
+        patientType: s.patientType,
+        userType: s.userType,
+        wouldRecommend: s.wouldRecommend,
+        satisfaction,
+      };
+    });
 
     return mappedData;
   } catch (error) {
@@ -138,12 +177,12 @@ function parseRating(value: any): number {
 /**
  * Fetch department concerns related to occupational health
  */
-export async function fetchOccupationalHealthConcerns(): Promise<
-  DepartmentConcern[]
-> {
+export async function fetchOccupationalHealthConcerns(
+  dateRange?: { from: string; to: string } | null
+): Promise<DepartmentConcern[]> {
   try {
     // First, we need to get the concerns with their IDs
-    const { data: concernsData, error: concernsError } = await supabase
+    let concernsQuery = supabase
       .from("DepartmentConcern")
       .select(
         `
@@ -155,6 +194,15 @@ export async function fetchOccupationalHealthConcerns(): Promise<
       `
       )
       .order("createdAt", { ascending: false });
+
+    // Apply date filter if provided
+    if (dateRange) {
+      concernsQuery = concernsQuery
+        .gte("createdAt", dateRange.from)
+        .lte("createdAt", dateRange.to);
+    }
+
+    const { data: concernsData, error: concernsError } = await concernsQuery;
 
     if (concernsError) throw concernsError;
     if (!concernsData || concernsData.length === 0) return [];
@@ -233,13 +281,15 @@ export async function fetchOccupationalHealthConcerns(): Promise<
  * Fetch occupational health data including ratings, top/lowest locations,
  * and user type distribution
  */
-export async function fetchOccupationalHealthData(): Promise<{
+export async function fetchOccupationalHealthData(
+  dateRange?: { from: string; to: string } | null
+): Promise<{
   ohData: OccupationalHealthData | null;
   ohConcerns: DepartmentConcern[];
 }> {
   try {
     // Get all submissions with occupational health visit purpose
-    const { data: ohSubmissions, error: ohError } = await supabase
+    let ohQuery = supabase
       .from("SurveySubmission")
       .select(
         `
@@ -256,7 +306,8 @@ export async function fetchOccupationalHealthData(): Promise<{
           understanding,
           promptnessCare,
           promptnessFeedback,
-          overall
+          overall,
+          wouldRecommend
         ),
         SubmissionLocation (
           locationId,
@@ -269,10 +320,19 @@ export async function fetchOccupationalHealthData(): Promise<{
       )
       .eq("visitPurpose", "Medicals (Occupational Health)");
 
+    // Apply date filter if provided
+    if (dateRange) {
+      ohQuery = ohQuery
+        .gte("submittedAt", dateRange.from)
+        .lte("submittedAt", dateRange.to);
+    }
+
+    const { data: ohSubmissions, error: ohError } = await ohQuery;
+
     if (ohError) throw ohError;
 
     // Get OH concerns
-    const ohConcerns = await fetchOccupationalHealthConcerns();
+    const ohConcerns = await fetchOccupationalHealthConcerns(dateRange);
 
     // If no data found, return null with empty concerns
     if (!ohSubmissions || ohSubmissions.length === 0) {
@@ -289,6 +349,7 @@ export async function fetchOccupationalHealthData(): Promise<{
     let totalSatisfaction = 0;
     let totalRecommend = 0;
     let ratingCount = 0;
+    let totalRatingsWithRecommendation = 0;
 
     // Initialize ratings object
     const aggregatedRatings: Record<string, number> = {
@@ -311,15 +372,55 @@ export async function fetchOccupationalHealthData(): Promise<{
 
     // Process each submission's ratings
     for (const submission of ohSubmissions) {
-      // Calculate overall satisfaction
+      // Calculate overall satisfaction from ALL rating categories
       if (submission.Rating && submission.Rating.length > 0) {
-        // Average the overall ratings for this submission
+        // Calculate average of ALL rating categories for this submission
+        let submissionTotalRating = 0;
+        let submissionRatingCount = 0;
+
+        submission.Rating.forEach((rating) => {
+          // Count location-specific recommendations with fallback to overall facility recommendation
+          const locationRecommendation = rating.wouldRecommend;
+          const overallRecommendation = submission.wouldRecommend;
+
+          // Use location-specific if available, otherwise fall back to overall
+          const effectiveRecommendation = locationRecommendation !== null && locationRecommendation !== undefined
+            ? locationRecommendation
+            : overallRecommendation;
+
+          // Count total ratings that have recommendation data (either location or overall)
+          if (effectiveRecommendation !== null && effectiveRecommendation !== undefined) {
+            totalRatingsWithRecommendation++;
+          }
+
+          // Count recommendations
+          if (effectiveRecommendation === true) {
+            totalRecommend++;
+          }
+
+          // Get all rating categories
+          const ratingCategories = [
+            'reception',
+            'professionalism',
+            'understanding',
+            'promptnessCare',
+            'promptnessFeedback',
+            'overall'
+          ];
+
+          ratingCategories.forEach((category) => {
+            if (rating[category]) {
+              const numericRating = parseRating(rating[category]);
+              submissionTotalRating += numericRating;
+              submissionRatingCount++;
+            }
+          });
+        });
+
         const submissionOverallRating =
-          submission.Rating.reduce((sum, rating) => {
-            // Convert string ratings to numbers (1-5 scale)
-            const numericRating = parseRating(rating.overall);
-            return sum + numericRating;
-          }, 0) / submission.Rating.length;
+          submissionRatingCount > 0
+            ? submissionTotalRating / submissionRatingCount
+            : 0;
 
         totalSatisfaction += submissionOverallRating;
         ratingCount++;
@@ -349,11 +450,6 @@ export async function fetchOccupationalHealthData(): Promise<{
             }
           });
         }
-      }
-
-      // Count recommendation
-      if (submission.wouldRecommend) {
-        totalRecommend++;
       }
 
       // Process detailed ratings
@@ -416,7 +512,7 @@ export async function fetchOccupationalHealthData(): Promise<{
     const avgSatisfaction =
       ratingCount > 0 ? totalSatisfaction / ratingCount : 0;
     const recommendRate =
-      visitCount > 0 ? (totalRecommend / visitCount) * 100 : 0;
+      totalRatingsWithRecommendation > 0 ? (totalRecommend / totalRatingsWithRecommendation) * 100 : 0;
 
     // Calculate average ratings per location and prepare top/lowest lists
     const locationAverages = Object.entries(locationRatings)
@@ -483,6 +579,7 @@ export async function fetchOccupationalHealthData(): Promise<{
       name: "Occupational Health Unit (Medicals)",
       visitCount,
       satisfaction: avgSatisfaction,
+      recommendRate,
       ratings: finalRatings,
       topRatedLocations,
       lowestRatedLocations,

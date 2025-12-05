@@ -84,11 +84,44 @@ function convertRatingToNumber(rating: string | number): number {
 }
 
 /**
+ * Calculate weighted average (Bayesian average) to prevent single-response outliers
+ * Formula: weighted_score = (v/(v+m)) * R + (m/(v+m)) * C
+ * @param visitCount Number of responses for this department (v)
+ * @param rawSatisfaction Actual satisfaction rating for this department (R)
+ * @param globalAverage Overall average satisfaction across all departments (C)
+ * @param minimumThreshold Minimum credibility threshold (m) - default 5
+ * @returns Weighted satisfaction score
+ */
+function calculateWeightedAverage(
+  visitCount: number,
+  rawSatisfaction: number,
+  globalAverage: number,
+  minimumThreshold: number = 5
+): number {
+  if (visitCount === 0) return 0;
+
+  const v = visitCount;
+  const m = minimumThreshold;
+  const R = rawSatisfaction;
+  const C = globalAverage;
+
+  const weightedScore = (v / (v + m)) * R + (m / (v + m)) * C;
+
+  return Number(weightedScore.toFixed(2));
+}
+
+/**
  * Fetch all departments with their satisfaction and visit data
  */
-export async function fetchDepartments(): Promise<Department[]> {
+export async function fetchDepartments(
+  dateRange?: { from: string; to: string } | null
+): Promise<Department[]> {
+  const cacheKey = dateRange
+    ? `${CacheKeys.departmentData()}_${dateRange.from}_${dateRange.to}`
+    : CacheKeys.departmentData();
+
   return surveyCache.getOrSet(
-    CacheKeys.departmentData(),
+    cacheKey,
     async () => {
       try {
         console.time("fetchDepartments");
@@ -111,42 +144,35 @@ export async function fetchDepartments(): Promise<Department[]> {
     console.time("fetchDepartments:ratings");
     const locationIds = locations.map((loc) => loc.id);
 
-    const { data: allRatings, error: ratingsError } =
-      await supabase
-        .from("Rating")
-        .select(`
-          locationId,
-          reception,
-          professionalism,
-          understanding,
-          promptnessCare,
-          promptnessFeedback,
-          overall
-        `)
-        .in("locationId", locationIds);
+    let ratingsQuery = supabase
+      .from("Rating")
+      .select(`
+        locationId,
+        reception,
+        professionalism,
+        understanding,
+        promptnessCare,
+        promptnessFeedback,
+        overall,
+        wouldRecommend,
+        SurveySubmission!inner(submittedAt)
+      `)
+      .in("locationId", locationIds);
+
+    // Add date range filter if provided
+    if (dateRange) {
+      ratingsQuery = ratingsQuery
+        .gte("SurveySubmission.submittedAt", dateRange.from)
+        .lte("SurveySubmission.submittedAt", dateRange.to);
+    }
+
+    const { data: allRatings, error: ratingsError } = await ratingsQuery;
     console.timeEnd("fetchDepartments:ratings");
 
     if (ratingsError) {
       console.error(`Error fetching ratings:`, ratingsError);
       return [];
     }
-
-    // Get recommendation data separately (much faster than complex joins)
-    console.time("fetchDepartments:recommendations");
-    const { data: recommendations, error: recommendError } = await supabase
-      .from("SurveySubmission")
-      .select("wouldRecommend")
-      .not("wouldRecommend", "is", null);
-    console.timeEnd("fetchDepartments:recommendations");
-
-    if (recommendError) {
-      console.error(`Error fetching recommendations:`, recommendError);
-    }
-
-    // Calculate overall recommendation rate
-    const totalRecommendations = recommendations?.filter(r => r.wouldRecommend).length || 0;
-    const totalSubmissions = recommendations?.length || 0;
-    const overallRecommendRate = totalSubmissions > 0 ? (totalRecommendations / totalSubmissions) * 100 : 0;
 
     // Group ratings by locationId for faster processing
     console.time("fetchDepartments:process");
@@ -176,9 +202,6 @@ export async function fetchDepartments(): Promise<Department[]> {
       // Count visits (each rating represents a visit)
       const visitCount = locationRatings?.length || 0;
 
-      // Use overall recommendation rate for this location (simplified approach)
-      const recommendCount = Math.round((visitCount * overallRecommendRate) / 100);
-
       // Track ratings
       const ratings = {
         reception: { sum: 0, count: 0 },
@@ -189,8 +212,16 @@ export async function fetchDepartments(): Promise<Department[]> {
         overall: { sum: 0, count: 0 },
       };
 
+      // Count location-specific recommendations
+      let recommendCount = 0;
+
       // Process ratings directly (much more efficient)
       locationRatings?.forEach((rating) => {
+        // Count recommendations from Rating table
+        if (rating.wouldRecommend === true) {
+          recommendCount++;
+        }
+
         // Process each rating category directly
         if (rating.reception) {
           ratings.reception.sum += convertRatingToNumber(rating.reception);
@@ -223,7 +254,7 @@ export async function fetchDepartments(): Promise<Department[]> {
         }
       });
 
-      // Calculate recommend rate
+      // Calculate recommend rate based on location-specific recommendations
       const recommendRate =
         visitCount > 0 ? Math.round((recommendCount / visitCount) * 100) : 0;
 
@@ -275,29 +306,47 @@ export async function fetchDepartments(): Promise<Department[]> {
             : 0,
       };
 
-      // Calculate overall satisfaction as the average of all ratings
+      // Calculate overall satisfaction as the average of all ratings (RAW score)
+      // Don't round yet - keep full precision for weighted average calculation
       const ratingValues = Object.values(avgRatings).filter((val) => val > 0);
-      const overallSatisfaction =
+      const rawSatisfaction =
         ratingValues.length > 0
-          ? Number(
-              (
-                ratingValues.reduce((sum, val) => sum + val, 0) /
-                ratingValues.length
-              ).toFixed(1)
-            )
+          ? ratingValues.reduce((sum, val) => sum + val, 0) /
+            ratingValues.length
           : 0;
 
-      // Add department to results
+      // Add department to results with RAW satisfaction (will be weighted later)
       departmentsData.push({
         id: location.id.toString(),
         name: location.name,
         type: "department",
         visitCount,
-        satisfaction: overallSatisfaction,
+        satisfaction: rawSatisfaction,
         recommendRate,
         ratings: avgRatings,
       });
     }
+
+    // Calculate global average satisfaction across all departments for weighted scoring
+    const departmentsWithData = departmentsData.filter((dept) => dept.visitCount > 0);
+    const globalAverage =
+      departmentsWithData.length > 0
+        ? departmentsWithData.reduce((sum, dept) => sum + dept.satisfaction, 0) /
+          departmentsWithData.length
+        : 3.0; // Default to 3.0 if no data
+
+    // Apply weighted average (Bayesian average) to each department's satisfaction score
+    departmentsData.forEach((dept) => {
+      dept.satisfaction = calculateWeightedAverage(
+        dept.visitCount,
+        dept.satisfaction,
+        globalAverage
+      );
+    });
+
+    // Sort departments by weighted satisfaction (descending order)
+    departmentsData.sort((a, b) => b.satisfaction - a.satisfaction);
+
         console.timeEnd("fetchDepartments:process:calculations");
         console.timeEnd("fetchDepartments:process");
         console.timeEnd("fetchDepartments");
@@ -965,11 +1014,13 @@ export async function fetchAllSurveyData() {
 /**
  * Fetch department tab data
  */
-export async function fetchDepartmentTabData() {
+export async function fetchDepartmentTabData(
+  dateRange?: { from: string; to: string } | null
+) {
   try {
     // Fetch all data in parallel with individual timing
 
-    const departmentsPromise = fetchDepartments();
+    const departmentsPromise = fetchDepartments(dateRange);
 
     const concernsPromise = fetchDepartmentConcerns();
 

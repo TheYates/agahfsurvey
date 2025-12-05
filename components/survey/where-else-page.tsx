@@ -35,7 +35,12 @@ export default function WhereElsePage({
     updateSurveyData("otherLocations", updatedLocations);
   };
 
-  // Prepare location groups for display - include occupational health in other services
+  // Prepare location groups for display
+  // If survey is for Occupational Health, exclude occupational health locations
+  // since they're already rating the occupational health location in-place
+  const shouldExcludeOccupationalHealth =
+    surveyData.visitPurpose === "Medicals (Occupational Health)";
+
   const displayGroups: LocationGroup[] = [
     {
       title: "Clinics & Departments",
@@ -49,7 +54,7 @@ export default function WhereElsePage({
       title: "Other Services",
       locations: [
         ...locationGroups.canteen,
-        ...locationGroups.occupational_health,
+        ...(shouldExcludeOccupationalHealth ? [] : locationGroups.occupational_health),
       ],
     },
   ];

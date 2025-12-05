@@ -204,9 +204,28 @@ function userWouldRecommend(submission: SurveySubmission): boolean {
 /**
  * Get survey overview data for the dashboard
  */
-export async function getSurveyOverviewData(): Promise<SurveyOverviewData> {
+export async function getSurveyOverviewData(
+  dateRange?: { from: string; to: string } | null
+): Promise<SurveyOverviewData> {
   try {
     console.time("getSurveyOverviewData");
+
+    // Build base queries
+    let countQuery = supabase.from("SurveySubmission").select("*", { count: "exact" });
+    let submissionsQuery = supabase.from("SurveySubmission").select(`
+      id,
+      recommendation,
+      wouldRecommend,
+      visitPurpose
+    `);
+    let ratingsQuery = supabase.from("Rating").select("overall, SurveySubmission!inner(submittedAt)");
+
+    // Apply date filters if provided
+    if (dateRange) {
+      countQuery = countQuery.gte("submittedAt", dateRange.from).lte("submittedAt", dateRange.to);
+      submissionsQuery = submissionsQuery.gte("submittedAt", dateRange.from).lte("submittedAt", dateRange.to);
+      ratingsQuery = ratingsQuery.gte("SurveySubmission.submittedAt", dateRange.from).lte("SurveySubmission.submittedAt", dateRange.to);
+    }
 
     // Optimized: Get all data in parallel with direct queries
     const [
@@ -214,19 +233,9 @@ export async function getSurveyOverviewData(): Promise<SurveyOverviewData> {
       { data: submissions, error: submissionsError },
       { data: ratings, error: ratingsError }
     ] = await Promise.all([
-      // Get total count
-      supabase.from("SurveySubmission").select("*", { count: "exact" }),
-
-      // Get submissions with only needed fields
-      supabase.from("SurveySubmission").select(`
-        id,
-        recommendation,
-        wouldRecommend,
-        visitPurpose
-      `),
-
-      // Get ratings directly
-      supabase.from("Rating").select("overall")
+      countQuery,
+      submissionsQuery,
+      ratingsQuery
     ]);
 
     if (countError) throw countError;
@@ -329,20 +338,40 @@ export async function getSurveyOverviewData(): Promise<SurveyOverviewData> {
 /**
  * Get satisfaction by demographic
  */
-export async function getSatisfactionByDemographic(): Promise<DemographicSatisfaction> {
+export async function getSatisfactionByDemographic(
+  dateRange?: { from: string; to: string } | null
+): Promise<DemographicSatisfaction> {
   try {
     console.time("getSatisfactionByDemographic");
 
     // Get survey data with demographic info
-    const { data, error } = await supabase.from("SurveySubmission").select(`
+    let query = supabase.from("SurveySubmission").select(`
         id,
         userType,
         patientType,
         wouldRecommend,
+        submittedAt,
         Rating (
-          overall
+          reception,
+          professionalism,
+          understanding,
+          promptnessCare,
+          promptnessFeedback,
+          overall,
+          admission,
+          nurseProfessionalism,
+          doctorProfessionalism,
+          discharge,
+          foodQuality
         )
       `);
+
+    // Apply date filters if provided
+    if (dateRange) {
+      query = query.gte("submittedAt", dateRange.from).lte("submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -387,16 +416,36 @@ export async function getSatisfactionByDemographic(): Promise<DemographicSatisfa
       }
       patientTypeGroups[submission.patientType].count += 1;
 
-      // Calculate average satisfaction from ratings
+      // Calculate average satisfaction from ALL rating categories
       let totalRating = 0;
       let ratingCount = 0;
 
       if (submission.Rating && Array.isArray(submission.Rating)) {
         submission.Rating.forEach((rating) => {
-          if (rating && rating.overall) {
-            const numericRating = convertRatingToNumber(rating.overall);
-            totalRating += numericRating;
-            ratingCount++;
+          if (rating) {
+            // Get all rating categories
+            const ratingCategories = [
+              'reception',
+              'professionalism',
+              'understanding',
+              'promptnessCare',
+              'promptnessFeedback',
+              'overall',
+              'admission',
+              'nurseProfessionalism',
+              'doctorProfessionalism',
+              'discharge',
+              'foodQuality'
+            ];
+
+            // Sum all available ratings for this location
+            ratingCategories.forEach((category) => {
+              if (rating[category]) {
+                const numericRating = convertRatingToNumber(rating[category]);
+                totalRating += numericRating;
+                ratingCount++;
+              }
+            });
           }
         });
       }
@@ -478,10 +527,12 @@ export async function getSatisfactionByDemographic(): Promise<DemographicSatisfa
 /**
  * Get visit time analysis
  */
-export async function getVisitTimeAnalysis(): Promise<VisitTimeAnalysis[]> {
+export async function getVisitTimeAnalysis(
+  dateRange?: { from: string; to: string } | null
+): Promise<VisitTimeAnalysis[]> {
   try {
     // Get survey data with visit time info
-    const { data, error } = await supabase.from("SurveySubmission").select(`
+    let query = supabase.from("SurveySubmission").select(`
         id,
         submittedAt,
         visitTime,
@@ -491,6 +542,13 @@ export async function getVisitTimeAnalysis(): Promise<VisitTimeAnalysis[]> {
           overall
         )
       `);
+
+    // Apply date filters if provided
+    if (dateRange) {
+      query = query.gte("submittedAt", dateRange.from).lte("submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -580,19 +638,27 @@ export async function getVisitTimeAnalysis(): Promise<VisitTimeAnalysis[]> {
 /**
  * Get improvement areas
  */
-export async function getImprovementAreas(): Promise<ImprovementArea[]> {
+export async function getImprovementAreas(
+  dateRange?: { from: string; to: string } | null
+): Promise<ImprovementArea[]> {
   try {
     // Get location satisfaction data
-    const { data, error } = await supabase.from("Location").select(`
+    let query = supabase.from("Location").select(`
         id,
         name,
         Rating (
-          overall
+          overall,
+          SurveySubmission!inner(submittedAt)
         ),
         SubmissionLocation (
-          submissionId
+          submissionId,
+          SurveySubmission!inner(submittedAt)
         )
       `);
+
+    // Note: Filtering on nested relations is complex in Supabase
+    // We'll filter the results after fetching
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -606,7 +672,15 @@ export async function getImprovementAreas(): Promise<ImprovementArea[]> {
       let ratingCount = 0;
 
       if (location.Rating && Array.isArray(location.Rating)) {
-        location.Rating.forEach((rating) => {
+        location.Rating.forEach((rating: any) => {
+          // Filter by date if dateRange is provided
+          if (dateRange && rating.SurveySubmission?.submittedAt) {
+            const submittedAt = rating.SurveySubmission.submittedAt;
+            if (submittedAt < dateRange.from || submittedAt > dateRange.to) {
+              return;
+            }
+          }
+
           if (rating && rating.overall) {
             totalSatisfaction += convertRatingToNumber(rating.overall);
             ratingCount++;
@@ -614,12 +688,20 @@ export async function getImprovementAreas(): Promise<ImprovementArea[]> {
         });
       }
 
-      // Calculate visit count
-      const visitCount = location.SubmissionLocation
-        ? Array.isArray(location.SubmissionLocation)
-          ? location.SubmissionLocation.length
-          : 0
-        : 0;
+      // Calculate visit count (with date filtering)
+      let visitCount = 0;
+      if (location.SubmissionLocation && Array.isArray(location.SubmissionLocation)) {
+        location.SubmissionLocation.forEach((sl: any) => {
+          // Filter by date if dateRange is provided
+          if (dateRange && sl.SurveySubmission?.submittedAt) {
+            const submittedAt = sl.SurveySubmission.submittedAt;
+            if (submittedAt < dateRange.from || submittedAt > dateRange.to) {
+              return;
+            }
+          }
+          visitCount++;
+        });
+      }
 
       if (ratingCount > 0) {
         const avgSatisfaction = Number(
@@ -672,11 +754,14 @@ export async function getImprovementAreas(): Promise<ImprovementArea[]> {
 /**
  * Get visit purpose data analysis
  */
-export async function getVisitPurposeData(): Promise<VisitPurposeData> {
+export async function getVisitPurposeData(
+  dateRange?: { from: string; to: string } | null
+): Promise<VisitPurposeData> {
   try {
     // Get submissions with visit purpose
-    const { data, error } = await supabase.from("SurveySubmission").select(`
+    let query = supabase.from("SurveySubmission").select(`
         id,
+        submittedAt,
         visitPurpose,
         recommendation,
         wouldRecommend,
@@ -696,6 +781,13 @@ export async function getVisitPurposeData(): Promise<VisitPurposeData> {
           )
         )
       `);
+
+    // Apply date filters if provided
+    if (dateRange) {
+      query = query.gte("submittedAt", dateRange.from).lte("submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -737,27 +829,50 @@ export async function getVisitPurposeData(): Promise<VisitPurposeData> {
         target.recommendCount++;
       }
 
-      if (submission.Rating && Array.isArray(submission.Rating)) {
-      }
-
-      // Process ratings
+      // Process ratings - include ALL rating categories, not just "overall"
       if (submission.Rating && Array.isArray(submission.Rating)) {
         submission.Rating.forEach((rating) => {
-          if (rating && rating.overall) {
-            const convertedRating = convertRatingToNumber(rating.overall);
+          if (rating) {
+            // Get all rating categories
+            const ratingCategories = [
+              'reception',
+              'professionalism',
+              'understanding',
+              'promptnessCare',
+              'promptnessFeedback',
+              'overall',
+              'admission',
+              'nurseProfessionalism',
+              'doctorProfessionalism',
+              'discharge',
+              'foodQuality'
+            ];
 
-            target.satisfactionTotal += convertedRating;
-            target.totalRatings++;
+            // Sum all available ratings for this location
+            let locationRatingSum = 0;
+            let locationRatingCount = 0;
 
-            // Store rating for analysis
-            if (isOccupationalHealth) {
-              ohRatings.push(convertedRating);
-            } else {
-              gpRatings.push(convertedRating);
-            }
+            ratingCategories.forEach((category) => {
+              if (rating[category]) {
+                const convertedRating = convertRatingToNumber(rating[category]);
+                locationRatingSum += convertedRating;
+                locationRatingCount++;
 
-            // Process location ratings
-            if (rating.Location) {
+                // Add to overall totals
+                target.satisfactionTotal += convertedRating;
+                target.totalRatings++;
+
+                // Store rating for analysis
+                if (isOccupationalHealth) {
+                  ohRatings.push(convertedRating);
+                } else {
+                  gpRatings.push(convertedRating);
+                }
+              }
+            });
+
+            // Process location ratings (use average of all categories for this location)
+            if (locationRatingCount > 0 && rating.Location) {
               // Handle different possible structure types
               let locationName: string | undefined;
 
@@ -771,7 +886,9 @@ export async function getVisitPurposeData(): Promise<VisitPurposeData> {
                 if (!target.locationRatings[locationName]) {
                   target.locationRatings[locationName] = { total: 0, count: 0 };
                 }
-                target.locationRatings[locationName].total += convertedRating;
+                // Add the average rating for this location
+                const avgLocationRating = locationRatingSum / locationRatingCount;
+                target.locationRatings[locationName].total += avgLocationRating;
                 target.locationRatings[locationName].count++;
               }
             }
@@ -908,11 +1025,14 @@ export async function getVisitPurposeData(): Promise<VisitPurposeData> {
 /**
  * Get patient type data
  */
-export async function getPatientTypeData(): Promise<PatientTypeData> {
+export async function getPatientTypeData(
+  dateRange?: { from: string; to: string } | null
+): Promise<PatientTypeData> {
   try {
     // Get survey submissions with patient type info
-    const { data, error } = await supabase.from("SurveySubmission").select(`
+    let query = supabase.from("SurveySubmission").select(`
         id,
+        submittedAt,
         patientType,
         recommendation,
         wouldRecommend,
@@ -932,6 +1052,13 @@ export async function getPatientTypeData(): Promise<PatientTypeData> {
           )
         )
       `);
+
+    // Apply date filters if provided
+    if (dateRange) {
+      query = query.gte("submittedAt", dateRange.from).lte("submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -968,27 +1095,50 @@ export async function getPatientTypeData(): Promise<PatientTypeData> {
         target.recommendCount++;
       }
 
-      if (submission.Rating && Array.isArray(submission.Rating)) {
-      }
-
-      // Process ratings
+      // Process ratings - include ALL rating categories, not just "overall"
       if (submission.Rating && Array.isArray(submission.Rating)) {
         submission.Rating.forEach((rating) => {
-          if (rating && rating.overall) {
-            const convertedRating = convertRatingToNumber(rating.overall);
+          if (rating) {
+            // Get all rating categories
+            const ratingCategories = [
+              'reception',
+              'professionalism',
+              'understanding',
+              'promptnessCare',
+              'promptnessFeedback',
+              'overall',
+              'admission',
+              'nurseProfessionalism',
+              'doctorProfessionalism',
+              'discharge',
+              'foodQuality'
+            ];
 
-            target.satisfactionTotal += convertedRating;
-            target.totalRatings++;
+            // Sum all available ratings for this location
+            let locationRatingSum = 0;
+            let locationRatingCount = 0;
 
-            // Store rating for analysis
-            if (isNew) {
-              newPatientRatings.push(convertedRating);
-            } else {
-              returningPatientRatings.push(convertedRating);
-            }
+            ratingCategories.forEach((category) => {
+              if (rating[category]) {
+                const convertedRating = convertRatingToNumber(rating[category]);
+                locationRatingSum += convertedRating;
+                locationRatingCount++;
 
-            // Process location ratings
-            if (rating.Location) {
+                // Add to overall totals
+                target.satisfactionTotal += convertedRating;
+                target.totalRatings++;
+
+                // Store rating for analysis
+                if (isNew) {
+                  newPatientRatings.push(convertedRating);
+                } else {
+                  returningPatientRatings.push(convertedRating);
+                }
+              }
+            });
+
+            // Process location ratings (use average of all categories for this location)
+            if (locationRatingCount > 0 && rating.Location) {
               // Handle different possible structure types
               let locationName: string | undefined;
 
@@ -1002,7 +1152,9 @@ export async function getPatientTypeData(): Promise<PatientTypeData> {
                 if (!target.locationRatings[locationName]) {
                   target.locationRatings[locationName] = { total: 0, count: 0 };
                 }
-                target.locationRatings[locationName].total += convertedRating;
+                // Add the average rating for this location
+                const avgLocationRating = locationRatingSum / locationRatingCount;
+                target.locationRatings[locationName].total += avgLocationRating;
                 target.locationRatings[locationName].count++;
               }
             }
@@ -1133,18 +1285,38 @@ export async function getPatientTypeData(): Promise<PatientTypeData> {
 /**
  * Get visit time data
  */
-export async function getVisitTimeData(): Promise<any[]> {
+export async function getVisitTimeData(
+  dateRange?: { from: string; to: string } | null
+): Promise<any[]> {
   try {
     // Get all submissions ordered by date
-    const { data, error } = await supabase.from("SurveySubmission").select(`
+    let query = supabase.from("SurveySubmission").select(`
         id,
+        submittedAt,
         visitTime,
         recommendation,
         wouldRecommend,
         Rating (
-          overall
+          reception,
+          professionalism,
+          understanding,
+          promptnessCare,
+          promptnessFeedback,
+          overall,
+          admission,
+          nurseProfessionalism,
+          doctorProfessionalism,
+          discharge,
+          foodQuality
         )
       `);
+
+    // Apply date filters if provided
+    if (dateRange) {
+      query = query.gte("submittedAt", dateRange.from).lte("submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -1220,18 +1392,37 @@ export async function getVisitTimeData(): Promise<any[]> {
         const visitTime = submission.visitTime as VisitTimePeriod;
         timeGroups[visitTime].count += 1;
 
-        // Calculate satisfaction from ratings
+        // Calculate satisfaction from ALL rating categories
         if (submission.Rating && Array.isArray(submission.Rating)) {
           let totalRating = 0;
           let validRatingsCount = 0;
 
           submission.Rating.forEach((rating) => {
-            if (rating && rating.overall) {
-              const overallRating = convertRatingToNumber(rating.overall);
-              totalRating += overallRating;
-              validRatingsCount++;
-              // Store the individual rating for analysis
-              timeGroups[visitTime].ratingValues.push(overallRating);
+            if (rating) {
+              // Get all rating categories
+              const ratingCategories = [
+                'reception',
+                'professionalism',
+                'understanding',
+                'promptnessCare',
+                'promptnessFeedback',
+                'overall',
+                'admission',
+                'nurseProfessionalism',
+                'doctorProfessionalism',
+                'discharge',
+                'foodQuality'
+              ];
+
+              ratingCategories.forEach((category) => {
+                if (rating[category]) {
+                  const ratingValue = convertRatingToNumber(rating[category]);
+                  totalRating += ratingValue;
+                  validRatingsCount++;
+                  // Store the individual rating for analysis
+                  timeGroups[visitTime].ratingValues.push(ratingValue);
+                }
+              });
             }
           });
 
@@ -1406,14 +1597,24 @@ export async function getVisitTimeData(): Promise<any[]> {
 /**
  * Get user type distribution data
  */
-export async function getUserTypeData(): Promise<UserTypeData> {
+export async function getUserTypeData(
+  dateRange?: { from: string; to: string } | null
+): Promise<UserTypeData> {
   try {
     // Get submissions with user type info
-    const { data, error } = await supabase.from("SurveySubmission").select(`
+    let query = supabase.from("SurveySubmission").select(`
         id,
+        submittedAt,
         userType,
         patientType
       `);
+
+    // Apply date filters if provided
+    if (dateRange) {
+      query = query.gte("submittedAt", dateRange.from).lte("submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -1493,10 +1694,22 @@ export async function getUserTypeData(): Promise<UserTypeData> {
 /**
  * Get general observation data
  */
-export async function getGeneralObservationData() {
+export async function getGeneralObservationData(
+  dateRange?: { from: string; to: string } | null
+) {
   try {
     // Query the GeneralObservation table directly with simpler select
-    let { data, error } = await supabase.from("GeneralObservation").select("*");
+    let query = supabase.from("GeneralObservation").select(`
+      *,
+      SurveySubmission!inner(submittedAt)
+    `);
+
+    // Apply date filters if provided
+    if (dateRange) {
+      query = query.gte("SurveySubmission.submittedAt", dateRange.from).lte("SurveySubmission.submittedAt", dateRange.to);
+    }
+
+    let { data, error } = await query;
 
     if (error) {
       console.error("Error querying GeneralObservation:", error);
@@ -1634,7 +1847,9 @@ export async function getGeneralObservationData() {
 /**
  * Fetch all overview tab data in a single function
  */
-export async function fetchOverviewTabData() {
+export async function fetchOverviewTabData(
+  dateRange?: { from: string; to: string } | null
+) {
   return surveyCache.getOrSet(
     CacheKeys.overviewTabData(),
     async () => {
@@ -1651,15 +1866,15 @@ export async function fetchOverviewTabData() {
       userTypeData,
       generalObservationData,
     ] = await Promise.all([
-      getSurveyOverviewData(),
-      getSatisfactionByDemographic(),
-      getVisitTimeAnalysis(),
-      getImprovementAreas(),
-      getVisitPurposeData(),
-      getPatientTypeData(),
-      getVisitTimeData(),
-      getUserTypeData(),
-      getGeneralObservationData(),
+      getSurveyOverviewData(dateRange),
+      getSatisfactionByDemographic(dateRange),
+      getVisitTimeAnalysis(dateRange),
+      getImprovementAreas(dateRange),
+      getVisitPurposeData(dateRange),
+      getPatientTypeData(dateRange),
+      getVisitTimeData(dateRange),
+      getUserTypeData(dateRange),
+      getGeneralObservationData(dateRange),
     ]);
 
     // Add generalObservationStats to surveyData

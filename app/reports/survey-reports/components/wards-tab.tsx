@@ -28,6 +28,8 @@ import {
   Star,
   AlertTriangle,
   Clock,
+  Info,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -55,6 +57,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Extend the Ward interface to include the ward-specific ratings
 export interface ExtendedWardRatings {
@@ -533,6 +541,7 @@ export function WardsTab({
 
   // Ward overview and list
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-medium">Ward Performance Overview</h2>
@@ -563,10 +572,24 @@ export function WardsTab({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
               Total Responses
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">
+                    <Info size={14} className="text-muted-foreground" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                  <p>
+                    Total number of survey submissions across all wards
+                    within the selected date range.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             </CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalResponses}</div>
@@ -577,15 +600,29 @@ export function WardsTab({
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
               Top Performing
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">
+                    <Info size={14} className="text-muted-foreground" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                  <p>
+                    The ward with the highest satisfaction rating. Scores are
+                    calculated using a weighted average that prevents wards with
+                    only a few responses from appearing at the top unfairly.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             </CardTitle>
+            <Star className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold flex items-center">
+            <div className="text-lg font-bold">
               {topWard.name}
-              <Star className="h-4 w-4 text-amber-500 ml-1" />
             </div>
             <div className="flex items-center">
               <span className="text-sm">
@@ -599,15 +636,29 @@ export function WardsTab({
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
               Needs Attention
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">
+                    <Info size={14} className="text-muted-foreground" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                  <p>
+                    The ward with the lowest satisfaction rating. Scores are
+                    calculated using a weighted average that prevents wards with
+                    only a few responses from appearing at the bottom unfairly.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             </CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold flex items-center">
+            <div className="text-lg font-bold">
               {needsAttentionWard.name}
-              <AlertTriangle className="h-4 w-4 text-red-500 ml-1" />
             </div>
             <div className="flex items-center">
               <span className="text-sm">
@@ -621,10 +672,25 @@ export function WardsTab({
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
               Overall Satisfaction
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">
+                    <Info size={14} className="text-muted-foreground" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                  <p>
+                    Average satisfaction rating across all wards, weighted by
+                    response count. Wards with more responses have proportionally
+                    more influence on the overall score.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             </CardTitle>
+            <BedDouble className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
@@ -696,6 +762,7 @@ export function WardsTab({
                 <TableHead>Ward</TableHead>
                 <TableHead>Response Count</TableHead>
                 <TableHead>Satisfaction</TableHead>
+                <TableHead>Recommend Rate</TableHead>
                 <TableHead>Top Rating</TableHead>
                 <TableHead>Lowest Rating</TableHead>
               </TableRow>
@@ -761,6 +828,11 @@ export function WardsTab({
                             className="h-2 w-16"
                           />
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-medium">
+                          {ward.recommendRate}%
+                        </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center">
@@ -865,5 +937,6 @@ export function WardsTab({
         </div>
       )}
     </div>
+    </TooltipProvider>
   );
 }

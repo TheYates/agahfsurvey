@@ -50,6 +50,8 @@ import {
   BarElement,
   PointElement,
   LineElement,
+  LineController,
+  BarController,
   Title,
   Tooltip as ChartTooltip,
   Legend as ChartLegend,
@@ -176,8 +178,10 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
+  BarController,
   PointElement,
   LineElement,
+  LineController,
   Title,
   ChartTooltip,
   ChartLegend,
@@ -582,11 +586,11 @@ export function OverviewTab({
                                   className="max-w-xs"
                                 >
                                   <p>
-                                    Average of "Overall impression" ratings for
-                                    General Practice visits. Patients rate from
-                                    "Excellent" (5) to "Poor" (1). Calculated
-                                    as: Sum of all overall impression ratings ÷
-                                    Number of ratings.
+                                    Average of all ratings (reception, professionalism,
+                                    understanding, promptness, overall, etc.) across all
+                                    locations visited for General Practice visits. Patients
+                                    rate from "Excellent" (5) to "Poor" (1). Calculated as:
+                                    Sum of all ratings ÷ Number of ratings.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -767,11 +771,11 @@ export function OverviewTab({
                                   className="max-w-xs"
                                 >
                                   <p>
-                                    Average of "Overall impression" ratings for
-                                    Occupational Health visits. Patients rate
-                                    from "Excellent" (5) to "Poor" (1).
-                                    Calculated as: Sum of all overall impression
-                                    ratings ÷ Number of ratings.
+                                    Average of all ratings (reception, professionalism,
+                                    understanding, promptness, overall, etc.) across all
+                                    locations visited for Occupational Health visits. Patients
+                                    rate from "Excellent" (5) to "Poor" (1). Calculated as:
+                                    Sum of all ratings ÷ Number of ratings.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -1130,11 +1134,11 @@ export function OverviewTab({
                                   className="max-w-xs"
                                 >
                                   <p>
-                                    Average of "Overall impression" ratings from
-                                    new patients. Patients rate from "Excellent"
-                                    (5) to "Poor" (1). Calculated as: Sum of all
-                                    overall impression ratings from new patients
-                                    ÷ Number of ratings.
+                                    Average of all ratings (reception, professionalism,
+                                    understanding, promptness, overall, etc.) across all
+                                    locations visited by new patients. Patients rate from
+                                    "Excellent" (5) to "Poor" (1). Calculated as: Sum of
+                                    all ratings from new patients ÷ Number of ratings.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -1201,42 +1205,6 @@ export function OverviewTab({
                             className="h-2"
                           />
                         </div>
-
-                        <div className="flex justify-between">
-                          <span className="text-sm">Top Department:</span>
-                          <span className="font-bold">
-                            {patientTypeData.newPatients.topDepartment.name}
-                            <span className="text-sm font-normal ml-1">
-                              (
-                              {typeof patientTypeData.newPatients.topDepartment
-                                .score === "number"
-                                ? patientTypeData.newPatients.topDepartment.score.toFixed(
-                                    1
-                                  )
-                                : patientTypeData.newPatients.topDepartment
-                                    .score}
-                              /5.0)
-                            </span>
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between">
-                          <span className="text-sm">Area for Improvement:</span>
-                          <span className="font-bold">
-                            {patientTypeData.newPatients.bottomDepartment.name}
-                            <span className="text-sm font-normal ml-1">
-                              (
-                              {typeof patientTypeData.newPatients
-                                .bottomDepartment.score === "number"
-                                ? patientTypeData.newPatients.bottomDepartment.score.toFixed(
-                                    1
-                                  )
-                                : patientTypeData.newPatients.bottomDepartment
-                                    .score}
-                              /5.0)
-                            </span>
-                          </span>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -1272,11 +1240,11 @@ export function OverviewTab({
                                   className="max-w-xs"
                                 >
                                   <p>
-                                    Average of "Overall impression" ratings from
-                                    returning patients. Patients rate from
-                                    "Excellent" (5) to "Poor" (1). Calculated
-                                    as: Sum of all overall impression ratings
-                                    from returning patients ÷ Number of ratings.
+                                    Average of all ratings (reception, professionalism,
+                                    understanding, promptness, overall, etc.) across all
+                                    locations visited by returning patients. Patients rate
+                                    from "Excellent" (5) to "Poor" (1). Calculated as: Sum
+                                    of all ratings from returning patients ÷ Number of ratings.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -1346,48 +1314,6 @@ export function OverviewTab({
                             }
                             className="h-2"
                           />
-                        </div>
-
-                        <div className="flex justify-between">
-                          <span className="text-sm">Top Department:</span>
-                          <span className="font-bold">
-                            {
-                              patientTypeData.returningPatients.topDepartment
-                                .name
-                            }
-                            <span className="text-sm font-normal ml-1">
-                              (
-                              {typeof patientTypeData.returningPatients
-                                .topDepartment.score === "number"
-                                ? patientTypeData.returningPatients.topDepartment.score.toFixed(
-                                    1
-                                  )
-                                : patientTypeData.returningPatients
-                                    .topDepartment.score}
-                              /5.0)
-                            </span>
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between">
-                          <span className="text-sm">Area for Improvement:</span>
-                          <span className="font-bold">
-                            {
-                              patientTypeData.returningPatients.bottomDepartment
-                                .name
-                            }
-                            <span className="text-sm font-normal ml-1">
-                              (
-                              {typeof patientTypeData.returningPatients
-                                .bottomDepartment.score === "number"
-                                ? patientTypeData.returningPatients.bottomDepartment.score.toFixed(
-                                    1
-                                  )
-                                : patientTypeData.returningPatients
-                                    .bottomDepartment.score}
-                              /5.0)
-                            </span>
-                          </span>
                         </div>
                       </div>
                     </div>
@@ -1847,125 +1773,6 @@ export function OverviewTab({
                           </CardContent>
                         </Card>
                       ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-6">
-                  <div>
-                    <h3 className="text-lg font-medium mb-4">
-                      Satisfaction & Recommendation Rate by Visit Recency
-                    </h3>
-                    <div className="h-96">
-                      <Chart
-                        type="bar"
-                        data={{
-                          labels: visitTimeData.map((item: any) => item.name),
-                          datasets: [
-                            {
-                              type: "bar",
-                              label: "Satisfaction Rating",
-                              data: visitTimeData.map(
-                                (item: any) => item.satisfaction
-                              ),
-                              backgroundColor: "#4caf50",
-                              order: 2,
-                              yAxisID: "y",
-                            },
-                            {
-                              type: "line",
-                              label: "Recommendation Rate",
-                              data: visitTimeData.map(
-                                (item: any) => item.recommendRate
-                              ),
-                              borderColor: "#f6a050",
-                              borderWidth: 2,
-                              backgroundColor: "#f6a050",
-                              pointBackgroundColor: "#f6a050",
-                              pointRadius: 4,
-                              pointHoverRadius: 6,
-                              fill: false,
-                              tension: 0.3,
-                              order: 1,
-                              yAxisID: "y1",
-                            },
-                          ],
-                        }}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          scales: {
-                            y: {
-                              type: "linear",
-                              display: true,
-                              position: "left",
-                              beginAtZero: true,
-                              max: 5,
-                              title: {
-                                display: true,
-                                text: "Satisfaction Rating (0-5)",
-                              },
-                              ticks: {
-                                stepSize: 1,
-                                callback: function (value) {
-                                  return value.toString();
-                                },
-                              },
-                              grid: {
-                                drawOnChartArea: true,
-                              },
-                            },
-                            y1: {
-                              type: "linear",
-                              display: true,
-                              position: "right",
-                              beginAtZero: true,
-                              max: 100,
-                              title: {
-                                display: true,
-                                text: "Recommendation Rate (%)",
-                              },
-                              ticks: {
-                                callback: function (value) {
-                                  return value + "%";
-                                },
-                              },
-                              grid: {
-                                drawOnChartArea: false,
-                              },
-                            },
-                          },
-                          interaction: {
-                            mode: "index",
-                            intersect: false,
-                          },
-                          plugins: {
-                            legend: {
-                              position: "bottom" as const,
-                              labels: {
-                                usePointStyle: true,
-                                pointStyle: "circle" as const,
-                                padding: 25,
-                              },
-                            },
-                            tooltip: {
-                              callbacks: {
-                                label: function (context: any) {
-                                  const label = context.dataset.label || "";
-                                  const value = context.raw as number;
-
-                                  if (label === "Satisfaction Rating") {
-                                    return `${label}: ${value.toFixed(2)}/5`;
-                                  } else if (label === "Recommendation Rate") {
-                                    return `${label}: ${value.toFixed(1)}%`;
-                                  }
-                                  return `${label}: ${value}`;
-                                },
-                              },
-                            },
-                          },
-                        }}
-                      />
-                    </div>
                   </div>
                 </div>
               </CardContent>

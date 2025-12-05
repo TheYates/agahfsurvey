@@ -23,8 +23,8 @@ class SurveyCache {
       ttl: ttl || this.defaultTTL,
     };
     this.cache.set(key, entry);
-    
-    console.log(`Cache SET: ${key} (TTL: ${entry.ttl}ms)`);
+
+    // console.log(`Cache SET: ${key} (TTL: ${entry.ttl}ms)`);
   }
 
   /**
@@ -32,9 +32,9 @@ class SurveyCache {
    */
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
-      console.log(`Cache MISS: ${key}`);
+      // console.log(`Cache MISS: ${key}`);
       return null;
     }
 
@@ -42,12 +42,12 @@ class SurveyCache {
     const age = now - entry.timestamp;
 
     if (age > entry.ttl) {
-      console.log(`Cache EXPIRED: ${key} (age: ${age}ms, ttl: ${entry.ttl}ms)`);
+      // console.log(`Cache EXPIRED: ${key} (age: ${age}ms, ttl: ${entry.ttl}ms)`);
       this.cache.delete(key);
       return null;
     }
 
-    console.log(`Cache HIT: ${key} (age: ${age}ms)`);
+    // console.log(`Cache HIT: ${key} (age: ${age}ms)`);
     return entry.data as T;
   }
 
@@ -64,7 +64,7 @@ class SurveyCache {
   delete(key: string): boolean {
     const deleted = this.cache.delete(key);
     if (deleted) {
-      console.log(`Cache DELETE: ${key}`);
+      // console.log(`Cache DELETE: ${key}`);
     }
     return deleted;
   }
@@ -75,7 +75,7 @@ class SurveyCache {
   clear(): void {
     const size = this.cache.size;
     this.cache.clear();
-    console.log(`Cache CLEAR: ${size} entries removed`);
+    // console.log(`Cache CLEAR: ${size} entries removed`);
   }
 
   /**
@@ -123,7 +123,7 @@ class SurveyCache {
     }
 
     if (cleaned > 0) {
-      console.log(`Cache CLEANUP: ${cleaned} expired entries removed`);
+      // console.log(`Cache CLEANUP: ${cleaned} expired entries removed`);
     }
 
     return cleaned;
@@ -142,7 +142,7 @@ class SurveyCache {
       return cached;
     }
 
-    console.log(`Cache COMPUTE: ${key}`);
+    // console.log(`Cache COMPUTE: ${key}`);
     const data = await computeFn();
     this.set(key, data, ttl);
     return data;
@@ -154,59 +154,59 @@ export const surveyCache = new SurveyCache();
 
 // Cache key generators
 export const CacheKeys = {
-  wardData: (page?: number, limit?: number) => 
-    `wards:${page || 'all'}:${limit || 'all'}`,
-  
-  wardConcerns: () => 'ward-concerns',
-  
-  departmentData: () => 'departments',
-  
-  departmentConcerns: () => 'department-concerns',
-  
-  overviewData: () => 'overview',
-  
-  overviewTabData: () => 'overview-tab-data',
-  
-  surveyOverview: () => 'survey-overview',
-  
-  demographicSatisfaction: () => 'demographic-satisfaction',
-  
-  visitTimeAnalysis: () => 'visit-time-analysis',
-  
-  improvementAreas: () => 'improvement-areas',
-  
-  allSurveyData: () => 'all-survey-data',
+  wardData: (page?: number, limit?: number) =>
+    `wards:${page || "all"}:${limit || "all"}`,
+
+  wardConcerns: () => "ward-concerns",
+
+  departmentData: () => "departments",
+
+  departmentConcerns: () => "department-concerns",
+
+  overviewData: () => "overview",
+
+  overviewTabData: () => "overview-tab-data",
+
+  surveyOverview: () => "survey-overview",
+
+  demographicSatisfaction: () => "demographic-satisfaction",
+
+  visitTimeAnalysis: () => "visit-time-analysis",
+
+  improvementAreas: () => "improvement-areas",
+
+  allSurveyData: () => "all-survey-data",
 
   // Canteen-specific cache keys
-  canteenData: () => 'canteen-data',
+  canteenData: () => "canteen-data",
 
-  canteenRatings: () => 'canteen-ratings',
+  canteenRatings: () => "canteen-ratings",
 
-  canteenConcerns: () => 'canteen-concerns',
+  canteenConcerns: () => "canteen-concerns",
 
-  canteenSubmissionCount: () => 'canteen-submission-count',
+  canteenSubmissionCount: () => "canteen-submission-count",
 
   // Survey locations for forms
-  surveyLocations: () => 'survey-locations',
+  surveyLocations: () => "survey-locations",
 
   // Dynamic keys with parameters
   wardsByLocation: (locationId: string) => `wards:location:${locationId}`,
 
   ratingsByLocation: (locationId: string) => `ratings:location:${locationId}`,
-  
+
   // Date-based keys for time-sensitive data
   dailyStats: (date: string) => `daily-stats:${date}`,
-  
+
   weeklyStats: (week: string) => `weekly-stats:${week}`,
-  
+
   monthlyStats: (month: string) => `monthly-stats:${month}`,
 };
 
 // Cache TTL constants (in milliseconds)
 export const CacheTTL = {
-  SHORT: 2 * 60 * 1000,      // 2 minutes
-  MEDIUM: 5 * 60 * 1000,     // 5 minutes  
-  LONG: 15 * 60 * 1000,      // 15 minutes
+  SHORT: 2 * 60 * 1000, // 2 minutes
+  MEDIUM: 5 * 60 * 1000, // 5 minutes
+  LONG: 15 * 60 * 1000, // 15 minutes
   VERY_LONG: 60 * 60 * 1000, // 1 hour
   DAILY: 24 * 60 * 60 * 1000, // 24 hours
 };

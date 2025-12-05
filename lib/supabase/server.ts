@@ -18,8 +18,8 @@ export const createServerClient = async () => {
     return clientCache;
   }
 
-  // First get the cookie store
-  const cookieStore = cookies();
+  // First get the cookie store (await it for Next.js 15)
+  const cookieStore = await cookies();
 
   // Create a new client and update the cache
   clientCache = createServerComponentClient<Database>({

@@ -259,6 +259,7 @@ export async function createSurveyQuery(
       doctorProfessionalism?: string | null;
       discharge?: string | null;
       foodQuality?: string | null;
+      wouldRecommend?: boolean | null;
     }>;
     concerns: Array<{
       locationId: number;
@@ -309,6 +310,7 @@ export async function createSurveyQuery(
     doctorProfessionalism: rating.doctorProfessionalism,
     discharge: rating.discharge,
     foodQuality: rating.foodQuality,
+    wouldRecommend: rating.wouldRecommend,
   }));
 
   if (ratingsToInsert.length > 0) {

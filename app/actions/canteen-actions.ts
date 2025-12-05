@@ -35,9 +35,15 @@ export interface DepartmentConcern {
   severity: number;
 }
 
-export async function fetchCanteenRatings(): Promise<CanteenData["ratings"]> {
+export async function fetchCanteenRatings(
+  dateRange?: { from: string; to: string } | null
+): Promise<CanteenData["ratings"]> {
+  const cacheKey = dateRange
+    ? `${CacheKeys.canteenRatings()}_${dateRange.from}_${dateRange.to}`
+    : CacheKeys.canteenRatings();
+
   return surveyCache.getOrSet(
-    CacheKeys.canteenRatings(),
+    cacheKey,
     async () => {
       try {
         console.time("fetchCanteenRatings");
@@ -62,7 +68,7 @@ export async function fetchCanteenRatings(): Promise<CanteenData["ratings"]> {
 
         // Now fetch the ratings for the canteen locations
         console.time("fetchCanteenRatings:ratings");
-        const { data: ratingsData, error } = await supabase
+        let ratingsQuery = supabase
           .from("Rating")
           .select(
             `
@@ -72,10 +78,20 @@ export async function fetchCanteenRatings(): Promise<CanteenData["ratings"]> {
             promptnessCare,
             promptnessFeedback,
             foodQuality,
-            overall
+            overall,
+            SurveySubmission!inner(submittedAt)
           `
           )
           .in("locationId", locationIds);
+
+        // Apply date filter if provided
+        if (dateRange) {
+          ratingsQuery = ratingsQuery
+            .gte("SurveySubmission.submittedAt", dateRange.from)
+            .lte("SurveySubmission.submittedAt", dateRange.to);
+        }
+
+        const { data: ratingsData, error } = await ratingsQuery;
         console.timeEnd("fetchCanteenRatings:ratings");
 
         if (error) throw error;
@@ -209,19 +225,24 @@ export async function fetchCanteenRatings(): Promise<CanteenData["ratings"]> {
  */
 
 export async function fetchCanteenData(
-  departments: any[]
+  departments: any[],
+  dateRange?: { from: string; to: string } | null
 ): Promise<CanteenData | null> {
+  const cacheKey = dateRange
+    ? `${CacheKeys.canteenData()}_${dateRange.from}_${dateRange.to}`
+    : CacheKeys.canteenData();
+
   return surveyCache.getOrSet(
-    CacheKeys.canteenData(),
+    cacheKey,
     async () => {
       try {
         console.time("fetchCanteenData");
 
         // First, get the actual count of canteen submissions
-        const canteenSubmissionCount = await getCanteenSubmissionCount();
+        const canteenSubmissionCount = await getCanteenSubmissionCount(dateRange);
 
     // Then try to fetch actual canteen ratings from the database
-    const canteenRatings = await fetchCanteenRatings();
+    const canteenRatings = await fetchCanteenRatings(dateRange);
 
     if (
       canteenRatings &&
@@ -236,12 +257,61 @@ export async function fetchCanteenData(
           dept.name.toLowerCase().includes("canteen")
       );
 
+      // Calculate overall satisfaction as average of all rating categories
+      const ratingValues = Object.values(canteenRatings).filter((val) => val > 0);
+      const overallSatisfaction =
+        ratingValues.length > 0
+          ? Number(
+              (
+                ratingValues.reduce((sum, val) => sum + val, 0) /
+                ratingValues.length
+              ).toFixed(1)
+            )
+          : 0;
+
+      // Fetch location-specific recommendation rate from Rating table
+      let recommendRate = 0;
+      try {
+        const { data: locationData } = await supabase
+          .from("Location")
+          .select("id")
+          .or("id.eq.23,name.ilike.%canteen%")
+          .limit(10);
+
+        if (locationData && locationData.length > 0) {
+          const locationIds = locationData.map((loc) => loc.id);
+
+          const { data: ratingsData } = await supabase
+            .from("Rating")
+            .select("wouldRecommend, SurveySubmission!inner(wouldRecommend)")
+            .in("locationId", locationIds);
+
+          if (ratingsData && ratingsData.length > 0) {
+            // Count recommendations with fallback to overall facility recommendation
+            const recommendCount = ratingsData.filter(r => {
+              const locationRecommendation = r.wouldRecommend;
+              const overallRecommendation = (r.SurveySubmission as any)?.wouldRecommend;
+
+              // Use location-specific if available, otherwise fall back to overall
+              const effectiveRecommendation = locationRecommendation !== null && locationRecommendation !== undefined
+                ? locationRecommendation
+                : overallRecommendation;
+
+              return effectiveRecommendation === true;
+            }).length;
+            recommendRate = Math.round((recommendCount / ratingsData.length) * 100);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching canteen recommendation rate:", error);
+      }
+
       return {
         id: "canteen-direct",
         name: "Canteen Services",
         visitCount: canteenSubmissionCount,
-        satisfaction: canteenRatings.overall || 0,
-        recommendRate: 60, // Default recommend rate
+        satisfaction: overallSatisfaction,
+        recommendRate: recommendRate,
         ratings: canteenRatings,
       };
     }
@@ -450,10 +520,12 @@ export async function fetchCanteenData(
 /**
  * Fetch all survey data that includes relevant information for canteen
  */
-export async function fetchAllSurveyData() {
+export async function fetchAllSurveyData(
+  dateRange?: { from: string; to: string } | null
+) {
   try {
     // Get all survey submissions with ratings
-    const { data, error } = await supabase
+    let query = supabase
       .from("SurveySubmission")
       .select(
         `
@@ -477,16 +549,51 @@ export async function fetchAllSurveyData() {
       )
       .order("submittedAt", { ascending: false });
 
+    // Apply date filter if provided
+    if (dateRange) {
+      query = query
+        .gte("submittedAt", dateRange.from)
+        .lte("submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
+
     if (error) throw error;
 
-    // Transform data to include satisfaction directly from ratings
-    return (data || []).map((survey) => ({
-      ...survey,
-      satisfaction:
-        survey.Rating && survey.Rating.length > 0
-          ? survey.Rating[0].overall
-          : 0,
-    }));
+    // Transform data to include satisfaction calculated from ALL rating categories
+    return (data || []).map((survey) => {
+      // Calculate satisfaction from ALL rating categories
+      let totalRating = 0;
+      let ratingCount = 0;
+
+      if (survey.Rating && survey.Rating.length > 0) {
+        survey.Rating.forEach((rating: any) => {
+          const ratingCategories = [
+            'reception',
+            'professionalism',
+            'understanding',
+            'promptnessCare',
+            'promptnessFeedback',
+            'foodQuality',
+            'overall'
+          ];
+
+          ratingCategories.forEach((category) => {
+            if (rating[category]) {
+              totalRating += parseRating(rating[category]);
+              ratingCount++;
+            }
+          });
+        });
+      }
+
+      const satisfaction = ratingCount > 0 ? totalRating / ratingCount : 0;
+
+      return {
+        ...survey,
+        satisfaction,
+      };
+    });
   } catch (error) {
     console.error("Error fetching all survey data:", error);
     return [];
@@ -496,10 +603,12 @@ export async function fetchAllSurveyData() {
 /**
  * Fetch concerns related to departments
  */
-export async function fetchDepartmentConcerns(): Promise<DepartmentConcern[]> {
+export async function fetchDepartmentConcerns(
+  dateRange?: { from: string; to: string } | null
+): Promise<DepartmentConcern[]> {
   try {
     // First, we need to get the concerns with their IDs
-    const { data: concernsData, error: concernsError } = await supabase
+    let concernsQuery = supabase
       .from("DepartmentConcern")
       .select(
         `
@@ -511,6 +620,15 @@ export async function fetchDepartmentConcerns(): Promise<DepartmentConcern[]> {
       `
       )
       .order("createdAt", { ascending: false });
+
+    // Apply date filter if provided
+    if (dateRange) {
+      concernsQuery = concernsQuery
+        .gte("createdAt", dateRange.from)
+        .lte("createdAt", dateRange.to);
+    }
+
+    const { data: concernsData, error: concernsError } = await concernsQuery;
 
     if (concernsError) throw concernsError;
     if (!concernsData || concernsData.length === 0) return [];
@@ -579,12 +697,14 @@ export async function fetchDepartmentConcerns(): Promise<DepartmentConcern[]> {
 /**
  * Fetch concerns specific to canteen services
  */
-export async function fetchCanteenConcerns(): Promise<DepartmentConcern[]> {
+export async function fetchCanteenConcerns(
+  dateRange?: { from: string; to: string } | null
+): Promise<DepartmentConcern[]> {
   try {
     // Get both concerns and general survey data
     const [allConcerns, allSurveys] = await Promise.all([
-      fetchDepartmentConcerns(),
-      fetchAllSurveyData(),
+      fetchDepartmentConcerns(dateRange),
+      fetchAllSurveyData(dateRange),
     ]);
 
     // Filter concerns that match canteen
@@ -777,9 +897,15 @@ function parseRating(value: any): number {
 /**
  * Get the actual count of submissions related to Canteen Services
  */
-export async function getCanteenSubmissionCount(): Promise<number> {
+export async function getCanteenSubmissionCount(
+  dateRange?: { from: string; to: string } | null
+): Promise<number> {
+  const cacheKey = dateRange
+    ? `${CacheKeys.canteenSubmissionCount()}_${dateRange.from}_${dateRange.to}`
+    : CacheKeys.canteenSubmissionCount();
+
   return surveyCache.getOrSet(
-    CacheKeys.canteenSubmissionCount(),
+    cacheKey,
     async () => {
       try {
         console.time("getCanteenSubmissionCount");
@@ -798,11 +924,20 @@ export async function getCanteenSubmissionCount(): Promise<number> {
     // Extract all canteen-related location IDs
     const canteenLocationIds = locationData.map((loc) => loc.id);
 
-    // Count submissions linked to these locations
-    const { count, error } = await supabase
+    // Count submissions linked to these locations with date filter
+    let countQuery = supabase
       .from("SubmissionLocation")
-      .select("*", { count: "exact", head: true })
+      .select("*, SurveySubmission!inner(submittedAt)", { count: "exact", head: true })
       .in("locationId", canteenLocationIds);
+
+    // Apply date filter if provided
+    if (dateRange) {
+      countQuery = countQuery
+        .gte("SurveySubmission.submittedAt", dateRange.from)
+        .lte("SurveySubmission.submittedAt", dateRange.to);
+    }
+
+    const { count, error } = await countQuery;
 
     if (error) {
       console.error("Error counting canteen submissions:", error);

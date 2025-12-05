@@ -138,6 +138,7 @@ export type Database = {
           doctorProfessionalism: string | null;
           discharge: string | null;
           foodQuality: string | null;
+          wouldRecommend: boolean | null;
           createdAt: string;
         };
         Insert: {
@@ -155,6 +156,7 @@ export type Database = {
           doctorProfessionalism?: string | null;
           discharge?: string | null;
           foodQuality?: string | null;
+          wouldRecommend?: boolean | null;
           createdAt?: string;
         };
         Update: {
@@ -172,6 +174,7 @@ export type Database = {
           doctorProfessionalism?: string | null;
           discharge?: string | null;
           foodQuality?: string | null;
+          wouldRecommend?: boolean | null;
           createdAt?: string;
         };
       };

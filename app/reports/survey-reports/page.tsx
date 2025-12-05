@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { DateRange } from "react-day-picker";
+import { addDays, subMonths, subYears, format } from "date-fns";
 import {
   Card,
   CardContent,
@@ -21,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 import {
   ArrowLeft,
@@ -161,7 +164,7 @@ const getData = async (
 
 export default function SurveyReportsPage() {
   const { toast } = useToast();
-  const [dateRange, setDateRange] = useState("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [filterType, setFilterType] = useState("all");
   const [filterValue, setFilterValue] = useState("all");
 
@@ -241,95 +244,37 @@ export default function SurveyReportsPage() {
   });
 
   // Update the fetchData function to implement better caching and parallel loading
-  const fetchData = async (dateRangeOption: string) => {
+  const fetchData = async (selectedDateRange: DateRange | undefined) => {
     try {
       setIsLoading(true);
       console.time("Total data loading time");
 
-      // Calculate date range based on selection
+      // Calculate date range filter from DateRange object
       let dateRangeFilter = null;
-      if (dateRangeOption !== "all") {
-        const endDate = new Date();
-        const startDate = new Date();
-
-        switch (dateRangeOption) {
-          case "month":
-            startDate.setMonth(endDate.getMonth() - 1);
-            break;
-          case "quarter":
-            startDate.setMonth(endDate.getMonth() - 3);
-            break;
-          case "year":
-            startDate.setFullYear(endDate.getFullYear() - 1);
-            break;
-        }
-
+      if (selectedDateRange?.from) {
         dateRangeFilter = {
-          from: startDate.toISOString().split("T")[0],
-          to: endDate.toISOString().split("T")[0],
+          from: format(selectedDateRange.from, "yyyy-MM-dd"),
+          to: selectedDateRange.to
+            ? format(selectedDateRange.to, "yyyy-MM-dd")
+            : format(selectedDateRange.from, "yyyy-MM-dd"),
         };
       }
 
-      // Check for cached data first
-      const CACHE_KEY = `surveyReportsData_${dateRangeOption}`;
-      const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+      // Define cache key - we'll skip cache for now to ensure fresh data
+      const CACHE_KEY = dateRangeFilter
+        ? `surveyReportsData_${dateRangeFilter.from}_${dateRangeFilter.to}`
+        : "surveyReportsData_all";
 
-      let cachedData = null;
-      if (typeof window !== "undefined") {
-        try {
-          const cached = sessionStorage.getItem(CACHE_KEY);
-          if (cached) {
-            const parsedCache = JSON.parse(cached);
-            const { data: cachedDataObj, timestamp } = parsedCache;
-
-            if (Date.now() - timestamp < CACHE_EXPIRY && cachedDataObj) {
-              // Check if the cached data has the required structure
-              if (cachedDataObj.overviewData) {
-                // Set all the data from cache
-                setOverviewData(cachedDataObj.overviewData);
-                setData(cachedDataObj.enhancedData || {});
-                setDepartments(cachedDataObj.departments || []);
-                setWards(cachedDataObj.wards || []);
-                setWardPagination(
-                  cachedDataObj.wardPagination || {
-                    total: 0,
-                    limit: 5,
-                    offset: 0,
-                    hasMore: false,
-                  }
-                );
-                setLocations(cachedDataObj.locations || []);
-                setVisitPurposeData(cachedDataObj.visitPurposeData || null);
-                setPatientTypeData(cachedDataObj.patientTypeData || null);
-                setVisitTimeData(cachedDataObj.visitTimeData || []);
-
-                // Mark all tabs as loaded since we have the data
-                setLoadedTabs({
-                  overview: true,
-                  departments: true,
-                  wards: true,
-                  canteen: false, // These will be loaded on demand
-                  medicals: false,
-                  feedback: false,
-                });
-
-                setIsLoading(false);
-                console.timeEnd("Total data loading time");
-                return;
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Error reading cache:", error);
-        }
-      }
+      // Skip cache check - always fetch fresh data to ensure filters work correctly
+      // TODO: Re-enable cache with proper invalidation strategy
 
       // Fetch all data in parallel
+      console.log("Fetching fresh data with date range filter:", dateRangeFilter);
 
       // Start all fetches in parallel
-      const overviewPromise = fetchOverviewTabData();
-      const departmentPromise = fetchDepartmentTabData();
-      const wardPromise = fetchWardTabData(5, 0);
+      const overviewPromise = fetchOverviewTabData(dateRangeFilter);
+      const departmentPromise = fetchDepartmentTabData(dateRangeFilter);
+      const wardPromise = fetchWardTabData(5, 0, dateRangeFilter);
 
       // Wait for all promises to resolve
       const [fetchedOverviewData, departmentData, wardData] = await Promise.all(
@@ -419,20 +364,23 @@ export default function SurveyReportsPage() {
       // Cache the data for future use
       if (typeof window !== "undefined") {
         try {
-          const dataToCache = {
-            overviewData: fetchedOverviewData,
-            enhancedData,
-            departments: departmentData.departments,
-            wards: wardData.wards,
-            wardPagination: wardPaginationData,
-            locations: combinedLocations,
-            visitPurposeData: fetchedOverviewData.visitPurposeData || null,
-            patientTypeData: fetchedOverviewData.patientTypeData || null,
-            visitTimeData: fetchedOverviewData.visitTimeData || [],
+          const cachePayload = {
+            data: {
+              overviewData: fetchedOverviewData,
+              enhancedData,
+              departments: departmentData.departments,
+              wards: wardData.wards,
+              wardPagination: wardPaginationData,
+              locations: combinedLocations,
+              visitPurposeData: fetchedOverviewData.visitPurposeData || null,
+              patientTypeData: fetchedOverviewData.patientTypeData || null,
+              visitTimeData: fetchedOverviewData.visitTimeData || [],
+            },
             timestamp: Date.now(),
           };
 
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify(dataToCache));
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload));
+          console.log("Saved cache with key:", CACHE_KEY);
         } catch (error) {
           console.error("Error caching data:", error);
         }
@@ -460,6 +408,7 @@ export default function SurveyReportsPage() {
   };
 
   useEffect(() => {
+    console.log("Date range changed:", dateRange);
     fetchData(dateRange);
   }, [dateRange]);
 
@@ -538,8 +487,19 @@ export default function SurveyReportsPage() {
       // Calculate the new offset
       const newOffset = wardPagination.offset + wardPagination.limit;
 
+      // Calculate date range filter from DateRange object
+      let dateRangeFilter = null;
+      if (dateRange?.from) {
+        dateRangeFilter = {
+          from: format(dateRange.from, "yyyy-MM-dd"),
+          to: dateRange.to
+            ? format(dateRange.to, "yyyy-MM-dd")
+            : format(dateRange.from, "yyyy-MM-dd"),
+        };
+      }
+
       // Fetch the next batch of wards
-      const wardData = await fetchWardTabData(wardPagination.limit, newOffset);
+      const wardData = await fetchWardTabData(wardPagination.limit, newOffset, dateRangeFilter);
 
       // Combine the new wards with existing ones
       setWards((prevWards) => [...prevWards, ...wardData.wards]);
@@ -604,36 +564,95 @@ export default function SurveyReportsPage() {
           </div>
         </div>
 
-        {/* Global Filters */}
+        {/* Date Range Filter */}
         <Card className="mb-3">
-          <CardContent className="py-2">
-            <div className="flex items-center justify-between">
+          <CardContent className="py-4">
+            <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2">
                 <Calendar size={16} />
                 <span className="text-sm font-medium">Date Range:</span>
               </div>
-              <div className="w-48">
-                <Select
-                  value={dateRange}
-                  onValueChange={(value) => {
-                    setDateRange(value);
-                    fetchData(value);
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={!dateRange ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setDateRange(undefined);
+                    fetchData(undefined);
                   }}
                 >
-                  <SelectTrigger className="h-8">
-                    <SelectValue
-                      placeholder="Select date range"
-                      className="survey-date-range"
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All time</SelectItem>
-                    <SelectItem value="month">Last month</SelectItem>
-                    <SelectItem value="quarter">Last quarter</SelectItem>
-                    <SelectItem value="year">Last year</SelectItem>
-                  </SelectContent>
-                </Select>
+                  All Time
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const range = {
+                      from: subMonths(new Date(), 1),
+                      to: new Date(),
+                    };
+                    setDateRange(range);
+                    fetchData(range);
+                  }}
+                >
+                  Last Month
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const range = {
+                      from: subMonths(new Date(), 3),
+                      to: new Date(),
+                    };
+                    setDateRange(range);
+                    fetchData(range);
+                  }}
+                >
+                  Last 3 Months
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const range = {
+                      from: subYears(new Date(), 1),
+                      to: new Date(),
+                    };
+                    setDateRange(range);
+                    fetchData(range);
+                  }}
+                >
+                  Last Year
+                </Button>
+                <div className="ml-auto">
+                  <DateRangePicker
+                    value={dateRange}
+                    onChange={(range) => {
+                      setDateRange(range);
+                      fetchData(range);
+                    }}
+                  />
+                </div>
               </div>
+
+              {dateRange?.from && (
+                <div className="text-sm text-muted-foreground">
+                  Showing data from{" "}
+                  <span className="font-medium">
+                    {format(dateRange.from, "MMM dd, yyyy")}
+                  </span>
+                  {dateRange.to && (
+                    <>
+                      {" "}to{" "}
+                      <span className="font-medium">
+                        {format(dateRange.to, "MMM dd, yyyy")}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -823,7 +842,14 @@ export default function SurveyReportsPage() {
           <TabsContent value="canteen">
             {renderTabContent(
               "canteen",
-              <CanteenTab isLoading={isLoading} departments={departments} />,
+              <CanteenTab
+                isLoading={isLoading}
+                departments={departments}
+                dateRange={dateRange ? {
+                  from: format(dateRange.from!, "yyyy-MM-dd"),
+                  to: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : format(dateRange.from!, "yyyy-MM-dd")
+                } : null}
+              />,
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -888,7 +914,13 @@ export default function SurveyReportsPage() {
           <TabsContent value="medicals">
             {renderTabContent(
               "medicals",
-              <MedicalsTab isLoading={isLoading} />,
+              <MedicalsTab
+                isLoading={isLoading}
+                dateRange={dateRange ? {
+                  from: format(dateRange.from!, "yyyy-MM-dd"),
+                  to: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : format(dateRange.from!, "yyyy-MM-dd")
+                } : null}
+              />,
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -965,6 +997,10 @@ export default function SurveyReportsPage() {
               <FeedbackTab
                 isLoading={isLoading}
                 surveyData={data.surveyData}
+                dateRange={dateRange ? {
+                  from: format(dateRange.from!, "yyyy-MM-dd"),
+                  to: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : format(dateRange.from!, "yyyy-MM-dd")
+                } : null}
               />,
               <div className="space-y-6">
                 <Card>

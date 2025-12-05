@@ -26,7 +26,14 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ListFilter,
+  Info,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -49,9 +56,10 @@ import {
 interface FeedbackTabProps {
   isLoading: boolean;
   surveyData: any[];
+  dateRange?: { from: string; to: string } | null;
 }
 
-export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
+export function FeedbackTab({ isLoading, surveyData, dateRange }: FeedbackTabProps) {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [notRecommendReasons, setNotRecommendReasons] = useState<
     NotRecommendReason[]
@@ -74,7 +82,9 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
   }, [locationFilter, searchQuery, activeTab]);
 
   useEffect(() => {
-    const CACHE_KEY = "feedbackTabData";
+    const CACHE_KEY = dateRange
+      ? `feedbackTabData_${dateRange.from}_${dateRange.to}`
+      : "feedbackTabData";
     const CACHE_TIME = 5 * 60 * 1000; // 5 minutes
     const instanceId = Math.random().toString(36).substring(2, 9); // Unique ID for this instance
     const timerName = `FeedbackTab_data_loading_${instanceId}`;
@@ -106,9 +116,9 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
         // Use Promise.all to fetch multiple data sources concurrently
         const [fetchedRecommendations, fetchedReasons, fetchedConcerns] =
           await Promise.all([
-            fetchRecommendations(),
-            fetchNotRecommendReasons(),
-            fetchDepartmentConcerns(),
+            fetchRecommendations(dateRange),
+            fetchNotRecommendReasons(dateRange),
+            fetchDepartmentConcerns(dateRange),
           ]);
 
         try {
@@ -153,7 +163,7 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
 
     // Only load data if this tab has been requested to be shown
     loadFeedbackData();
-  }, []);
+  }, [dateRange]);
 
   // Get unique locations from all feedback types
   const allLocations = Array.from(
@@ -432,6 +442,7 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
   };
 
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       <Card>
         <CardHeader>
@@ -448,63 +459,93 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
           {/* Stats cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-1">
                   Department Concerns
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">
+                        <Info size={14} className="text-muted-foreground" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <p>
+                        Total number of specific issues and concerns raised about
+                        individual departments. These are actionable feedback items
+                        that highlight areas needing attention or improvement.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                 </CardTitle>
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-8 w-8 text-amber-600" />
-                  <div>
-                    <div className="text-2xl font-bold">{concerns.length}</div>
-                    <p className="text-xs text-muted-foreground">
-                      Specific department issues
-                    </p>
-                  </div>
-                </div>
+                <div className="text-2xl font-bold">{concerns.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  Specific department issues
+                </p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-1">
                   Recommendations
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">
+                        <Info size={14} className="text-muted-foreground" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <p>
+                        Total number of positive suggestions and recommendations
+                        from patients. These represent constructive feedback and
+                        ideas for enhancing services and patient experience.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                 </CardTitle>
+                <Lightbulb className="h-4 w-4 text-green-600" />
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="h-8 w-8 text-green-600" />
-                  <div>
-                    <div className="text-2xl font-bold">
-                      {recommendations.length}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Positive suggestions
-                    </p>
-                  </div>
+                <div className="text-2xl font-bold">
+                  {recommendations.length}
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Positive suggestions
+                </p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-1">
                   Non-Recommendation Reasons
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">
+                        <Info size={14} className="text-muted-foreground" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <p>
+                        Total number of responses explaining why patients would
+                        not recommend the facility. These are critical issues that
+                        need immediate attention to improve overall satisfaction.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                 </CardTitle>
+                <ThumbsDown className="h-4 w-4 text-red-600" />
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-2">
-                  <ThumbsDown className="h-8 w-8 text-red-600" />
-                  <div>
-                    <div className="text-2xl font-bold">
-                      {notRecommendReasons.length}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Critical issues reported
-                    </p>
-                  </div>
+                <div className="text-2xl font-bold">
+                  {notRecommendReasons.length}
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Critical issues reported
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -543,14 +584,16 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
                 value={activeTab}
                 onValueChange={setActiveTab}
               >
-                <TabsList className="mb-4">
-                  <TabsTrigger value="concerns">
+                <TabsList className="mb-4 w-full">
+                  <TabsTrigger className="w-full" value="concerns">
                     Department Concerns
                   </TabsTrigger>
-                  <TabsTrigger value="recommendations">
+                  <TabsTrigger className="w-full" value="recommendations">
                     Service Recommendations
                   </TabsTrigger>
-                  <TabsTrigger value="why-not">Why Not Recommend</TabsTrigger>
+                  <TabsTrigger className="w-full" value="why-not">
+                    Why Not Recommend
+                  </TabsTrigger>
                 </TabsList>
 
                 {/* Department Concerns Tab */}
@@ -823,5 +866,6 @@ export function FeedbackTab({ isLoading, surveyData }: FeedbackTabProps) {
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }

@@ -78,6 +78,33 @@ const ratingToValue = (rating: string): number => {
 };
 
 /**
+ * Calculate weighted average (Bayesian average) to prevent single-response outliers
+ * Formula: weighted_score = (v/(v+m)) * R + (m/(v+m)) * C
+ * @param visitCount Number of responses for this ward (v)
+ * @param rawSatisfaction Actual satisfaction rating for this ward (R)
+ * @param globalAverage Overall average satisfaction across all wards (C)
+ * @param minimumThreshold Minimum credibility threshold (m) - default 5
+ * @returns Weighted satisfaction score
+ */
+const calculateWeightedAverage = (
+  visitCount: number,
+  rawSatisfaction: number,
+  globalAverage: number,
+  minimumThreshold: number = 5
+): number => {
+  if (visitCount === 0) return 0;
+
+  const v = visitCount;
+  const m = minimumThreshold;
+  const R = rawSatisfaction;
+  const C = globalAverage;
+
+  const weightedScore = (v / (v + m)) * R + (m / (v + m)) * C;
+
+  return Number(weightedScore.toFixed(2));
+};
+
+/**
  * Fetches all wards with their satisfaction ratings
  * @param limit Optional limit on number of wards to return (for pagination)
  * @param offset Optional offset for pagination
@@ -85,9 +112,13 @@ const ratingToValue = (rating: string): number => {
  */
 export async function fetchWards(
   limit: number = 5,
-  offset: number = 0
+  offset: number = 0,
+  dateRange?: { from: string; to: string } | null
 ): Promise<{ wards: Ward[]; total: number }> {
-  const cacheKey = CacheKeys.wardData(Math.floor(offset / limit) + 1, limit);
+  const baseCacheKey = CacheKeys.wardData(Math.floor(offset / limit) + 1, limit);
+  const cacheKey = dateRange
+    ? `${baseCacheKey}_${dateRange.from}_${dateRange.to}`
+    : baseCacheKey;
 
   return surveyCache.getOrSet(
     cacheKey,
@@ -131,24 +162,34 @@ export async function fetchWards(
     console.time("fetchWards:ratings");
     const locationIds = locations.map((loc) => loc.id);
 
-    const { data: allRatings, error: ratingsError } =
-      await supabase
-        .from("Rating")
-        .select(`
-          locationId,
-          reception,
-          professionalism,
-          understanding,
-          promptnessCare,
-          promptnessFeedback,
-          overall,
-          admission,
-          nurseProfessionalism,
-          doctorProfessionalism,
-          foodQuality,
-          discharge
-        `)
-        .in("locationId", locationIds);
+    let ratingsQuery = supabase
+      .from("Rating")
+      .select(`
+        locationId,
+        reception,
+        professionalism,
+        understanding,
+        promptnessCare,
+        promptnessFeedback,
+        overall,
+        admission,
+        nurseProfessionalism,
+        doctorProfessionalism,
+        foodQuality,
+        discharge,
+        wouldRecommend,
+        SurveySubmission!inner(submittedAt)
+      `)
+      .in("locationId", locationIds);
+
+    // Add date range filter if provided
+    if (dateRange) {
+      ratingsQuery = ratingsQuery
+        .gte("SurveySubmission.submittedAt", dateRange.from)
+        .lte("SurveySubmission.submittedAt", dateRange.to);
+    }
+
+    const { data: allRatings, error: ratingsError } = await ratingsQuery;
     console.timeEnd("fetchWards:ratings");
 
     if (ratingsError) {
@@ -156,23 +197,6 @@ export async function fetchWards(
       console.timeEnd("fetchWards");
       return { wards: [], total: count || 0 };
     }
-
-    // Get recommendation data separately (much faster than complex joins)
-    console.time("fetchWards:recommendations");
-    const { data: recommendations, error: recommendError } = await supabase
-      .from("SurveySubmission")
-      .select("wouldRecommend")
-      .not("wouldRecommend", "is", null);
-    console.timeEnd("fetchWards:recommendations");
-
-    if (recommendError) {
-      console.error(`Error fetching recommendations:`, recommendError);
-    }
-
-    // Calculate overall recommendation rate
-    const totalRecommendations = recommendations?.filter(r => r.wouldRecommend).length || 0;
-    const totalSubmissions = recommendations?.length || 0;
-    const overallRecommendRate = totalSubmissions > 0 ? (totalRecommendations / totalSubmissions) * 100 : 0;
 
     // Group ratings by locationId for faster processing
     console.time("fetchWards:process");
@@ -202,9 +226,6 @@ export async function fetchWards(
       // Count visits (each rating represents a visit)
       const visitCount = locationRatings?.length || 0;
 
-      // Use overall recommendation rate for this location (simplified approach)
-      const recommendCount = Math.round((visitCount * overallRecommendRate) / 100);
-
       // Track ratings
       const ratings = {
         reception: { sum: 0, count: 0 },
@@ -221,8 +242,16 @@ export async function fetchWards(
         discharge: { sum: 0, count: 0 },
       };
 
+      // Count location-specific recommendations
+      let recommendCount = 0;
+
       // Process ratings directly (much more efficient)
       locationRatings?.forEach((rating) => {
+        // Count recommendations from Rating table
+        if (rating.wouldRecommend === true) {
+          recommendCount++;
+        }
+
         // Process each rating category directly
         if (rating.reception) {
           ratings.reception.sum += ratingToValue(rating.reception);
@@ -281,7 +310,7 @@ export async function fetchWards(
         }
       });
 
-      // Calculate recommend rate
+      // Calculate recommend rate based on location-specific recommendations
       const recommendRate =
         visitCount > 0 ? Math.round((recommendCount / visitCount) * 100) : 0;
 
@@ -374,35 +403,53 @@ export async function fetchWards(
       };
       console.timeEnd("fetchWards:process:averages");
 
-      // Calculate overall satisfaction as the average of all ratings
+      // Calculate overall satisfaction as the average of all ratings (RAW score)
+      // Don't round yet - keep full precision for weighted average calculation
       const ratingValues = Object.values(avgRatings).filter((val) => val > 0);
-      const overallSatisfaction =
+      const rawSatisfaction =
         ratingValues.length > 0
-          ? Number(
-              (
-                ratingValues.reduce((sum, val) => sum + val, 0) /
-                ratingValues.length
-              ).toFixed(1)
-            )
+          ? ratingValues.reduce((sum, val) => sum + val, 0) /
+            ratingValues.length
           : 0;
 
       // Add mock capacity and occupancy for ward data
       const capacity = Math.floor(Math.random() * 30) + 10; // 10-40 beds
       const occupancy = Math.floor(Math.random() * (capacity - 3)) + 3; // 3 to capacity
 
-      // Add ward to results
+      // Add ward to results with RAW satisfaction (will be weighted later)
       wardsData.push({
         id: location.id,
         name: location.name,
         type: "ward",
         visitCount: visitCount,
-        satisfaction: overallSatisfaction,
+        satisfaction: rawSatisfaction,
         recommendRate: recommendRate,
         ratings: avgRatings,
         capacity,
         occupancy,
       });
     }
+
+    // Calculate global average satisfaction across all wards for weighted scoring
+    const wardsWithData = wardsData.filter((ward) => ward.visitCount > 0);
+    const globalAverage =
+      wardsWithData.length > 0
+        ? wardsWithData.reduce((sum, ward) => sum + ward.satisfaction, 0) /
+          wardsWithData.length
+        : 3.0; // Default to 3.0 if no data
+
+    // Apply weighted average (Bayesian average) to each ward's satisfaction score
+    wardsData.forEach((ward) => {
+      ward.satisfaction = calculateWeightedAverage(
+        ward.visitCount,
+        ward.satisfaction,
+        globalAverage
+      );
+    });
+
+    // Sort wards by weighted satisfaction (descending order)
+    wardsData.sort((a, b) => b.satisfaction - a.satisfaction);
+
     console.timeEnd("fetchWards:process:calculations");
     console.timeEnd("fetchWards:process");
 
@@ -581,13 +628,18 @@ export async function fetchAllSurveyData(): Promise<SurveySubmission[]> {
  * Fetches data for the entire ward tab
  * @param limit Optional limit on number of wards to return (for pagination)
  * @param offset Optional offset for pagination
+ * @param dateRange Optional date range filter
  */
-export async function fetchWardTabData(limit: number = 5, offset: number = 0) {
+export async function fetchWardTabData(
+  limit: number = 5,
+  offset: number = 0,
+  dateRange?: { from: string; to: string } | null
+) {
   try {
     // Prepare fetch promises for parallel execution
 
-    // Comment out pagination for the test
-    const wardsPromise = fetchWards(); // Remove pagination params
+    // Pass dateRange to fetchWards
+    const wardsPromise = fetchWards(limit, offset, dateRange);
 
     const concernsPromise = fetchWardConcerns();
 

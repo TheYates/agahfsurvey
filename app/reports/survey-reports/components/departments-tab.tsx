@@ -30,7 +30,14 @@ import {
   Clock,
   RefreshCcw,
   TrendingUp,
+  Info,
 } from "lucide-react";
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
@@ -517,6 +524,7 @@ export function DepartmentsTab({
 
   // Department overview and list
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-medium">Department Performance Overview</h2>
@@ -548,8 +556,21 @@ export function DepartmentsTab({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
               Total Responses
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">
+                    <Info size={14} className="text-muted-foreground" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                  <p>
+                    Total number of survey submissions across all departments
+                    within the selected date range.
+                  </p>
+                </TooltipContent>
+              </UITooltip>
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -562,15 +583,29 @@ export function DepartmentsTab({
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
               Top Performing
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">
+                    <Info size={14} className="text-muted-foreground" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                  <p>
+                    The department with the highest satisfaction rating. Scores are
+                    calculated using a weighted average that prevents departments with
+                    only a few responses from appearing at the top unfairly.
+                  </p>
+                </TooltipContent>
+              </UITooltip>
             </CardTitle>
+            <Star className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold flex items-center">
+            <div className="text-lg font-bold">
               {topDepartment.name}
-              <Star className="h-4 w-4 text-amber-500 ml-1" />
             </div>
             <div className="flex items-center">
               <span className="text-sm">
@@ -584,15 +619,29 @@ export function DepartmentsTab({
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
               Needs Attention
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">
+                    <Info size={14} className="text-muted-foreground" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                  <p>
+                    The department with the lowest satisfaction rating. Scores are
+                    calculated using a weighted average that prevents departments with
+                    only a few responses from appearing at the bottom unfairly.
+                  </p>
+                </TooltipContent>
+              </UITooltip>
             </CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg font-bold flex items-center">
+            <div className="text-lg font-bold">
               {needsAttentionDepartment.name}
-              <AlertTriangle className="h-4 w-4 text-red-500 ml-1" />
             </div>
             <div className="flex items-center">
               <span className="text-sm">
@@ -606,10 +655,25 @@ export function DepartmentsTab({
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-1">
               Overall Satisfaction
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">
+                    <Info size={14} className="text-muted-foreground" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                  <p>
+                    Average satisfaction rating across all departments, weighted by
+                    response count. Departments with more responses have proportionally
+                    more influence on the overall score.
+                  </p>
+                </TooltipContent>
+              </UITooltip>
             </CardTitle>
+            <Building className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
@@ -834,5 +898,6 @@ export function DepartmentsTab({
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }

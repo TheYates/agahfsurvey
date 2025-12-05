@@ -38,10 +38,12 @@ export interface DepartmentConcern {
 /**
  * Fetch recommendations from survey submissions
  */
-export async function fetchRecommendations(): Promise<Recommendation[]> {
+export async function fetchRecommendations(
+  dateRange?: { from: string; to: string } | null
+): Promise<Recommendation[]> {
   try {
     // Get submissions with recommendations
-    const { data, error } = await supabase
+    let query = supabase
       .from("SurveySubmission")
       .select(
         `
@@ -55,6 +57,15 @@ export async function fetchRecommendations(): Promise<Recommendation[]> {
       )
       .not("recommendation", "is", null)
       .order("submittedAt", { ascending: false });
+
+    // Apply date filter if provided
+    if (dateRange) {
+      query = query
+        .gte("submittedAt", dateRange.from)
+        .lte("submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -78,12 +89,12 @@ export async function fetchRecommendations(): Promise<Recommendation[]> {
 /**
  * Fetch reasons why patients would not recommend the hospital
  */
-export async function fetchNotRecommendReasons(): Promise<
-  NotRecommendReason[]
-> {
+export async function fetchNotRecommendReasons(
+  dateRange?: { from: string; to: string } | null
+): Promise<NotRecommendReason[]> {
   try {
     // Get submissions where patient would not recommend and provided a reason
-    const { data: submissions, error: submissionsError } = await supabase
+    let query = supabase
       .from("SurveySubmission")
       .select(
         `
@@ -105,6 +116,15 @@ export async function fetchNotRecommendReasons(): Promise<
       .eq("wouldRecommend", false)
       .not("whyNotRecommend", "is", null)
       .order("submittedAt", { ascending: false });
+
+    // Apply date filter if provided
+    if (dateRange) {
+      query = query
+        .gte("submittedAt", dateRange.from)
+        .lte("submittedAt", dateRange.to);
+    }
+
+    const { data: submissions, error: submissionsError } = await query;
 
     if (submissionsError) throw submissionsError;
 
@@ -137,10 +157,12 @@ export async function fetchNotRecommendReasons(): Promise<
 /**
  * Fetch department concerns from survey submissions
  */
-export async function fetchDepartmentConcerns(): Promise<DepartmentConcern[]> {
+export async function fetchDepartmentConcerns(
+  dateRange?: { from: string; to: string } | null
+): Promise<DepartmentConcern[]> {
   try {
     // First, we need to get the concerns with their IDs
-    const { data: concernsData, error: concernsError } = await supabase
+    let concernsQuery = supabase
       .from("DepartmentConcern")
       .select(
         `
@@ -152,6 +174,15 @@ export async function fetchDepartmentConcerns(): Promise<DepartmentConcern[]> {
       `
       )
       .order("createdAt", { ascending: false });
+
+    // Apply date filter if provided
+    if (dateRange) {
+      concernsQuery = concernsQuery
+        .gte("createdAt", dateRange.from)
+        .lte("createdAt", dateRange.to);
+    }
+
+    const { data: concernsData, error: concernsError } = await concernsQuery;
 
     if (concernsError) throw concernsError;
     if (!concernsData || concernsData.length === 0) return [];

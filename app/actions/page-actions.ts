@@ -338,7 +338,8 @@ export async function getSubmissionById(
         admission,
         nurseProfessionalism,
         doctorProfessionalism,
-        discharge
+        discharge,
+        wouldRecommend
       ),
       GeneralObservation (
         cleanliness,
@@ -414,6 +415,10 @@ export async function getSubmissionById(
           discharge: locationRating.discharge || "",
           // Add canteen-specific fields
           foodQuality: locationRating.foodQuality || "",
+          // Add location-specific recommendation
+          wouldRecommend: locationRating.wouldRecommend !== null && locationRating.wouldRecommend !== undefined
+            ? (locationRating.wouldRecommend ? "Yes" : "No")
+            : "",
           comment: "",
         });
       } else {
@@ -426,6 +431,7 @@ export async function getSubmissionById(
           promptnessCare: "",
           promptnessFeedback: "",
           overall: "",
+          wouldRecommend: "",
           comment: "",
         });
       }
@@ -462,6 +468,10 @@ export async function getSubmissionById(
         discharge: rating.discharge || "",
         // Add canteen-specific fields
         foodQuality: rating.foodQuality || "",
+        // Add location-specific recommendation
+        wouldRecommend: rating.wouldRecommend !== null && rating.wouldRecommend !== undefined
+          ? (rating.wouldRecommend ? "Yes" : "No")
+          : "",
         comment: "",
       });
     });
@@ -475,6 +485,7 @@ export async function getSubmissionById(
       promptnessCare: "",
       promptnessFeedback: "",
       overall: "",
+      wouldRecommend: "",
       comment: "",
     });
   }

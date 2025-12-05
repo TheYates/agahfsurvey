@@ -28,6 +28,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Search,
   Filter,
   Eye,
@@ -47,6 +53,7 @@ import {
 import { format } from "date-fns";
 import SubmissionDetailModal from "./components/submission-detail-modal";
 import DeleteSubmissionDialog from "@/components/submissions/delete-submission-dialog";
+import BulkDeleteDialog from "@/components/submissions/bulk-delete-dialog";
 import {
   exportToCSV,
   exportToJSON,
@@ -103,6 +110,7 @@ export default function SubmissionsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [deleteSubmissionId, setDeleteSubmissionId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -230,6 +238,19 @@ export default function SubmissionsPage() {
 
   const handleDeleteSuccess = () => {
     // Refresh the data after successful deletion
+    window.location.reload();
+  };
+
+  const handleBulkDeleteClick = () => {
+    if (selectedSubmissions.length === 0) {
+      alert("Please select at least one submission to delete.");
+      return;
+    }
+    setIsBulkDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteSuccess = () => {
+    setSelectedSubmissions([]);
     window.location.reload();
   };
 
@@ -533,6 +554,15 @@ export default function SubmissionsPage() {
                   >
                     Clear Selection
                   </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleBulkDeleteClick}
+                    disabled={isExporting}
+                    className="gap-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Selected
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -630,7 +660,7 @@ export default function SubmissionsPage() {
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
-                    <TableHead className="w-40">ID</TableHead>
+                    <TableHead className="w-16">No.</TableHead>
                     <TableHead className="w-40">Date</TableHead>
                     <TableHead className="w-40">Visit Purpose</TableHead>
                     <TableHead className="w-48">User Type</TableHead>
@@ -640,7 +670,7 @@ export default function SubmissionsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentItems.map((submission) => (
+                  {currentItems.map((submission, index) => (
                     <TableRow
                       key={submission.id}
                       className="cursor-pointer hover:bg-muted/50 transition-colors"
@@ -658,8 +688,8 @@ export default function SubmissionsPage() {
                         />
                       </TableCell>
                       <TableCell className="font-medium whitespace-nowrap">
-                        <span className="text-xs text-muted-foreground block truncate max-w-32">
-                          {submission.id}
+                        <span className="text-sm text-muted-foreground">
+                          {startIndex + index + 1}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -693,12 +723,28 @@ export default function SubmissionsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">
-                            {submission.locations.length} locations
-                          </span>
-                        </div>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center gap-2 cursor-help">
+                                <MapPin className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">
+                                  {submission.locations.length} {submission.locations.length === 1 ? 'location' : 'locations'}
+                                </span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="max-w-xs">
+                                <p className="font-semibold mb-1">Locations visited:</p>
+                                <ul className="list-disc list-inside text-sm">
+                                  {submission.locations.map((location, idx) => (
+                                    <li key={idx}>{location}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
 
                       <TableCell>
@@ -905,6 +951,16 @@ export default function SubmissionsPage() {
             setDeleteSubmissionId(null);
           }}
           onDeleted={handleDeleteSuccess}
+        />
+
+        {/* Bulk Delete Dialog */}
+        <BulkDeleteDialog
+          submissionIds={selectedSubmissions}
+          open={isBulkDeleteDialogOpen}
+          onClose={() => {
+            setIsBulkDeleteDialogOpen(false);
+          }}
+          onDeleted={handleBulkDeleteSuccess}
         />
       </div>
     </main>
