@@ -1386,16 +1386,22 @@ export async function getVisitTimeData(
 
     // Process each submission
     data?.forEach((submission) => {
-      // Use the visitTime field from the survey submission
-      if (
+      // Determine if this is a first-time visitor based on patientType
+      let visitTime: VisitTimePeriod | null = null;
+      
+      if (submission.patientType === "New Patient") {
+        visitTime = "first-time";
+      } else if (
         submission.visitTime &&
-        (submission.visitTime === "first-time" ||
-          submission.visitTime === "less-than-month" ||
+        (submission.visitTime === "less-than-month" ||
           submission.visitTime === "one-two-months" ||
           submission.visitTime === "three-six-months" ||
           submission.visitTime === "more-than-six-months")
       ) {
-        const visitTime = submission.visitTime as VisitTimePeriod;
+        visitTime = submission.visitTime as VisitTimePeriod;
+      }
+      
+      if (visitTime) {
         timeGroups[visitTime].count += 1;
 
         // Calculate satisfaction from ALL rating categories
