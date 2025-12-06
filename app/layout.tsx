@@ -7,6 +7,9 @@ import { SupabaseAuthProvider } from "@/contexts/supabase-auth-context";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { SessionTimeoutAlert } from "@/components/ui/session-timeout-alert";
+import { OfflineProvider } from "@/lib/offline/offline-context";
+import { OfflineBanner } from "@/components/offline-banner";
+import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -27,6 +30,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/agahflogo white.svg" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#0ea5e9" />
       </head>
       <body className={inter.className}>
         <ThemeProvider
@@ -36,9 +41,13 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SupabaseAuthProvider>
-            <ContextMenu>{children}</ContextMenu>
-            <Toaster />
-            <SessionTimeoutAlert />
+            <OfflineProvider>
+              <ServiceWorkerRegistration />
+              <OfflineBanner />
+              <ContextMenu>{children}</ContextMenu>
+              <Toaster />
+              <SessionTimeoutAlert />
+            </OfflineProvider>
           </SupabaseAuthProvider>
         </ThemeProvider>
       </body>

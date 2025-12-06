@@ -242,7 +242,7 @@ export async function getSurveyOverviewData(
     if (submissionsError) throw submissionsError;
     if (ratingsError) throw ratingsError;
 
-    console.time("getSurveyOverviewData:processing");
+    
 
     // Calculate recommendation rate (optimized)
     let recommendCount = 0;
@@ -313,8 +313,7 @@ export async function getSurveyOverviewData(
         ? Number((totalSatisfaction / satisfactionCount).toFixed(1))
         : 0;
 
-    console.timeEnd("getSurveyOverviewData:processing");
-    console.timeEnd("getSurveyOverviewData");
+  
 
     return {
       totalResponses: totalCount || 0,
@@ -342,7 +341,6 @@ export async function getSatisfactionByDemographic(
   dateRange?: { from: string; to: string } | null
 ): Promise<DemographicSatisfaction> {
   try {
-    console.time("getSatisfactionByDemographic");
 
     // Get survey data with demographic info
     let query = supabase.from("SurveySubmission").select(`
@@ -440,8 +438,8 @@ export async function getSatisfactionByDemographic(
 
             // Sum all available ratings for this location
             ratingCategories.forEach((category) => {
-              if (rating[category]) {
-                const numericRating = convertRatingToNumber(rating[category]);
+              if (rating[category as keyof typeof rating] !== undefined) {
+                const numericRating = convertRatingToNumber(rating[category as keyof typeof rating]);
                 totalRating += numericRating;
                 ratingCount++;
               }
@@ -511,11 +509,9 @@ export async function getSatisfactionByDemographic(
       }
     }
 
-    console.timeEnd("getSatisfactionByDemographic");
     return { byUserType, byPatientType, insight };
   } catch (error) {
     console.error("Error fetching satisfaction by demographic:", error);
-    console.timeEnd("getSatisfactionByDemographic");
     return {
       byUserType: [],
       byPatientType: [],
@@ -853,8 +849,8 @@ export async function getVisitPurposeData(
             let locationRatingCount = 0;
 
             ratingCategories.forEach((category) => {
-              if (rating[category]) {
-                const convertedRating = convertRatingToNumber(rating[category]);
+              if (rating[category as keyof typeof rating] !== undefined) {
+                const convertedRating = convertRatingToNumber(rating[category as keyof typeof rating]);
                 locationRatingSum += convertedRating;
                 locationRatingCount++;
 
@@ -1119,8 +1115,8 @@ export async function getPatientTypeData(
             let locationRatingCount = 0;
 
             ratingCategories.forEach((category) => {
-              if (rating[category]) {
-                const convertedRating = convertRatingToNumber(rating[category]);
+              if (rating[category as keyof typeof rating] !== undefined) {
+                const convertedRating = convertRatingToNumber(rating[category as keyof typeof rating]);
                 locationRatingSum += convertedRating;
                 locationRatingCount++;
 
@@ -1415,8 +1411,8 @@ export async function getVisitTimeData(
               ];
 
               ratingCategories.forEach((category) => {
-                if (rating[category]) {
-                  const ratingValue = convertRatingToNumber(rating[category]);
+                if (rating[category as keyof typeof rating] !== undefined) {
+                  const ratingValue = convertRatingToNumber(rating[category as keyof typeof rating]);
                   totalRating += ratingValue;
                   validRatingsCount++;
                   // Store the individual rating for analysis
@@ -1716,68 +1712,7 @@ export async function getGeneralObservationData(
       throw error;
     }
 
-    if (!data || data.length === 0) {
-      // Try to find a valid submissionId first
-      const { data: submissionData, error: submissionError } = await supabase
-        .from("SurveySubmission")
-        .select("id")
-        .limit(1);
-
-      if (submissionError) {
-        console.error("Error fetching submissions:", submissionError);
-      } else {
-        if (submissionData && submissionData.length > 0) {
-          const submissionId = submissionData[0].id;
-
-          // For testing - insert a sample record if there's none
-          const { data: insertData, error: insertError } = await supabase
-            .from("GeneralObservation")
-            .insert([
-              {
-                cleanliness: "Good",
-                facilities: "Very Good",
-                security: "Excellent",
-                overall: "Very Good",
-                submissionId: submissionId,
-              },
-            ])
-            .select();
-
-          if (insertError) {
-            console.error("Error inserting test data:", insertError);
-          } else {
-            // Now try to fetch the data again
-            const { data: refetchData, error: refetchError } = await supabase
-              .from("GeneralObservation")
-              .select("*");
-
-            if (refetchError) {
-              console.error("Error refetching data:", refetchError);
-            } else {
-              data = refetchData;
-            }
-          }
-        } else {
-          // For testing - insert a sample record with dummy ID
-          const { data: insertData, error: insertError } = await supabase
-            .from("GeneralObservation")
-            .insert([
-              {
-                cleanliness: "Good",
-                facilities: "Very Good",
-                security: "Excellent",
-                overall: "Very Good",
-                submissionId: "00000000-0000-0000-0000-000000000001", // Use proper UUID format
-              },
-            ])
-            .select();
-
-          if (insertError) {
-            console.error("Error inserting test data (dummy ID):", insertError);
-          }
-        }
-      }
-    }
+    // If no data found, return empty stats (removed test data insertion)
 
     const observationCategories = [
       "cleanliness",
@@ -1850,11 +1785,14 @@ export async function getGeneralObservationData(
 export async function fetchOverviewTabData(
   dateRange?: { from: string; to: string } | null
 ) {
+  const cacheKey = dateRange
+    ? `${dateRange.from}_${dateRange.to}`
+    : undefined;
+
   return surveyCache.getOrSet(
-    CacheKeys.overviewTabData(),
+    CacheKeys.overviewTabData(cacheKey),
     async () => {
       try {
-        console.time("fetchOverviewTabData");
         const [
       surveyData,
       satisfactionByDemographic,
@@ -1883,7 +1821,6 @@ export async function fetchOverviewTabData(
       generalObservationStats: generalObservationData,
     };
 
-        console.timeEnd("fetchOverviewTabData");
         return {
           surveyData: enhancedSurveyData,
           satisfactionByDemographic,
@@ -1896,7 +1833,6 @@ export async function fetchOverviewTabData(
         };
       } catch (error) {
         console.error("Error fetching overview tab data:", error);
-        console.timeEnd("fetchOverviewTabData");
         throw error;
       }
     },

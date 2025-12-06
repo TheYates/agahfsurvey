@@ -171,7 +171,7 @@ export default function OccupationalHealthRating({
 
             <div className="space-y-3 pt-2">
               <Label className="text-base font-medium">
-                Would you recommend this medical unit to others?{" "}
+                Would you recommend the {location} to others?{" "}
                 <span className="text-red-500">*</span>
               </Label>
               <RadioGroup

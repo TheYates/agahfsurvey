@@ -68,9 +68,26 @@ export default function IntroPage({
           </Label>
           <RadioGroup
             value={surveyData.visitTime}
-            onValueChange={(value) => updateSurveyData("visitTime", value)}
+            onValueChange={(value) => {
+              updateSurveyData("visitTime", value);
+              // Automatically set patient type based on selection
+              if (value === "first-time") {
+                updateSurveyData("patientType", "New Patient");
+              } else {
+                updateSurveyData("patientType", "Returning Patient");
+              }
+            }}
             className="grid grid-cols-1 md:grid-cols-2 gap-3"
           >
+            <div className="flex items-center space-x-2 bg-muted/30 p-3 rounded-md hover:bg-muted/50 transition-colors">
+              <RadioGroupItem value="first-time" id="first-time" />
+              <Label
+                htmlFor="first-time"
+                className="w-full cursor-pointer"
+              >
+                First time visiting (New Patient)
+              </Label>
+            </div>
             <div className="flex items-center space-x-2 bg-muted/30 p-3 rounded-md hover:bg-muted/50 transition-colors">
               <RadioGroupItem value="less-than-month" id="less-than-month" />
               <Label

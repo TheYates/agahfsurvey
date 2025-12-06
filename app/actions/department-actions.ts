@@ -127,12 +127,10 @@ export async function fetchDepartments(
         console.time("fetchDepartments");
 
     // Get all locations of type 'department' - only select fields we need
-    console.time("fetchDepartments:locations");
     const { data: locations, error: locationsError } = await supabase
       .from("Location")
       .select("id, name")
       .eq("locationType", "department");
-    console.timeEnd("fetchDepartments:locations");
 
     if (locationsError) throw locationsError;
 
@@ -141,7 +139,6 @@ export async function fetchDepartments(
     }
 
     // Optimized: Get ratings directly with location filter - much faster
-    console.time("fetchDepartments:ratings");
     const locationIds = locations.map((loc) => loc.id);
 
     let ratingsQuery = supabase
@@ -167,7 +164,6 @@ export async function fetchDepartments(
     }
 
     const { data: allRatings, error: ratingsError } = await ratingsQuery;
-    console.timeEnd("fetchDepartments:ratings");
 
     if (ratingsError) {
       console.error(`Error fetching ratings:`, ratingsError);
@@ -175,9 +171,6 @@ export async function fetchDepartments(
     }
 
     // Group ratings by locationId for faster processing
-    console.time("fetchDepartments:process");
-
-    console.time("fetchDepartments:process:grouping");
     const ratingsByLocation: Record<string, any[]> = {};
     locationIds.forEach((id) => {
       ratingsByLocation[id] = [];
@@ -189,13 +182,11 @@ export async function fetchDepartments(
         ratingsByLocation[locationId].push(rating);
       }
     });
-    console.timeEnd("fetchDepartments:process:grouping");
 
     // Create result array to hold department data
     const departmentsData: Department[] = [];
 
     // Process each location with its grouped ratings
-    console.time("fetchDepartments:process:calculations");
     for (const location of locations) {
       const locationRatings = ratingsByLocation[location.id] || [];
 
@@ -346,10 +337,6 @@ export async function fetchDepartments(
 
     // Sort departments by weighted satisfaction (descending order)
     departmentsData.sort((a, b) => b.satisfaction - a.satisfaction);
-
-        console.timeEnd("fetchDepartments:process:calculations");
-        console.timeEnd("fetchDepartments:process");
-        console.timeEnd("fetchDepartments");
 
         return departmentsData;
       } catch (error) {

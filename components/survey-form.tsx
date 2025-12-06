@@ -21,6 +21,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useLocations } from "@/hooks/use-locations";
+import { useOffline } from "@/lib/offline/offline-context";
 
 // Define the survey data structure
 interface SurveyData {
@@ -47,6 +48,7 @@ export default function SurveyForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { toast } = useToast();
   const { locationGroups, loading: locationsLoading } = useLocations();
+  const { saveSubmission, isOnline } = useOffline();
   const [surveyData, setSurveyData] = useState<SurveyData>({
     visitTime: "",
     visitPurpose: "",
@@ -238,25 +240,15 @@ export default function SurveyForm() {
         recommendation: surveyData.recommendation || null,
       };
 
-      // Submit to Supabase
-      const result = await submitSurveyToSupabase(formData);
+      // Use offline-aware submission
+      await saveSubmission(formData);
 
-      if (result.success) {
-        setIsSubmitted(true);
-        toast({
-          title: "Thank You for Your Feedback!",
-          description:
-            "Your responses have been recorded and will help us improve our services.",
-        });
-      } else {
-        toast({
-          title: "Submission Failed",
-          description:
-            "There was a problem submitting your survey. Please try again.",
-          variant: "destructive",
-        });
-      }
+      // Mark as submitted regardless of online/offline status
+      setIsSubmitted(true);
+
+      // Toast is handled by the offline context
     } catch (error) {
+      console.error("Error submitting survey:", error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again later.",

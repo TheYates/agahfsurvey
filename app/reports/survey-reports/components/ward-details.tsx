@@ -12,20 +12,53 @@ import { Button } from "@/components/ui/button";
 import { BedDouble, ArrowLeft, ThumbsUp, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  BarChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Bar,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-} from "recharts";
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend as ChartLegend,
+} from "chart.js";
+import { Bar, Line } from "react-chartjs-2";
 
-import { WardConcern, SurveySubmission } from "@/app/actions/ward-actions";
+import { WardConcern, SurveySubmission, fetchAllSurveyData } from "@/app/actions/ward-actions";
 import { ExtendedWard } from "./wards-tab";
+import { COLORS, barAveragePlugin } from "../utils/chart-utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Title,
+  ChartTooltip,
+  ChartLegend,
+  barAveragePlugin
+);
+
+// Helper to convert text rating to number
+const ratingToValue = (rating: string): number => {
+  switch (rating) {
+    case "Excellent":
+      return 5;
+    case "Very Good":
+      return 4;
+    case "Good":
+      return 3;
+    case "Fair":
+      return 2;
+    case "Poor":
+      return 1;
+    default:
+      return 0;
+  }
+};
 
 interface WardDetailsProps {
   selectedWard: ExtendedWard;
@@ -51,10 +84,88 @@ export function WardDetails({
   wardConcerns,
   ratingCategories,
   departmentAverages,
-  satisfactionTrend,
+  satisfactionTrend: _ignoredTrend,
   onBackClick,
   valueToRating,
 }: WardDetailsProps) {
+  const [wardSatisfactionTrend, setWardSatisfactionTrend] = useState<any[]>([]);
+  const [isLoadingTrend, setIsLoadingTrend] = useState(false);
+
+  // Calculate ward-specific satisfaction trend
+  useEffect(() => {
+    const generateWardSatisfactionTrend = async () => {
+      setIsLoadingTrend(true);
+      try {
+        // Fetch real survey data
+        const surveyData = await fetchAllSurveyData();
+
+        // Filter submissions for this specific ward
+        const wardSubmissions = surveyData.filter((submission: SurveySubmission) => {
+          return submission.Rating?.some(
+            (rating) => rating.locationId === parseInt(selectedWard.id as string)
+          );
+        });
+
+        // Group by month and calculate average satisfaction
+        const monthlyData: Record<string, { total: number; count: number }> = {};
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+
+        // Initialize months with empty data
+        months.forEach((month) => {
+          monthlyData[month] = { total: 0, count: 0 };
+        });
+
+        // Process ward-specific survey data
+        wardSubmissions.forEach((submission: SurveySubmission) => {
+          const date = new Date(submission.submittedAt);
+          const month = date.toLocaleString("default", { month: "short" });
+
+          if (monthlyData[month]) {
+            const wardRating = submission.Rating?.find(
+              (rating) => rating.locationId === parseInt(selectedWard.id as string)
+            );
+
+            if (wardRating?.overall) {
+              const satisfaction = ratingToValue(wardRating.overall);
+              monthlyData[month].total += satisfaction;
+              monthlyData[month].count += 1;
+            }
+          }
+        });
+
+        // Convert to trend format
+        const trend = months
+          .map((month) => ({
+            month,
+            satisfaction:
+              monthlyData[month].count > 0
+                ? Math.round((monthlyData[month].total / monthlyData[month].count) * 10) / 10
+                : null,
+          }))
+          .filter((item) => item.satisfaction !== null);
+
+        setWardSatisfactionTrend(trend.length > 0 ? trend : [
+          {
+            month: new Date().toLocaleString("default", { month: "short" }),
+            satisfaction: selectedWard.satisfaction || 3.5,
+          },
+        ]);
+      } catch (error) {
+        console.error("Error generating ward satisfaction trend:", error);
+        setWardSatisfactionTrend([
+          {
+            month: new Date().toLocaleString("default", { month: "short" }),
+            satisfaction: selectedWard.satisfaction || 3.5,
+          },
+        ]);
+      } finally {
+        setIsLoadingTrend(false);
+      }
+    };
+
+    generateWardSatisfactionTrend();
+  }, [selectedWard.id, selectedWard.satisfaction]);
+
   // Create ranking suffix
   const getRankingSuffix = (ranking: number) => {
     if (ranking === 1) return "st";
@@ -129,7 +240,7 @@ export function WardDetails({
   ];
 
   // Debug log
-  useEffect(() => {}, [selectedWard.name, satisfactionTrend]);
+  useEffect(() => {}, [selectedWard.name, wardSatisfactionTrend]);
 
   return (
     <div className="space-y-6">
@@ -235,25 +346,17 @@ export function WardDetails({
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">
                   <div className="flex items-center gap-1">
-                    <Clock size={16} />
-                    Response Share
+                    <ThumbsUp size={16} />
+                    Recommend Rate
                   </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {Math.round(
-                    (selectedWard.visitCount /
-                      wardsOnly.reduce(
-                        (sum, ward) => sum + ward.visitCount,
-                        0
-                      )) *
-                      100
-                  )}
-                  %
+                  {Math.round(selectedWard.recommendRate)}%
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Share of total ward responses
+                  Would recommend this ward
                 </p>
               </CardContent>
             </Card>
@@ -301,78 +404,129 @@ export function WardDetails({
               <div>
                 <h4 className="text-sm font-medium mb-3">Rating Comparison</h4>
                 <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={ratingCategories
+                  <Bar
+                    data={{
+                      labels: ratingCategories
                         .filter(
                           (category) =>
                             category.id !== "reception" &&
                             category.id !== "professionalism"
                         )
-                        .map((category) => {
-                          const value =
-                            (selectedWard.ratings as any)[category.id] || 0;
-                          return {
-                            category: category.label,
-                            rating: value,
-                          };
-                        })}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 60 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis
-                        dataKey="category"
-                        angle={-45}
-                        textAnchor="end"
-                        height={70}
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis domain={[0, 5]} />
-                      <Tooltip
-                        formatter={(value: any) => [
-                          typeof value === "number" ? value.toFixed(1) : value,
-                          "Rating",
-                        ]}
-                      />
-                      <Bar
-                        dataKey="rating"
-                        fill="#4caf50"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+                        .map((category) => category.label),
+                      datasets: [
+                        {
+                          label: "Rating",
+                          data: ratingCategories
+                            .filter(
+                              (category) =>
+                                category.id !== "reception" &&
+                                category.id !== "professionalism"
+                            )
+                            .map((category) => {
+                              const value =
+                                (selectedWard.ratings as any)[category.id] || 0;
+                              return value;
+                            }),
+                          backgroundColor: "#4caf50",
+                          borderRadius: 4,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          display: true,
+                          position: "top" as const,
+                        },
+                        tooltip: {
+                          callbacks: {
+                            label: (context) => {
+                              return `Rating: ${context.parsed.y.toFixed(1)}`;
+                            },
+                          },
+                        },
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          max: 5,
+                          ticks: {
+                            stepSize: 1,
+                          },
+                        },
+                        x: {
+                          ticks: {
+                            autoSkip: false,
+                            maxRotation: 45,
+                            minRotation: 45,
+                          },
+                        },
+                      },
+                    }}
+                  />
                 </div>
               </div>
 
               <div>
                 <h4 className="text-sm font-medium mb-3">
-                  Satisfaction Trend (Last 6 Months)
+                  Satisfaction Trend (Last 6 Months) - {selectedWard.name}
                 </h4>
                 <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={satisfactionTrend}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis domain={[0, 5]} />
-                      <Tooltip
-                        formatter={(value: any) => [
-                          typeof value === "number" ? value.toFixed(1) : value,
-                          "Satisfaction",
-                        ]}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="satisfaction"
-                        stroke="#7c3aed"
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {isLoadingTrend ? (
+                    <div className="flex items-center justify-center h-full">
+                      <LoadingSpinner />
+                    </div>
+                  ) : (
+                    <Line
+                      data={{
+                        labels: wardSatisfactionTrend.map((item) => item.month),
+                        datasets: [
+                          {
+                            label: "Satisfaction",
+                            data: wardSatisfactionTrend.map(
+                              (item) => item.satisfaction
+                            ),
+                            borderColor: "#7c3aed",
+                            backgroundColor: "rgba(124, 58, 237, 0.1)",
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            tension: 0.4,
+                          },
+                        ],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            display: true,
+                            position: "top" as const,
+                          },
+                          tooltip: {
+                            callbacks: {
+                              label: (context) => {
+                                return `Satisfaction: ${context.parsed.y.toFixed(
+                                  1
+                                )}`;
+                              },
+                            },
+                          },
+                        },
+                        scales: {
+                          y: {
+                            beginAtZero: true,
+                            max: 5,
+                            ticks: {
+                              stepSize: 1,
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             </CardContent>

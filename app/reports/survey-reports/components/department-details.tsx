@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -9,25 +9,59 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Clock, RefreshCcw, Building } from "lucide-react";
+import { ArrowLeft, ThumbsUp, RefreshCcw, Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
-  BarChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Bar,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-} from "recharts";
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip as ChartTooltip,
+  Legend as ChartLegend,
+} from "chart.js";
+import { Bar, Line } from "react-chartjs-2";
 
 import {
   DepartmentConcern,
   Recommendation,
+  fetchAllSurveyData,
 } from "@/app/actions/department-actions";
+import { COLORS, barAveragePlugin } from "../utils/chart-utils";
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Title,
+  ChartTooltip,
+  ChartLegend,
+  barAveragePlugin
+);
+
+// Helper to convert text rating to number
+const ratingToValue = (rating: string): number => {
+  switch (rating) {
+    case "Excellent":
+      return 5;
+    case "Very Good":
+      return 4;
+    case "Good":
+      return 3;
+    case "Fair":
+      return 2;
+    case "Poor":
+      return 1;
+    default:
+      return 0;
+  }
+};
 
 // Define Department interface for better type safety
 interface Department {
@@ -66,11 +100,88 @@ export function DepartmentDetails({
   departmentConcerns,
   departmentRecommendations,
   ratingCategories,
-  satisfactionTrend,
+  satisfactionTrend: _ignoredTrend,
   onBackClick,
   valueToRating,
 }: DepartmentDetailsProps) {
   const [isLoadingConcerns, setIsLoadingConcerns] = useState(false);
+  const [deptSatisfactionTrend, setDeptSatisfactionTrend] = useState<any[]>([]);
+  const [isLoadingTrend, setIsLoadingTrend] = useState(false);
+
+  // Calculate department-specific satisfaction trend
+  useEffect(() => {
+    const generateDeptSatisfactionTrend = async () => {
+      setIsLoadingTrend(true);
+      try {
+        // Fetch real survey data
+        const surveyData = await fetchAllSurveyData();
+
+        // Filter submissions for this specific department
+        const deptSubmissions = surveyData.filter((submission: any) => {
+          return submission.Rating?.some(
+            (rating: any) => rating.locationId === parseInt(selectedDepartment.id as string)
+          );
+        });
+
+        // Group by month and calculate average satisfaction
+        const monthlyData: Record<string, { total: number; count: number }> = {};
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+
+        // Initialize months with empty data
+        months.forEach((month) => {
+          monthlyData[month] = { total: 0, count: 0 };
+        });
+
+        // Process department-specific survey data
+        deptSubmissions.forEach((submission: any) => {
+          const date = new Date(submission.submittedAt);
+          const month = date.toLocaleString("default", { month: "short" });
+
+          if (monthlyData[month]) {
+            const deptRating = submission.Rating?.find(
+              (rating: any) => rating.locationId === parseInt(selectedDepartment.id as string)
+            );
+
+            if (deptRating?.overall) {
+              const satisfaction = ratingToValue(deptRating.overall);
+              monthlyData[month].total += satisfaction;
+              monthlyData[month].count += 1;
+            }
+          }
+        });
+
+        // Convert to trend format
+        const trend = months
+          .map((month) => ({
+            month,
+            satisfaction:
+              monthlyData[month].count > 0
+                ? Math.round((monthlyData[month].total / monthlyData[month].count) * 10) / 10
+                : null,
+          }))
+          .filter((item) => item.satisfaction !== null);
+
+        setDeptSatisfactionTrend(trend.length > 0 ? trend : [
+          {
+            month: new Date().toLocaleString("default", { month: "short" }),
+            satisfaction: selectedDepartment.satisfaction || 3.5,
+          },
+        ]);
+      } catch (error) {
+        console.error("Error generating department satisfaction trend:", error);
+        setDeptSatisfactionTrend([
+          {
+            month: new Date().toLocaleString("default", { month: "short" }),
+            satisfaction: selectedDepartment.satisfaction || 3.5,
+          },
+        ]);
+      } finally {
+        setIsLoadingTrend(false);
+      }
+    };
+
+    generateDeptSatisfactionTrend();
+  }, [selectedDepartment.id, selectedDepartment.satisfaction]);
 
   // Create ranking suffix
   const getRankingSuffix = (ranking: number) => {
@@ -224,25 +335,17 @@ export function DepartmentDetails({
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">
                   <div className="flex items-center gap-1">
-                    <Clock size={16} />
-                    Response Share
+                    <ThumbsUp size={16} />
+                    Recommend Rate
                   </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {Math.round(
-                    (selectedDepartment.visitCount /
-                      departmentsOnly.reduce(
-                        (sum, dept) => sum + dept.visitCount,
-                        0
-                      )) *
-                      100
-                  )}
-                  %
+                  {Math.round(selectedDepartment.recommendRate)}%
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Share of total survey responses
+                  Would recommend this department
                 </p>
               </CardContent>
             </Card>
@@ -294,11 +397,10 @@ export function DepartmentDetails({
                   Ratings by Category
                 </h4>
                 <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={Object.entries(selectedDepartment.ratings).map(
+                  <Bar
+                    data={{
+                      labels: Object.entries(selectedDepartment.ratings).map(
                         ([key, value]) => {
-                          // Find matching category label
                           const category = ratingCategories.find(
                             (cat) => cat.id === key
                           ) || {
@@ -307,68 +409,113 @@ export function DepartmentDetails({
                               .replace(/-/g, " ")
                               .replace(/\b\w/g, (l) => l.toUpperCase()),
                           };
-                          return {
-                            category: category.label,
-                            rating: value,
-                          };
+                          return category.label;
                         }
-                      )}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 60 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis
-                        dataKey="category"
-                        angle={-45}
-                        textAnchor="end"
-                        height={70}
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis domain={[0, 5]} />
-                      <Tooltip
-                        formatter={(value: any) => [
-                          typeof value === "number" ? value.toFixed(1) : value,
-                          "Rating",
-                        ]}
-                      />
-                      <Bar
-                        dataKey="rating"
-                        fill="#7c3aed"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+                      ),
+                      datasets: [
+                        {
+                          label: "Rating",
+                          data: Object.values(selectedDepartment.ratings),
+                          backgroundColor: "#7c3aed",
+                          borderRadius: 4,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          display: true,
+                          position: "top" as const,
+                        },
+                        tooltip: {
+                          callbacks: {
+                            label: (context) => {
+                              return `Rating: ${context.parsed.y.toFixed(1)}`;
+                            },
+                          },
+                        },
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          max: 5,
+                          ticks: {
+                            stepSize: 1,
+                          },
+                        },
+                        x: {
+                          ticks: {
+                            autoSkip: false,
+                            maxRotation: 45,
+                            minRotation: 45,
+                          },
+                        },
+                      },
+                    }}
+                  />
                 </div>
               </div>
 
               <div>
                 <h4 className="text-sm font-medium mb-3">
-                  Satisfaction Trend (Last 6 Months)
+                  Satisfaction Trend (Last 6 Months) - {selectedDepartment.name}
                 </h4>
                 <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={satisfactionTrend}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis domain={[0, 5]} />
-                      <Tooltip
-                        formatter={(value: any) => [
-                          typeof value === "number" ? value.toFixed(1) : value,
-                          "Satisfaction",
-                        ]}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="satisfaction"
-                        stroke="#7c3aed"
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {isLoadingTrend ? (
+                    <div className="flex items-center justify-center h-full">
+                      <LoadingSpinner />
+                    </div>
+                  ) : (
+                    <Line
+                      data={{
+                        labels: deptSatisfactionTrend.map((item) => item.month),
+                        datasets: [
+                          {
+                            label: "Satisfaction",
+                            data: deptSatisfactionTrend.map(
+                              (item) => item.satisfaction
+                            ),
+                            borderColor: "#7c3aed",
+                            backgroundColor: "rgba(124, 58, 237, 0.1)",
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            tension: 0.4,
+                          },
+                        ],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            display: true,
+                            position: "top" as const,
+                          },
+                          tooltip: {
+                            callbacks: {
+                              label: (context) => {
+                                return `Satisfaction: ${context.parsed.y.toFixed(
+                                  1
+                                )}`;
+                              },
+                            },
+                          },
+                        },
+                        scales: {
+                          y: {
+                            beginAtZero: true,
+                            max: 5,
+                            ticks: {
+                              stepSize: 1,
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             </CardContent>

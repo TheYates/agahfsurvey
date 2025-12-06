@@ -288,8 +288,9 @@ function UserInformationSection({
                 {[
                   "AGAG Employee",
                   "AGAG/Contractor Dependant",
-                  "Other Corporate Employee",
+                  "Community",
                   "Contractor Employee",
+                  "Other Corporate Employee",
                 ].map((userType) => (
                   <div
                     key={userType}
@@ -320,34 +321,18 @@ function UserInformationSection({
 
             <div className="space-y-4">
               <Label className="text-base font-medium">
-                and a: <span className="text-red-500">*</span>
+                Patient Type:
               </Label>
-              <div className="flex space-x-4">
-                {["New Patient", "Returning Patient"].map((patientType) => (
-                  <div
-                    key={patientType}
-                    className={`flex items-center space-x-2 p-3 rounded-md ${
-                      submission.patientType === patientType
-                        ? "bg-primary/10 border border-primary/30"
-                        : "bg-muted/30"
-                    }`}
-                  >
-                    <div
-                      className={`h-4 w-4 rounded-full border ${
-                        submission.patientType === patientType
-                          ? "bg-primary border-primary"
-                          : "border-muted-foreground"
-                      }`}
-                    >
-                      {submission.patientType === patientType && (
-                        <div className="h-full w-full rounded-full flex items-center justify-center">
-                          <div className="h-1.5 w-1.5 rounded-full bg-primary-foreground"></div>
-                        </div>
-                      )}
-                    </div>
-                    <Label className="w-full">{patientType}</Label>
+              <div className="bg-muted/30 p-4 rounded-md border border-primary/30">
+                <div className="flex items-center space-x-2">
+                  <div className="h-4 w-4 rounded-full bg-primary border-primary flex items-center justify-center">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary-foreground"></div>
                   </div>
-                ))}
+                  <Label className="font-semibold text-base">{submission.patientType}</Label>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 ml-6">
+                  Automatically determined based on visit history
+                </p>
               </div>
             </div>
           </div>

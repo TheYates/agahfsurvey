@@ -518,7 +518,17 @@ export function OverviewTab({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {mostCommonVisitTime.visitTime}
+                {mostCommonVisitTime.visitTime === "first-time"
+                  ? "First time visiting"
+                  : mostCommonVisitTime.visitTime === "less-than-month"
+                  ? "< 1 month ago"
+                  : mostCommonVisitTime.visitTime === "one-two-months"
+                  ? "1-2 months ago"
+                  : mostCommonVisitTime.visitTime === "three-six-months"
+                  ? "3-6 months ago"
+                  : mostCommonVisitTime.visitTime === "more-than-six-months"
+                  ? "> 6 months ago"
+                  : mostCommonVisitTime.visitTime}
               </div>
               <p className="text-xs text-muted-foreground">
                 {mostCommonVisitTime.count} visits (

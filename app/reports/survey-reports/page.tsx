@@ -165,6 +165,7 @@ const getData = async (
 export default function SurveyReportsPage() {
   const { toast } = useToast();
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [activePreset, setActivePreset] = useState<string | null>(null);
   const [filterType, setFilterType] = useState("all");
   const [filterValue, setFilterValue] = useState("all");
 
@@ -247,7 +248,7 @@ export default function SurveyReportsPage() {
   const fetchData = async (selectedDateRange: DateRange | undefined) => {
     try {
       setIsLoading(true);
-      console.time("Total data loading time");
+      
 
       // Calculate date range filter from DateRange object
       let dateRangeFilter = null;
@@ -269,7 +270,6 @@ export default function SurveyReportsPage() {
       // TODO: Re-enable cache with proper invalidation strategy
 
       // Fetch all data in parallel
-      console.log("Fetching fresh data with date range filter:", dateRangeFilter);
 
       // Start all fetches in parallel
       const overviewPromise = fetchOverviewTabData(dateRangeFilter);
@@ -380,7 +380,6 @@ export default function SurveyReportsPage() {
           };
 
           sessionStorage.setItem(CACHE_KEY, JSON.stringify(cachePayload));
-          console.log("Saved cache with key:", CACHE_KEY);
         } catch (error) {
           console.error("Error caching data:", error);
         }
@@ -395,7 +394,6 @@ export default function SurveyReportsPage() {
       });
 
       setIsLoading(false);
-      console.timeEnd("Total data loading time");
     } catch (error) {
       console.error("Error fetching data:", error);
       setIsLoading(false);
@@ -408,7 +406,6 @@ export default function SurveyReportsPage() {
   };
 
   useEffect(() => {
-    console.log("Date range changed:", dateRange);
     fetchData(dateRange);
   }, [dateRange]);
 
@@ -531,6 +528,7 @@ export default function SurveyReportsPage() {
                 alt="AGA Health Foundation Logo"
                 width={50}
                 height={50}
+                className="h-auto"
               />
               <h1 className="text-2xl md:text-3xl font-bold text-primary">
                 Survey Reports
@@ -567,92 +565,81 @@ export default function SurveyReportsPage() {
         {/* Date Range Filter */}
         <Card className="mb-3">
           <CardContent className="py-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <Calendar size={16} />
-                <span className="text-sm font-medium">Date Range:</span>
-              </div>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Calendar size={16} />
+                  <span className="text-sm font-medium">Date Range:</span>
+                </div>
 
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={!dateRange ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setDateRange(undefined);
-                    fetchData(undefined);
-                  }}
-                >
-                  All Time
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const range = {
-                      from: subMonths(new Date(), 1),
-                      to: new Date(),
-                    };
-                    setDateRange(range);
-                    fetchData(range);
-                  }}
-                >
-                  Last Month
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const range = {
-                      from: subMonths(new Date(), 3),
-                      to: new Date(),
-                    };
-                    setDateRange(range);
-                    fetchData(range);
-                  }}
-                >
-                  Last 3 Months
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const range = {
-                      from: subYears(new Date(), 1),
-                      to: new Date(),
-                    };
-                    setDateRange(range);
-                    fetchData(range);
-                  }}
-                >
-                  Last Year
-                </Button>
-                <div className="ml-auto">
-                  <DateRangePicker
-                    value={dateRange}
-                    onChange={(range) => {
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={activePreset === null ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setActivePreset(null);
+                      setDateRange(undefined);
+                      fetchData(undefined);
+                    }}
+                  >
+                    All Time
+                  </Button>
+                  <Button
+                    variant={activePreset === "last-month" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setActivePreset("last-month");
+                      const range = {
+                        from: subMonths(new Date(), 1),
+                        to: new Date(),
+                      };
                       setDateRange(range);
                       fetchData(range);
                     }}
-                  />
+                  >
+                    Last Month
+                  </Button>
+                  <Button
+                    variant={activePreset === "last-3-months" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setActivePreset("last-3-months");
+                      const range = {
+                        from: subMonths(new Date(), 3),
+                        to: new Date(),
+                      };
+                      setDateRange(range);
+                      fetchData(range);
+                    }}
+                  >
+                    Last 3 Months
+                  </Button>
+                  <Button
+                    variant={activePreset === "last-year" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setActivePreset("last-year");
+                      const range = {
+                        from: subYears(new Date(), 1),
+                        to: new Date(),
+                      };
+                      setDateRange(range);
+                      fetchData(range);
+                    }}
+                  >
+                    Last Year
+                  </Button>
                 </div>
               </div>
 
-              {dateRange?.from && (
-                <div className="text-sm text-muted-foreground">
-                  Showing data from{" "}
-                  <span className="font-medium">
-                    {format(dateRange.from, "MMM dd, yyyy")}
-                  </span>
-                  {dateRange.to && (
-                    <>
-                      {" "}to{" "}
-                      <span className="font-medium">
-                        {format(dateRange.to, "MMM dd, yyyy")}
-                      </span>
-                    </>
-                  )}
-                </div>
-              )}
+              <DateRangePicker
+                value={dateRange}
+                onChange={(range) => {
+                  setActivePreset("custom");
+                  setDateRange(range);
+                  fetchData(range);
+                }}
+              />
             </div>
           </CardContent>
         </Card>

@@ -131,7 +131,7 @@ export default function DepartmentRating({
 
             <div className="space-y-3 pt-2">
               <Label className="text-base font-medium">
-                Would you recommend this department to others?{" "}
+                Would you recommend  the {location} to others?{" "}
                 <span className="text-red-500">*</span>
               </Label>
               <RadioGroup

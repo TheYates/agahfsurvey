@@ -56,15 +56,13 @@ export default function FinalPage({
     // Check if user type is selected
     const userTypeComplete = surveyData.userType !== "";
 
-    // Check if patient type is selected
-    const patientTypeComplete = surveyData.patientType !== "";
+    // Patient type is now automatically set in intro page, no need to check
 
     return (
       generalComplete &&
       recommendationComplete &&
       reasonComplete &&
-      userTypeComplete &&
-      patientTypeComplete
+      userTypeComplete
     );
   };
 
@@ -289,47 +287,7 @@ export default function FinalPage({
                     Other Corporate Employee
                   </Label>
                 </div>
-                
-              </RadioGroup>
-            </div>
 
-            <div className="space-y-4">
-              <Label className="text-base font-medium">
-                and a: <span className="text-red-500">*</span>
-              </Label>
-              <RadioGroup
-                value={surveyData.patientType}
-                onValueChange={(value) =>
-                  updateSurveyData("patientType", value)
-                }
-                className="flex space-x-4"
-              >
-                <div className="flex items-center space-x-2 bg-muted/30 p-3 rounded-md hover:bg-muted/50 transition-colors">
-                  <RadioGroupItem
-                    value="New Patient"
-                    id="new-patient"
-                    className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                  />
-                  <Label
-                    htmlFor="new-patient"
-                    className="w-full cursor-pointer"
-                  >
-                    New Patient
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2 bg-muted/30 p-3 rounded-md hover:bg-muted/50 transition-colors">
-                  <RadioGroupItem
-                    value="Returning Patient"
-                    id="returning-patient"
-                    className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                  />
-                  <Label
-                    htmlFor="returning-patient"
-                    className="w-full cursor-pointer"
-                  >
-                    Returning Patient
-                  </Label>
-                </div>
               </RadioGroup>
             </div>
           </div>

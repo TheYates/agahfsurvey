@@ -165,7 +165,8 @@ export const CacheKeys = {
 
   overviewData: () => "overview",
 
-  overviewTabData: () => "overview-tab-data",
+  overviewTabData: (dateRange?: string) =>
+    dateRange ? `overview-tab-data-${dateRange}` : "overview-tab-data",
 
   surveyOverview: () => "survey-overview",
 
