@@ -601,6 +601,7 @@ export async function fetchVisitTimeData() {
 
     // Define the time periods from the survey form
     type VisitTimePeriod =
+      | "first-time"
       | "less-than-month"
       | "one-two-months"
       | "three-six-months"
@@ -608,6 +609,7 @@ export async function fetchVisitTimeData() {
 
     // Create a mapping for display names
     const periodDisplayNames: Record<VisitTimePeriod, string> = {
+      "first-time": "First time visiting",
       "less-than-month": "Less than a month ago",
       "one-two-months": "One - Two months ago",
       "three-six-months": "Three - Six months ago",
@@ -623,6 +625,7 @@ export async function fetchVisitTimeData() {
         recommendCount: number;
       }
     > = {
+      "first-time": { count: 0, satisfactionSum: 0, recommendCount: 0 },
       "less-than-month": { count: 0, satisfactionSum: 0, recommendCount: 0 },
       "one-two-months": { count: 0, satisfactionSum: 0, recommendCount: 0 },
       "three-six-months": { count: 0, satisfactionSum: 0, recommendCount: 0 },
@@ -638,7 +641,8 @@ export async function fetchVisitTimeData() {
       // Use the visitTime field from the survey submission
       if (
         submission.visitTime &&
-        (submission.visitTime === "less-than-month" ||
+        (submission.visitTime === "first-time" ||
+          submission.visitTime === "less-than-month" ||
           submission.visitTime === "one-two-months" ||
           submission.visitTime === "three-six-months" ||
           submission.visitTime === "more-than-six-months")
