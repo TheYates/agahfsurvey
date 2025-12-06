@@ -1,11 +1,14 @@
 "use client";
 
-import { createBrowserSupabaseClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 
 // Create a single instance of the Supabase client for client-side auth
 export const createAuthClient = () => {
-  return createBrowserSupabaseClient<Database>();
+  return createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 };
 
 // Auth utility functions for client-side use
