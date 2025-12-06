@@ -589,6 +589,7 @@ export async function fetchVisitTimeData() {
         `
         id,
         visitTime,
+        patientType,
         wouldRecommend,
         Rating (
           overall

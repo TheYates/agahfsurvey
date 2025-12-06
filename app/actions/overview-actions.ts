@@ -1290,6 +1290,7 @@ export async function getVisitTimeData(
         id,
         submittedAt,
         visitTime,
+        patientType,
         recommendation,
         wouldRecommend,
         Rating (
