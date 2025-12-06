@@ -1,7 +1,7 @@
-const CACHE_NAME = 'agahf-survey-v1';
+const CACHE_NAME = 'agahf-survey-v2';
 const urlsToCache = [
-  '/survey',
-  '/agahflogo white.svg',
+  '/',
+  '/submit',
 ];
 
 // Install service worker
@@ -46,8 +46,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For survey pages, use network first strategy
-  if (event.request.url.includes('/survey')) {
+  // For survey/submit pages, use network first strategy
+  if (event.request.url.includes('/submit') || event.request.url.includes('/survey')) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {

@@ -60,6 +60,7 @@ import {
   BarChart3,
   FileText,
   Info,
+  ArrowRight,
 } from "lucide-react";
 import {
   SurveyData,
@@ -487,76 +488,91 @@ export default function ReportsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Link
             href="/reports/service-points"
-            className="col-span-1 md:col-span-1"
+            className="col-span-1 md:col-span-1 group"
           >
-            <Card className="h-full transition-all hover:shadow-lg hover:border-primary hover:bg-accent/50 cursor-pointer">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Map size={18} />
-                  Service Points
+            <Card className="h-full transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 hover:border-primary cursor-pointer relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150" />
+              <CardHeader className="relative">
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Map size={20} className="text-primary" />
+                    Service Points
+                  </span>
+                  <ArrowRight size={18} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                 </CardTitle>
                 <CardDescription>
                   Manage service locations and reports
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
+              <CardContent className="relative">
+                <p className="text-sm text-muted-foreground mb-4">
                   View and analyze performance across all service points.
                 </p>
-                <Button className="mt-4" size="sm">
+                <div className="flex items-center gap-2 text-primary font-medium text-sm group-hover:gap-3 transition-all">
                   View Service Points
-                </Button>
+                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                </div>
               </CardContent>
             </Card>
           </Link>
 
           <Link
             href="/reports/survey-reports"
-            className="col-span-1 md:col-span-1"
+            className="col-span-1 md:col-span-1 group"
           >
-            <Card className="h-full transition-all hover:shadow-lg hover:border-primary hover:bg-accent/50 cursor-pointer text-green-500">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 size={18} />
-                  Advanced Analysis
+            <Card className="h-full transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 hover:border-primary cursor-pointer relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150" />
+              <CardHeader className="relative">
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <BarChart3 size={20} className="text-primary" />
+                    Advanced Analysis
+                  </span>
+                  <ArrowRight size={18} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                 </CardTitle>
                 <CardDescription>
                   Compare visit purposes, patient types, and get actionable
                   improvement recommendations.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
+              <CardContent className="relative">
+                <p className="text-sm text-muted-foreground mb-4">
                   Compare visit purposes, patient types, and get actionable
                   improvement recommendations.
                 </p>
-                <Button className="mt-4" size="sm">
+                <div className="flex items-center gap-2 text-primary font-medium text-sm group-hover:gap-3 transition-all">
                   View Enhanced Analysis
-                </Button>
+                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                </div>
               </CardContent>
             </Card>
           </Link>
 
           <Link
             href="/reports/submissions"
-            className="col-span-1 md:col-span-1"
+            className="col-span-1 md:col-span-1 group"
           >
-            <Card className="h-full transition-all hover:shadow-lg hover:border-primary hover:bg-accent/50 cursor-pointer">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText size={18} />
-                  Survey Submissions
+            <Card className="h-full transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 hover:border-primary cursor-pointer relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150" />
+              <CardHeader className="relative">
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <FileText size={20} className="text-primary" />
+                    Survey Submissions
+                  </span>
+                  <ArrowRight size={18} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                 </CardTitle>
                 <CardDescription>Individual survey details</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
+              <CardContent className="relative">
+                <p className="text-sm text-muted-foreground mb-4">
                   Browse and analyze individual survey submissions with detailed
                   response information.
                 </p>
-                <Button className="mt-4" size="sm">
+                <div className="flex items-center gap-2 text-primary font-medium text-sm group-hover:gap-3 transition-all">
                   View Submissions
-                </Button>
+                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                </div>
               </CardContent>
             </Card>
           </Link>

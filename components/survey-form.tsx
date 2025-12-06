@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -64,6 +64,14 @@ export default function SurveyForm() {
     userType: "",
     patientType: "",
   });
+
+  // Scroll to top whenever step or location changes
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  }, [currentStep, currentLocationIndex]);
 
   // Use dynamic location data from the database with immediate fallback
   const departmentLocations = locationGroups.department?.length > 0 ? locationGroups.department : [

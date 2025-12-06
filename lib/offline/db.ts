@@ -89,11 +89,13 @@ export const getPendingSubmissions = async (): Promise<OfflineSubmission[]> => {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([STORE_NAME], 'readonly');
     const store = transaction.objectStore(STORE_NAME);
-    const index = store.index('synced');
-    const request = index.getAll(false);
+    const request = store.getAll();
 
     request.onsuccess = () => {
-      resolve(request.result);
+      // Filter for unsynced submissions in JavaScript
+      const allSubmissions: OfflineSubmission[] = request.result;
+      const pendingSubmissions = allSubmissions.filter(sub => !sub.synced);
+      resolve(pendingSubmissions);
     };
 
     request.onerror = () => {
