@@ -1709,7 +1709,7 @@ export function OverviewTab({
                   <h3 className="text-lg font-medium mb-4">
                     Visit Recency Distribution
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                     {visitTimeData &&
                       visitTimeData.map((item: any, index: number) => (
                         <Card
@@ -1721,7 +1721,17 @@ export function OverviewTab({
                         >
                           <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium">
-                              {item.name}
+                              {item.id === "first-time"
+                                ? "First time visiting"
+                                : item.id === "less-than-month"
+                                ? "< 1 month ago"
+                                : item.id === "one-two-months"
+                                ? "1-2 months ago"
+                                : item.id === "three-six-months"
+                                ? "3-6 months ago"
+                                : item.id === "more-than-six-months"
+                                ? "> 6 months ago"
+                                : item.name}
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-2">
