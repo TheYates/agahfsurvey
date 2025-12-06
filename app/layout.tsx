@@ -10,7 +10,7 @@ import { SessionTimeoutAlert } from "@/components/ui/session-timeout-alert";
 import { OfflineProvider } from "@/lib/offline/offline-context";
 import { OfflineBanner } from "@/components/offline-banner";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
-import { cn } from "@/lib/utils";
+import { Analytics } from "@vercel/analytics/next"
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -45,6 +45,7 @@ export default function RootLayout({
               <ServiceWorkerRegistration />
               <OfflineBanner />
               <ContextMenu>{children}</ContextMenu>
+              <Analytics />
               <Toaster />
               <SessionTimeoutAlert />
             </OfflineProvider>
