@@ -5,10 +5,14 @@ import type { Database } from "@/lib/supabase/database.types";
 
 // Create a single instance of the Supabase client for client-side auth
 export const createAuthClient = () => {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!url || !key) {
+    throw new Error("Missing Supabase environment variables");
+  }
+  
+  return createClient<Database>(url, key);
 };
 
 // Auth utility functions for client-side use
