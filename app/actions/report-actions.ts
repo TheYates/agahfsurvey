@@ -493,3 +493,60 @@ function convertRatingToNumber(rating: string): number {
     default: return 3;
   }
 }
+
+// Get Net Promoter Score (NPS)
+export async function getNPS(): Promise<{
+  score: number;
+  promoters: number;
+  passives: number;
+  detractors: number;
+  total: number;
+}> {
+  try {
+    const { data, error } = await supabase
+      .from("SurveySubmission")
+      .select("recommendation")
+      .not("recommendation", "is", null);
+
+    if (error) {
+      console.error("Error fetching NPS data:", error);
+      return { score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 };
+    }
+
+    if (!data || data.length === 0) {
+      return { score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 };
+    }
+
+    // Categorize responses based on NPS methodology
+    let promoters = 0;
+    let passives = 0;
+    let detractors = 0;
+
+    data.forEach((item) => {
+      const rating = item.recommendation;
+      if (rating >= 9) {
+        promoters++;
+      } else if (rating >= 7) {
+        passives++;
+      } else {
+        detractors++;
+      }
+    });
+
+    const total = data.length;
+    const promoterPercentage = (promoters / total) * 100;
+    const detractorPercentage = (detractors / total) * 100;
+    const npsScore = promoterPercentage - detractorPercentage;
+
+    return {
+      score: Math.round(npsScore),
+      promoters,
+      passives,
+      detractors,
+      total,
+    };
+  } catch (error) {
+    console.error("Error in getNPS:", error);
+    return { score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 };
+  }
+}

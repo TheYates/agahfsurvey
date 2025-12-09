@@ -6,6 +6,12 @@ import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  CustomPieChart,
+  CustomBarChart,
+  CustomStackedBarChart,
+} from "./components/ShadcnCharts";
+
+import {
   Card,
   CardContent,
   CardDescription,
@@ -20,20 +26,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip as ChartTooltip,
-  Legend as ChartLegend,
-  ArcElement,
-  PieController,
-} from "chart.js";
-import { Chart, Bar, Pie } from "react-chartjs-2";
 import {
   Table,
   TableBody,
@@ -77,21 +69,8 @@ import {
   getRecommendationRate,
   getAverageSatisfaction,
   getSatisfactionByLocation,
+  getNPS,
 } from "../actions/report-actions";
-
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  ChartTooltip,
-  ChartLegend,
-  ArcElement,
-  PieController
-);
 
 // Colors for charts
 const COLORS = [
@@ -145,6 +124,13 @@ export default function ReportsPage() {
       poor: number;
     }[]
   >([]);
+  const [npsData, setNpsData] = useState<{
+    score: number;
+    promoters: number;
+    passives: number;
+    detractors: number;
+    total: number;
+  }>({ score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 });
 
   // Log satisfaction data when it changes
   useEffect(() => {
@@ -184,6 +170,7 @@ export default function ReportsPage() {
         recommendationRateData,
         averageSatisfactionData,
         satisfactionByLocationData,
+        nps,
       ] = await Promise.all([
         getSurveyData(),
         getTotalSubmissionCount(),
@@ -193,12 +180,14 @@ export default function ReportsPage() {
         getRecommendationRate(),
         getAverageSatisfaction(),
         getSatisfactionByLocation(),
+        getNPS(),
       ]);
 
       // Set the TOTAL number of responses without filtering
       setTotalResponses(totalCount);
       setRecommendationRate(recommendationRateData);
       setAverageSatisfaction(averageSatisfactionData);
+      setNpsData(nps);
       // Apply location name shortening to satisfaction by location data
       const shortenedSatisfactionByLocation = satisfactionByLocationData.map(
         (loc: any) => ({
@@ -382,7 +371,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">
@@ -483,6 +472,52 @@ export default function ReportsPage() {
               </p>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">
+                  Net Promoter Score
+                </CardTitle>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-2">
+                      <h4 className="font-semibold">How it's calculated:</h4>
+                      <ol className="text-sm space-y-1 list-decimal list-inside">
+                        <li>
+                          Promoters (9-10): Customers who gave ratings of 9 or
+                          10
+                        </li>
+                        <li>
+                          Passives (7-8): Customers who gave ratings of 7 or 8
+                        </li>
+                        <li>
+                          Detractors (0-6): Customers who gave ratings of 0-6
+                        </li>
+                        <li>NPS = (% Promoters) - (% Detractors)</li>
+                      </ol>
+                      <div className="text-xs text-muted-foreground mt-2">
+                        Score ranges from -100 to +100. Higher scores indicate
+                        better customer loyalty.
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <CardDescription>Customer loyalty metric</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{npsData.score}</div>
+              <p className="text-xs text-muted-foreground">
+                {npsData.promoters} promoters, {npsData.passives} passives,{" "}
+                {npsData.detractors} detractors
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -498,7 +533,10 @@ export default function ReportsPage() {
                     <Map size={20} className="text-primary" />
                     Service Points
                   </span>
-                  <ArrowRight size={18} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                  <ArrowRight
+                    size={18}
+                    className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all"
+                  />
                 </CardTitle>
                 <CardDescription>
                   Manage service locations and reports
@@ -510,7 +548,10 @@ export default function ReportsPage() {
                 </p>
                 <div className="flex items-center gap-2 text-primary font-medium text-sm group-hover:gap-3 transition-all">
                   View Service Points
-                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight
+                    size={16}
+                    className="group-hover:translate-x-1 transition-transform"
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -528,7 +569,10 @@ export default function ReportsPage() {
                     <BarChart3 size={20} className="text-primary" />
                     Advanced Analysis
                   </span>
-                  <ArrowRight size={18} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                  <ArrowRight
+                    size={18}
+                    className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all"
+                  />
                 </CardTitle>
                 <CardDescription>
                   Compare visit purposes, patient types, and get actionable
@@ -542,7 +586,10 @@ export default function ReportsPage() {
                 </p>
                 <div className="flex items-center gap-2 text-primary font-medium text-sm group-hover:gap-3 transition-all">
                   View Enhanced Analysis
-                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight
+                    size={16}
+                    className="group-hover:translate-x-1 transition-transform"
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -560,7 +607,10 @@ export default function ReportsPage() {
                     <FileText size={20} className="text-primary" />
                     Survey Submissions
                   </span>
-                  <ArrowRight size={18} className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                  <ArrowRight
+                    size={18}
+                    className="text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all"
+                  />
                 </CardTitle>
                 <CardDescription>Individual survey details</CardDescription>
               </CardHeader>
@@ -571,7 +621,10 @@ export default function ReportsPage() {
                 </p>
                 <div className="flex items-center gap-2 text-primary font-medium text-sm group-hover:gap-3 transition-all">
                   View Submissions
-                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight
+                    size={16}
+                    className="group-hover:translate-x-1 transition-transform"
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -655,105 +708,25 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="h-80">
-                    <Pie
-                      data={{
-                        labels: satisfactionData
-                          .slice()
-                          .reverse()
-                          .map((item) => {
-                            // Map rating numbers to descriptive text
-                            switch (item.name) {
-                              case "1":
-                                return "Poor";
-                              case "2":
-                                return "Fair";
-                              case "3":
-                                return "Good";
-                              case "4":
-                                return "Very Good";
-                              case "5":
-                                return "Excellent";
-                              default:
-                                return item.name;
-                            }
-                          }),
-                        datasets: [
-                          {
-                            label: "Satisfaction Rating",
-                            data: satisfactionData
-                              .slice()
-                              .reverse()
-                              .map((item) => item.value),
-                            backgroundColor: satisfactionData
-                              .slice()
-                              .reverse()
-                              .map((item) => {
-                                // Match colors to sentiment
-                                switch (item.name) {
-                                  case "1":
-                                    return COLORS[4]; // Poor = red
-                                  case "2":
-                                    return COLORS[3]; // Fair = orange
-                                  case "3":
-                                    return COLORS[2]; // Good = beige
-                                  case "4":
-                                    return COLORS[1]; // Very Good = light teal
-                                  case "5":
-                                    return COLORS[0]; // Excellent = dark teal
-                                  default:
-                                    return "#cccccc"; // Default gray
-                                }
-                              }),
-                            borderColor: satisfactionData
-                              .slice()
-                              .reverse()
-                              .map((item) => {
-                                // Match colors to sentiment
-                                switch (item.name) {
-                                  case "1":
-                                    return COLORS[4]; // Poor = red
-                                  case "2":
-                                    return COLORS[3]; // Fair = orange
-                                  case "3":
-                                    return COLORS[2]; // Good = beige
-                                  case "4":
-                                    return COLORS[1]; // Very Good = light teal
-                                  case "5":
-                                    return COLORS[0]; // Excellent = dark teal
-                                  default:
-                                    return "#cccccc"; // Default gray
-                                }
-                              }),
-                            borderWidth: 1,
-                          },
-                        ],
-                      }}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                          legend: {
-                            position: "bottom" as const,
-                          },
-                          tooltip: {
-                            callbacks: {
-                              label: function (context: any) {
-                                const label = context.label || "";
-                                const value = context.raw || 0;
-                                const dataset = context.dataset;
-                                const total = dataset.data.reduce(
-                                  (a: number, b: number) => a + b,
-                                  0
-                                );
-                                const percentage = Math.round(
-                                  (value / total) * 100
-                                );
-                                return `${label}: ${value} (${percentage}%)`;
-                              },
-                            },
-                          },
-                        },
-                      }}
+                    <CustomPieChart
+                      data={satisfactionData
+                        .slice()
+                        .reverse()
+                        .map((item) => ({
+                          name:
+                            item.name === "1"
+                              ? "Poor"
+                              : item.name === "2"
+                              ? "Fair"
+                              : item.name === "3"
+                              ? "Good"
+                              : item.name === "4"
+                              ? "Very Good"
+                              : item.name === "5"
+                              ? "Excellent"
+                              : item.name,
+                          value: item.value,
+                        }))}
                     />
                   </div>
                 </CardContent>
@@ -777,45 +750,11 @@ export default function ReportsPage() {
                     </div>
                   ) : (
                     <div className="h-80">
-                      <Bar
-                        data={{
-                          labels: locationData.map((item) => item.name),
-                          datasets: [
-                            {
-                              label: "Visit Count",
-                              data: locationData.map((item) => item.count),
-                              backgroundColor: locationData.map(
-                                (_, index) => COLORS[index % COLORS.length]
-                              ),
-                              borderColor: locationData.map(
-                                (_, index) => COLORS[index % COLORS.length]
-                              ),
-                              borderWidth: 1,
-                            },
-                          ],
-                        }}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              position: "bottom" as const,
-                            },
-                          },
-                          scales: {
-                            x: {
-                              grid: {
-                                display: false,
-                              },
-                            },
-                            y: {
-                              beginAtZero: true,
-                              grid: {
-                                display: true,
-                              },
-                            },
-                          },
-                        }}
+                      <CustomBarChart
+                        data={locationData.map((item) => ({
+                          name: item.name,
+                          value: item.count,
+                        }))}
                       />
                     </div>
                   )}
@@ -879,89 +818,7 @@ export default function ReportsPage() {
                   </div>
                 ) : (
                   <div className="h-96">
-                    <Bar
-                      data={{
-                        labels: satisfactionByLocation.map((loc) => loc.name),
-                        datasets: [
-                          {
-                            label: "Excellent",
-                            data: satisfactionByLocation.map(
-                              (loc) => loc.excellent
-                            ),
-                            backgroundColor: COLORS[1], // light teal
-                            borderColor: COLORS[1],
-                            borderWidth: 1,
-                          },
-                          {
-                            label: "Very Good",
-                            data: satisfactionByLocation.map(
-                              (loc) => loc.veryGood
-                            ),
-                            backgroundColor: COLORS[0], // dark teal
-                            borderColor: COLORS[0],
-                            borderWidth: 1,
-                          },
-                          {
-                            label: "Good",
-                            data: satisfactionByLocation.map((loc) => loc.good),
-                            backgroundColor: COLORS[2], // beige
-                            borderColor: COLORS[2],
-                            borderWidth: 1,
-                          },
-                          {
-                            label: "Fair",
-                            data: satisfactionByLocation.map((loc) => loc.fair),
-                            backgroundColor: COLORS[3], // orange
-                            borderColor: COLORS[3],
-                            borderWidth: 1,
-                          },
-                          {
-                            label: "Poor",
-                            data: satisfactionByLocation.map((loc) => loc.poor),
-                            backgroundColor: COLORS[4], // red
-                            borderColor: COLORS[4],
-                            borderWidth: 1,
-                          },
-                        ],
-                      }}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        indexAxis: "y" as const,
-                        scales: {
-                          x: {
-                            stacked: true,
-                            beginAtZero: true,
-                            title: {
-                              display: true,
-                              text: "Number of Ratings",
-                            },
-                            grid: {
-                              display: true,
-                            },
-                          },
-                          y: {
-                            stacked: true,
-                            grid: {
-                              display: false,
-                            },
-                          },
-                        },
-                        plugins: {
-                          legend: {
-                            position: "bottom" as const,
-                          },
-                          tooltip: {
-                            callbacks: {
-                              label: function (context: any) {
-                                const label = context.dataset.label || "";
-                                return `${label}: ${context.raw}`;
-                              },
-                            },
-                          },
-                        },
-                      }}
-                    />
+                    <CustomStackedBarChart data={satisfactionByLocation} />
                   </div>
                 )}
               </CardContent>

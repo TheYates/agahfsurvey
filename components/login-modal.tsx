@@ -16,7 +16,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
 import { Loader2, AlertCircle } from "lucide-react";
-import { rateLimiter, formatTimeRemaining, isRateLimitError } from "@/lib/utils/rate-limit";
+import {
+  rateLimiter,
+  formatTimeRemaining,
+  isRateLimitError,
+} from "@/lib/utils/rate-limit";
 import { RateLimitHelp } from "@/components/auth/rate-limit-help";
 
 interface LoginModalProps {
@@ -37,15 +41,20 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
     e.preventDefault();
 
     // Check rate limiting
-    if (rateLimiter.isRateLimited('login')) {
-      const timeRemaining = rateLimiter.getTimeUntilReset('login');
-      setError(`Too many login attempts. Please wait ${formatTimeRemaining(timeRemaining)} before trying again.`);
+    if (rateLimiter.isRateLimited("login")) {
+      const timeRemaining = rateLimiter.getTimeUntilReset("login");
+      setError(
+        `Too many login attempts. Please wait ${formatTimeRemaining(
+          timeRemaining
+        )} before trying again.`
+      );
       return;
     }
 
     // Prevent rapid successive attempts (debounce)
     const now = Date.now();
-    if (now - lastAttempt < 2000) { // 2 second cooldown
+    if (now - lastAttempt < 2000) {
+      // 2 second cooldown
       setError("Please wait a moment before trying again.");
       return;
     }
@@ -61,14 +70,18 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
       if (error) {
         // Handle specific rate limit error
         if (isRateLimitError(error)) {
-          const timeRemaining = rateLimiter.getTimeUntilReset('login');
-          setError(`Too many login attempts. Please wait ${formatTimeRemaining(timeRemaining)} before trying again.`);
+          const timeRemaining = rateLimiter.getTimeUntilReset("login");
+          setError(
+            `Too many login attempts. Please wait ${formatTimeRemaining(
+              timeRemaining
+            )} before trying again.`
+          );
         } else {
           setError(error.message);
         }
       } else {
         // Success - clear rate limit
-        rateLimiter.clear('login');
+        rateLimiter.clear("login");
         setEmail("");
         setPassword("");
         onSuccess();
@@ -76,8 +89,12 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
     } catch (err: any) {
       // Handle rate limit and other errors
       if (isRateLimitError(err)) {
-        const timeRemaining = rateLimiter.getTimeUntilReset('login');
-        setError(`Too many login attempts. Please wait ${formatTimeRemaining(timeRemaining)} before trying again.`);
+        const timeRemaining = rateLimiter.getTimeUntilReset("login");
+        setError(
+          `Too many login attempts. Please wait ${formatTimeRemaining(
+            timeRemaining
+          )} before trying again.`
+        );
       } else {
         setError("An error occurred during login");
       }
@@ -141,7 +158,7 @@ export function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
           </DialogFooter>
         </form>
 
-        <RateLimitHelp />
+        {/* <RateLimitHelp /> */}
       </DialogContent>
     </Dialog>
   );
