@@ -13,17 +13,20 @@ import { ArrowLeft, ThumbsUp, RefreshCcw, Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip as ChartTooltip,
-  Legend as ChartLegend,
-} from "chart.js";
-import { Bar, Line } from "react-chartjs-2";
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
 
 import {
   DepartmentConcern,
@@ -31,19 +34,6 @@ import {
   fetchAllSurveyData,
 } from "@/app/actions/department-actions";
 import { COLORS, barAveragePlugin } from "../utils/chart-utils";
-
-// Register ChartJS components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  ChartTooltip,
-  ChartLegend,
-  barAveragePlugin
-);
 
 // Helper to convert text rating to number
 const ratingToValue = (rating: string): number => {

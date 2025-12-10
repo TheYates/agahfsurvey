@@ -139,6 +139,7 @@ export type Database = {
           discharge: string | null;
           foodQuality: string | null;
           wouldRecommend: boolean | null;
+          npsRating: number | null;
           createdAt: string;
         };
         Insert: {
@@ -157,6 +158,7 @@ export type Database = {
           discharge?: string | null;
           foodQuality?: string | null;
           wouldRecommend?: boolean | null;
+          npsRating?: number | null;
           createdAt?: string;
         };
         Update: {
@@ -175,6 +177,7 @@ export type Database = {
           discharge?: string | null;
           foodQuality?: string | null;
           wouldRecommend?: boolean | null;
+          npsRating?: number | null;
           createdAt?: string;
         };
       };

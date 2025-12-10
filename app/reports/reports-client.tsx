@@ -12,20 +12,23 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip as ChartTooltip,
-  Legend as ChartLegend,
-  ArcElement,
-  PieController,
-} from "chart.js";
-import { Chart, Bar, Pie } from "react-chartjs-2";
+// Charts temporarily disabled - imports kept for future use
+// import {
+//   ChartContainer,
+//   ChartTooltip,
+//   ChartTooltipContent,
+// } from "@/components/ui/chart";
+// import {
+//   BarChart,
+//   Bar,
+//   PieChart,
+//   Pie,
+//   XAxis,
+//   YAxis,
+//   CartesianGrid,
+//   ResponsiveContainer,
+//   Cell,
+// } from "recharts";
 import {
   Table,
   TableBody,
@@ -56,20 +59,6 @@ import {
   Star,
   ThumbsUp,
 } from "lucide-react";
-
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  ChartTooltip,
-  ChartLegend,
-  ArcElement,
-  PieController
-);
 
 // Colors for charts
 const COLORS = [
@@ -269,12 +258,9 @@ export function ReportsClient({ initialData }: ReportsClientProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px] flex items-center justify-center">
-                  {data.satisfactionData.length > 0 ? (
-                    <Pie data={satisfactionChartData} options={{ responsive: true, maintainAspectRatio: false }} />
-                  ) : (
-                    <p className="text-muted-foreground">No satisfaction data available</p>
-                  )}
+                {/* Chart temporarily disabled - TODO: Convert to Recharts */}
+                <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                  <p className="text-muted-foreground">Chart visualization coming soon</p>
                 </div>
               </CardContent>
             </Card>
@@ -287,14 +273,9 @@ export function ReportsClient({ initialData }: ReportsClientProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px]">
-                  {data.locationData.length > 0 ? (
-                    <Bar data={locationChartData} options={{ ...chartOptions, maintainAspectRatio: false }} />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <p className="text-muted-foreground">No location data available</p>
-                    </div>
-                  )}
+                {/* Chart temporarily disabled - TODO: Convert to Recharts */}
+                <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                  <p className="text-muted-foreground">Chart visualization coming soon</p>
                 </div>
               </CardContent>
             </Card>

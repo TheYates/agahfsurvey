@@ -41,28 +41,23 @@ import {
   BarChart3,
 } from "lucide-react";
 
-// Chart components
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-} from "chart.js";
-import { Bar, Pie } from "react-chartjs-2";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement
-);
+// Charts temporarily disabled
+// import {
+//   ChartContainer,
+//   ChartTooltip,
+//   ChartTooltipContent,
+// } from "@/components/ui/chart";
+// import {
+//   BarChart,
+//   Bar,
+//   PieChart,
+//   Pie,
+//   XAxis,
+//   YAxis,
+//   CartesianGrid,
+//   ResponsiveContainer,
+//   Cell,
+// } from "recharts";
 
 interface OptimizedSurveyData {
   overview: {

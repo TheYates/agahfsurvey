@@ -42,19 +42,23 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { NPSCard } from "@/components/ui/nps-card";
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip as ChartTooltip,
-  Legend as ChartLegend,
-  ArcElement,
-} from "chart.js";
-import { Bar, Pie } from "react-chartjs-2";
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 import {
   fetchOccupationalHealthData,
   fetchAllSurveyData,
@@ -65,22 +69,16 @@ import {
 } from "@/app/actions/medicals-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Register ChartJS components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  ChartTooltip,
-  ChartLegend,
-  ArcElement
-);
-
 interface OccupationalHealthTabProps {
   isLoading: boolean;
   dateRange?: { from: string; to: string } | null;
+  npsData?: {
+    score: number;
+    promoters: number;
+    passives: number;
+    detractors: number;
+    total: number;
+  } | null;
 }
 
 // Convert numeric value to rating text
@@ -101,7 +99,7 @@ const COLORS = [
   "#e84e3c", // red
 ];
 
-export function MedicalsTab({ isLoading, dateRange }: OccupationalHealthTabProps) {
+export function MedicalsTab({ isLoading, dateRange, npsData }: OccupationalHealthTabProps) {
   const [ohData, setOhData] = useState<OccupationalHealthData | null>(null);
   const [ohConcerns, setOhConcerns] = useState<DepartmentConcern[]>([]);
   const [isLoadingConcerns, setIsLoadingConcerns] = useState(false);
@@ -691,56 +689,7 @@ export function MedicalsTab({ isLoading, dateRange }: OccupationalHealthTabProps
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-1">
-                    Overall Satisfaction
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="cursor-help">
-                          <Info size={14} className="text-muted-foreground" />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-xs">
-                        <p>
-                          Average satisfaction rating for Occupational Health
-                          services on a 5-point scale. Calculated as: Sum of all
-                          category ratings ÷ Number of rating categories.
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </CardTitle>
-                  <Stethoscope className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-2xl font-bold">
-                      {ohData.satisfaction.toFixed(1)}
-                    </div>
-                    <Badge
-                      className={cn(
-                        ohData.satisfaction >= 4
-                          ? "bg-[#22c5bf]/20 text-[#22c5bf] border-[#22c5bf]"
-                          : ohData.satisfaction >= 3
-                          ? "bg-[#f6a050]/20 text-[#f6a050] border-[#f6a050]"
-                          : "bg-[#e84e3c]/20 text-[#e84e3c] border-[#e84e3c]"
-                      )}
-                    >
-                      {valueToRating(ohData.satisfaction)}
-                    </Badge>
-                  </div>
-                  <Progress
-                    value={ohData.satisfaction * 20}
-                    className={
-                      ohData.satisfaction >= 4
-                        ? "h-2 bg-[#22c5bf]/30"
-                        : ohData.satisfaction >= 3
-                        ? "h-2 bg-[#f6a050]/30"
-                        : "h-2 bg-[#e84e3c]/30"
-                    }
-                  />
-                </CardContent>
-              </Card>
+              <NPSCard npsData={npsData} title="Occupational Health NPS" />
             </div>
 
             <Card>

@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { NPSCard } from "@/components/ui/nps-card";
 
 import {
   BarChart,
@@ -107,6 +108,13 @@ interface Department {
 interface DepartmentsTabProps {
   isLoading: boolean;
   departments: Department[];
+  npsData?: {
+    score: number;
+    promoters: number;
+    passives: number;
+    detractors: number;
+    total: number;
+  } | null;
 }
 
 // Convert rating text to numeric value
@@ -144,6 +152,7 @@ const CACHE_TIME = 5 * 60 * 1000; // 5 minutes in milliseconds
 export function DepartmentsTab({
   isLoading,
   departments,
+  npsData,
 }: DepartmentsTabProps) {
   const [selectedDepartment, setSelectedDepartment] =
     useState<Department | null>(null);
@@ -654,48 +663,7 @@ export function DepartmentsTab({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-1">
-              Overall Satisfaction
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <span className="cursor-help">
-                    <Info size={14} className="text-muted-foreground" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-xs">
-                  <p>
-                    Average satisfaction rating across all departments, weighted by
-                    response count. Departments with more responses have proportionally
-                    more influence on the overall score.
-                  </p>
-                </TooltipContent>
-              </UITooltip>
-            </CardTitle>
-            <Building className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <div className="text-2xl font-bold">
-                {avgSatisfaction.toFixed(1)}
-              </div>
-              <Badge
-                className={cn(
-                  "ml-2",
-                  avgSatisfaction >= 4
-                    ? "bg-green-100 text-green-800"
-                    : avgSatisfaction >= 3
-                    ? "bg-amber-100 text-amber-800"
-                    : "bg-red-100 text-red-800"
-                )}
-              >
-                {valueToRating(avgSatisfaction)}
-              </Badge>
-            </div>
-            <Progress value={avgSatisfaction * 20} className="h-2 mt-2" />
-          </CardContent>
-        </Card>
+        <NPSCard npsData={npsData} title="Department NPS" />
       </div>
 
       <Card>

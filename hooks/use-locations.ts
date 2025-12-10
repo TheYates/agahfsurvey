@@ -11,6 +11,9 @@ type LocationGroups = {
   occupational_health: string[]
 }
 
+// Create the Supabase client ONCE outside the hook
+const supabase = createClient()
+
 export function useLocations() {
   const [locationGroups, setLocationGroups] = useState<LocationGroups>({
     department: [],
@@ -20,8 +23,6 @@ export function useLocations() {
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  const supabase = createClient()
 
   useEffect(() => {
     async function fetchLocations() {

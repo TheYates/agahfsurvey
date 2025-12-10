@@ -14,20 +14,25 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip as ChartTooltip,
-  Legend as ChartLegend,
-  ArcElement,
-  PieController,
-} from "chart.js";
-import { Bar, Pie, Line } from "react-chartjs-2";
+// Charts temporarily disabled
+// import {
+//   ChartContainer,
+//   ChartTooltip,
+//   ChartTooltipContent,
+// } from "@/components/ui/chart";
+// import {
+//   BarChart,
+//   Bar,
+//   PieChart,
+//   Pie,
+//   LineChart,
+//   Line,
+//   XAxis,
+//   YAxis,
+//   CartesianGrid,
+//   ResponsiveContainer,
+//   Cell,
+// } from "recharts";
 import {
   Table,
   TableBody,
@@ -63,20 +68,6 @@ import {
   ServicePointFeedback,
   ServicePointRatingDistribution,
 } from "@/app/actions/service_point-actions";
-
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  ChartTooltip,
-  ChartLegend,
-  ArcElement,
-  PieController
-);
 
 // Colors for charts
 const COLORS = [

@@ -41,18 +41,20 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { NPSCard } from "@/components/ui/nps-card";
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip as ChartTooltip,
-  Legend as ChartLegend,
-  ArcElement,
-} from "chart.js";
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
 
 import {
   fetchCanteenData,
@@ -80,19 +82,6 @@ const COLORS = [
   "#e84e3c", // red
 ];
 
-// Register ChartJS components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  ChartTooltip,
-  ChartLegend,
-  ArcElement
-);
-
 // Cache keys and expiration time
 const CACHE_KEY_CANTEEN = "canteenTabData";
 const CACHE_KEY_CONCERNS = "canteenConcernsData";
@@ -102,6 +91,13 @@ interface CanteenTabProps {
   isLoading: boolean;
   departments: any[];
   dateRange?: { from: string; to: string } | null;
+  npsData?: {
+    score: number;
+    promoters: number;
+    passives: number;
+    detractors: number;
+    total: number;
+  } | null;
 }
 
 // Before the component definition, add this helper function
@@ -110,7 +106,7 @@ function fetchCanteenReviews(): Promise<any[]> {
   return Promise.resolve([]);
 }
 
-export function CanteenTab({ isLoading, departments, dateRange }: CanteenTabProps) {
+export function CanteenTab({ isLoading, departments, dateRange, npsData }: CanteenTabProps) {
   const [canteenData, setCanteenData] = useState<CanteenData | null>(null);
   const [canteenConcerns, setCanteenConcerns] = useState<DepartmentConcern[]>(
     []
@@ -557,56 +553,7 @@ export function CanteenTab({ isLoading, departments, dateRange }: CanteenTabProp
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-1">
-                    Overall Satisfaction
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="cursor-help">
-                          <Info size={14} className="text-muted-foreground" />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-xs">
-                        <p>
-                          Average satisfaction rating for Canteen Services on a
-                          5-point scale. Calculated as: Sum of all category
-                          ratings ÷ Number of rating categories.
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </CardTitle>
-                  <Utensils className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-2xl font-bold">
-                      {canteenData.satisfaction.toFixed(1)}
-                    </div>
-                    <Badge
-                      className={cn(
-                        canteenData.satisfaction >= 4
-                          ? "bg-[#22c5bf]/20 text-[#22c5bf] border-[#22c5bf]"
-                          : canteenData.satisfaction >= 3
-                          ? "bg-[#f6a050]/20 text-[#f6a050] border-[#f6a050]"
-                          : "bg-[#e84e3c]/20 text-[#e84e3c] border-[#e84e3c]"
-                      )}
-                    >
-                      {valueToRating(canteenData.satisfaction)}
-                    </Badge>
-                  </div>
-                  <Progress
-                    value={canteenData.satisfaction * 20}
-                    className={
-                      canteenData.satisfaction >= 4
-                        ? "h-2 bg-[#22c5bf]/30"
-                        : canteenData.satisfaction >= 3
-                        ? "h-2 bg-[#f6a050]/30"
-                        : "h-2 bg-[#e84e3c]/30"
-                    }
-                  />
-                </CardContent>
-              </Card>
+              <NPSCard npsData={npsData} title="Canteen NPS" />
             </div>
 
             <Card>

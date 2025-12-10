@@ -44,23 +44,32 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  LineController,
-  BarController,
-  Title,
-  Tooltip as ChartTooltip,
-  Legend as ChartLegend,
-  ArcElement,
-  PieController,
-  RadarController,
-  RadialLinearScale,
-} from "chart.js";
-import { Chart, Bar, Pie, Line, Radar } from "react-chartjs-2";
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  Cell,
+  Legend,
+  Tooltip as RechartsTooltip,
+} from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   COLORS,
@@ -174,26 +183,6 @@ import {
 //   },
 // };
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  BarController,
-  PointElement,
-  LineElement,
-  LineController,
-  Title,
-  ChartTooltip,
-  ChartLegend,
-  ArcElement,
-  PieController,
-  RadarController,
-  RadialLinearScale,
-  barAveragePlugin,
-  legendLabelsPlugin,
-  legendValueLabelsPlugin
-);
-
 // Convert numeric value to rating text
 const valueToRating = (value: number): string => {
   if (value >= 4.5) return "Excellent";
@@ -222,6 +211,14 @@ interface SurveyData {
   };
 }
 
+interface NPSData {
+  score: number;
+  promoters: number;
+  passives: number;
+  detractors: number;
+  total: number;
+}
+
 interface OverviewTabProps {
   surveyData: SurveyData;
   isLoading: boolean;
@@ -235,6 +232,7 @@ interface OverviewTabProps {
     distribution: UserTypeDistribution[];
     insight: string;
   };
+  npsData?: NPSData;
   locations?: Array<{
     id: string;
     name: string;
@@ -255,6 +253,7 @@ export function OverviewTab({
   patientTypeData,
   visitTimeData,
   userTypeData,
+  npsData,
   locations,
 }: OverviewTabProps) {
   if (isLoading) {
@@ -431,11 +430,11 @@ export function OverviewTab({
             </CardContent>
           </Card>
 
-          {/* Average Satisfaction Card */}
+          {/* NPS Score Card */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-1">
-                Average Satisfaction
+                Net Promoter Score
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="cursor-help">
@@ -444,54 +443,48 @@ export function OverviewTab({
                   </TooltipTrigger>
                   <TooltipContent side="right" className="max-w-xs">
                     <p>
-                      Mean satisfaction rating across all responses on a 5-point
-                      scale. Calculated as: Sum of all satisfaction ratings ÷
-                      Number of responses.
+                      NPS measures customer loyalty. Score = % Promoters (9-10) - % Detractors (0-6).
+                      Range: -100 to +100. Above 0 is good, above 50 is excellent.
                     </p>
                   </TooltipContent>
                 </Tooltip>
               </CardTitle>
+              <Star className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold mb-2">
                 <span
                   className={cn(
-                    surveyData.avgSatisfaction >= 4
+                    (npsData?.score || 0) >= 50
                       ? "text-[#22c5bf]"
-                      : surveyData.avgSatisfaction >= 3
+                      : (npsData?.score || 0) >= 0
                       ? "text-[#f6a050]"
                       : "text-[#e84e3c]"
                   )}
                 >
-                  {surveyData.avgSatisfaction
-                    ? surveyData.avgSatisfaction.toFixed(1)
-                    : "0"}
+                  {npsData?.score || 0}
                 </span>
-                <span className="text-sm ml-1 text-muted-foreground">/ 5</span>
               </div>
-              <div className="flex items-center space-x-2">
-                {[1, 2, 3, 4, 5].map((rating) => {
-                  let barColor = "bg-muted";
-                  if (rating <= Math.round(surveyData.avgSatisfaction || 0)) {
-                    if (surveyData.avgSatisfaction >= 4) {
-                      barColor = "bg-[#22c5bf]"; // teal
-                    } else if (surveyData.avgSatisfaction >= 3) {
-                      barColor = "bg-[#f6a050]"; // orange
-                    } else {
-                      barColor = "bg-[#e84e3c]"; // red
-                    }
-                  }
-                  return (
-                    <div
-                      key={rating}
-                      className={cn("h-2 w-1/5 rounded-full", barColor)}
-                    />
-                  );
-                })}
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <div className="flex justify-between">
+                  <span className="flex items-center gap-1">
+                    <ThumbsUp className="h-3 w-3 text-[#22c5bf]" />
+                    Promoters
+                  </span>
+                  <span className="font-medium">{npsData?.promoters || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Passives</span>
+                  <span className="font-medium">{npsData?.passives || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="flex items-center gap-1">
+                    <ThumbsDown className="h-3 w-3 text-[#e84e3c]" />
+                    Detractors
+                  </span>
+                  <span className="font-medium">{npsData?.detractors || 0}</span>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Overall experience rating
-              </p>
             </CardContent>
           </Card>
 
@@ -1016,68 +1009,9 @@ export function OverviewTab({
                       </TooltipContent>
                     </Tooltip>
                   </h3>
-                  <div className="h-80">
-                    <Line
-                      data={{
-                        labels: ["General Practice", "Occupational Health"],
-                        datasets: [
-                          {
-                            label: "Satisfaction",
-                            data: [
-                              typeof visitPurposeData.generalPractice
-                                .satisfaction === "number"
-                                ? parseFloat(
-                                    visitPurposeData.generalPractice.satisfaction.toFixed(
-                                      1
-                                    )
-                                  )
-                                : 0,
-                              typeof visitPurposeData.occupationalHealth
-                                .satisfaction === "number"
-                                ? parseFloat(
-                                    visitPurposeData.occupationalHealth.satisfaction.toFixed(
-                                      1
-                                    )
-                                  )
-                                : 0,
-                            ],
-                            backgroundColor: ["#0a6a74", "#22c5bf"],
-                            borderColor: ["#0a6a74", "#22c5bf"],
-                            tension: 0.2,
-                            fill: false,
-                            pointBackgroundColor: "#0a6a74",
-                            pointRadius: 6,
-                            borderWidth: 1,
-                          },
-                        ],
-                      }}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                          y: {
-                            beginAtZero: true,
-                            max: 5,
-                            ticks: {
-                              stepSize: 1,
-                            },
-                          },
-                        },
-                        plugins: {
-                          legend: {
-                            position: "bottom" as const,
-                          },
-                          tooltip: {
-                            callbacks: {
-                              label: function (context: any) {
-                                const value = context.parsed.y;
-                                return `Rating: ${value.toFixed(2)}/5`;
-                              },
-                            },
-                          },
-                        },
-                      }}
-                    />
+                  {/* Chart temporarily disabled - TODO: Convert to Recharts */}
+                  <div className="h-80 flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground">Chart visualization coming soon</p>
                   </div>
                 </div>
               </CardContent>
@@ -1339,57 +1273,9 @@ export function OverviewTab({
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <div className="h-80 w-full">
-                        <Pie
-                          data={{
-                            labels: userTypeData.distribution.map(
-                              (item) => item.name
-                            ),
-                            datasets: [
-                              {
-                                label: "User Types",
-                                data: userTypeData.distribution.map(
-                                  (item) => item.value
-                                ),
-                                backgroundColor: userTypeData.distribution.map(
-                                  (_, index) => COLORS[index % COLORS.length]
-                                ),
-                                borderColor: userTypeData.distribution.map(
-                                  (_, index) => COLORS[index % COLORS.length]
-                                ),
-                                borderWidth: 1,
-                              },
-                            ],
-                          }}
-                          options={{
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                              legend: {
-                                position: "right" as const,
-                                labels: {
-                                  boxWidth: 15,
-                                },
-                              },
-                              tooltip: {
-                                callbacks: {
-                                  label: function (context: any) {
-                                    const label = context.label || "";
-                                    const value = context.raw || 0;
-                                    const total = (
-                                      context.dataset.data as number[]
-                                    ).reduce((a, b) => a + b, 0);
-                                    const percentage =
-                                      total > 0
-                                        ? Math.round((value / total) * 100)
-                                        : 0;
-                                    return `${label}: ${value} (${percentage}%)`;
-                                  },
-                                },
-                              },
-                            },
-                          }}
-                        />
+                      {/* Chart temporarily disabled - TODO: Convert to Recharts */}
+                      <div className="h-80 w-full flex items-center justify-center bg-muted/30 rounded-lg">
+                        <p className="text-muted-foreground">Chart visualization coming soon</p>
                       </div>
 
                       <div className="mt-6 space-y-4">
@@ -1467,69 +1353,9 @@ export function OverviewTab({
                         <Sparkles size={18} />
                         General Observation Ratings
                       </h3>
-                      <div className="h-80 w-full">
-                        <Bar
-                          data={{
-                            labels: [
-                              "Cleanliness/Serenity",
-                              "Facilities",
-                              "Security",
-                              "Overall impression",
-                            ],
-                            datasets: [
-                              {
-                                label: "Average Rating",
-                                data: [
-                                  surveyData.generalObservationStats
-                                    ?.cleanliness || 0,
-                                  surveyData.generalObservationStats
-                                    ?.facilities || 0,
-                                  surveyData.generalObservationStats
-                                    ?.security || 0,
-                                  surveyData.generalObservationStats?.overall ||
-                                    0,
-                                ],
-                                backgroundColor: COLORS[1],
-                                borderColor: COLORS[1],
-                                borderWidth: 1,
-                                borderRadius: 4,
-                              },
-                            ],
-                          }}
-                          options={{
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                              y: {
-                                beginAtZero: true,
-                                max: 5,
-                                ticks: {
-                                  stepSize: 1,
-                                  callback: function (value) {
-                                    return value + ".0";
-                                  },
-                                },
-                                title: {
-                                  display: true,
-                                  text: "Average Rating (0-5)",
-                                },
-                              },
-                            },
-                            plugins: {
-                              legend: {
-                                position: "bottom",
-                              },
-                              tooltip: {
-                                callbacks: {
-                                  label: function (context) {
-                                    const value = context.parsed.y;
-                                    return `Rating: ${value.toFixed(1)}/5.0`;
-                                  },
-                                },
-                              },
-                            },
-                          }}
-                        />
+                      {/* Chart temporarily disabled - TODO: Convert to Recharts */}
+                      <div className="h-80 w-full flex items-center justify-center bg-muted/30 rounded-lg">
+                        <p className="text-muted-foreground">Chart visualization coming soon</p>
                       </div>
 
                       <div className="mt-6">

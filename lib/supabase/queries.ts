@@ -260,6 +260,7 @@ export async function createSurveyQuery(
       discharge?: string | null;
       foodQuality?: string | null;
       wouldRecommend?: boolean | null;
+      npsRating?: number | null;
     }>;
     concerns: Array<{
       locationId: number;
@@ -311,6 +312,7 @@ export async function createSurveyQuery(
     discharge: rating.discharge,
     foodQuality: rating.foodQuality,
     wouldRecommend: rating.wouldRecommend,
+    npsRating: rating.npsRating,
   }));
 
   if (ratingsToInsert.length > 0) {

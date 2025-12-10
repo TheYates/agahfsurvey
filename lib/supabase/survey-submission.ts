@@ -13,7 +13,7 @@ export type SurveyFormData = {
   visitTime: string;
   visitPurpose: string;
   locations: string[];
-  departmentRatings: Record<string, Record<string, string>>;
+  departmentRatings: Record<string, Record<string, string | number>>;
   departmentConcerns: Record<string, string>;
   visitedOtherPlaces: boolean;
   otherLocations: string[];
@@ -44,6 +44,7 @@ function mapRatingCategory(category: string): string {
     "doctor-professionalism": "doctorProfessionalism",
     discharge: "discharge",
     wouldRecommend: "wouldRecommend",
+    npsRating: "npsRating",
   };
 
   return mappings[category] || category;
@@ -125,12 +126,15 @@ export async function submitSurveyToSupabase(formData: SurveyFormData) {
       ratings: Object.entries(formData.departmentRatings).map(
         ([locationName, ratings]) => {
           // Convert rating categories to the proper database columns
-          const transformedRatings: Record<string, string | boolean> = {};
+          const transformedRatings: Record<string, string | boolean | number> = {};
           Object.entries(ratings).forEach(([category, value]) => {
             const mappedCategory = mapRatingCategory(category);
             // Convert "Yes"/"No" to boolean for wouldRecommend field
             if (mappedCategory === "wouldRecommend") {
               transformedRatings[mappedCategory] = value === "Yes";
+            } else if (mappedCategory === "npsRating") {
+              // Convert npsRating to number
+              transformedRatings[mappedCategory] = typeof value === "number" ? value : parseInt(value);
             } else {
               transformedRatings[mappedCategory] = value;
             }

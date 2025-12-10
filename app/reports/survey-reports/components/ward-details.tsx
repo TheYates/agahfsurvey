@@ -12,35 +12,25 @@ import { Button } from "@/components/ui/button";
 import { BedDouble, ArrowLeft, ThumbsUp, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip as ChartTooltip,
-  Legend as ChartLegend,
-} from "chart.js";
-import { Bar, Line } from "react-chartjs-2";
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
 
 import { WardConcern, SurveySubmission, fetchAllSurveyData } from "@/app/actions/ward-actions";
 import { ExtendedWard } from "./wards-tab";
 import { COLORS, barAveragePlugin } from "../utils/chart-utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-
-// Register ChartJS components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  ChartTooltip,
-  ChartLegend,
-  barAveragePlugin
-);
 
 // Helper to convert text rating to number
 const ratingToValue = (rating: string): number => {

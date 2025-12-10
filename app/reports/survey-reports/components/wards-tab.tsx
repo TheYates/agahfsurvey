@@ -34,6 +34,7 @@ import {
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NPSCard } from "@/components/ui/nps-card";
 
 import { WardDetails } from "./ward-details";
 
@@ -92,6 +93,13 @@ interface WardsTabProps {
     hasMore: boolean;
   };
   onLoadMore?: () => Promise<void>;
+  npsData?: {
+    score: number;
+    promoters: number;
+    passives: number;
+    detractors: number;
+    total: number;
+  } | null;
 }
 
 // Convert numeric value to rating text
@@ -132,6 +140,7 @@ export function WardsTab({
   wards,
   pagination,
   onLoadMore,
+  npsData,
 }: WardsTabProps) {
   const [selectedWard, setSelectedWard] = useState<ExtendedWard | null>(null);
   const [wardConcerns, setWardConcerns] = useState<WardConcern[]>([]);
@@ -671,48 +680,7 @@ export function WardsTab({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-1">
-              Overall Satisfaction
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="cursor-help">
-                    <Info size={14} className="text-muted-foreground" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-xs">
-                  <p>
-                    Average satisfaction rating across all wards, weighted by
-                    response count. Wards with more responses have proportionally
-                    more influence on the overall score.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </CardTitle>
-            <BedDouble className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <div className="text-2xl font-bold">
-                {avgSatisfaction.toFixed(1)}
-              </div>
-              <Badge
-                className={cn(
-                  "ml-2",
-                  avgSatisfaction >= 4
-                    ? "bg-green-100 text-green-800"
-                    : avgSatisfaction >= 3
-                    ? "bg-amber-100 text-amber-800"
-                    : "bg-red-100 text-red-800"
-                )}
-              >
-                {valueToRating(avgSatisfaction)}
-              </Badge>
-            </div>
-            <Progress value={avgSatisfaction * 20} className="h-2 mt-2" />
-          </CardContent>
-        </Card>
+        <NPSCard npsData={npsData} title="Ward NPS" />
       </div>
 
       <Card>

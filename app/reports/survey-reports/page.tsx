@@ -61,6 +61,7 @@ import {
   ImprovementArea,
   UserTypeDistribution,
 } from "@/app/actions/overview-actions";
+import { getNPS, getNPSByLocationType } from "@/app/actions/report-actions";
 import { OverviewTab } from "./components/overview-tab";
 import { DepartmentsTab } from "./components/departments-tab";
 import { WardsTab } from "./components/wards-tab";
@@ -176,6 +177,11 @@ export default function SurveyReportsPage() {
   const [textFeedback, setTextFeedback] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [locations, setLocations] = useState<(DepartmentData | WardData)[]>([]);
+  const [npsData, setNpsData] = useState<any>(null);
+  const [departmentNpsData, setDepartmentNpsData] = useState<any>(null);
+  const [wardNpsData, setWardNpsData] = useState<any>(null);
+  const [canteenNpsData, setCanteenNpsData] = useState<any>(null);
+  const [medicalsNpsData, setMedicalsNpsData] = useState<any>(null);
   const [overviewData, setOverviewData] = useState<any>({
     surveyData: {
       totalResponses: 0,
@@ -275,14 +281,40 @@ export default function SurveyReportsPage() {
       const overviewPromise = fetchOverviewTabData(dateRangeFilter);
       const departmentPromise = fetchDepartmentTabData(dateRangeFilter);
       const wardPromise = fetchWardTabData(5, 0, dateRangeFilter);
+      const npsPromise = getNPS();
+      const departmentNpsPromise = getNPSByLocationType("Department");
+      const wardNpsPromise = getNPSByLocationType("Ward");
+      const canteenNpsPromise = getNPSByLocationType("Canteen");
+      const medicalsNpsPromise = getNPSByLocationType("occupational_health");
 
       // Wait for all promises to resolve
-      const [fetchedOverviewData, departmentData, wardData] = await Promise.all(
-        [overviewPromise, departmentPromise, wardPromise]
-      );
+      const [
+        fetchedOverviewData, 
+        departmentData, 
+        wardData, 
+        npsResult, 
+        deptNps,
+        wardNps,
+        canteenNps,
+        medicalsNps
+      ] = await Promise.all([
+        overviewPromise, 
+        departmentPromise, 
+        wardPromise, 
+        npsPromise,
+        departmentNpsPromise,
+        wardNpsPromise,
+        canteenNpsPromise,
+        medicalsNpsPromise
+      ]);
 
       // Store the fetched data in the overviewData state
       setOverviewData(fetchedOverviewData);
+      setNpsData(npsResult);
+      setDepartmentNpsData(deptNps);
+      setWardNpsData(wardNps);
+      setCanteenNpsData(canteenNps);
+      setMedicalsNpsData(medicalsNps);
 
       // For backward compatibility, create a surveyData array with safe access
       const surveyData =
@@ -717,6 +749,7 @@ export default function SurveyReportsPage() {
                 userTypeData={
                   data.userTypeData || { distribution: [], insight: "" }
                 }
+                npsData={npsData}
                 locations={locations}
               />,
               <div className="space-y-6">
@@ -774,6 +807,7 @@ export default function SurveyReportsPage() {
               <DepartmentsTab
                 isLoading={isLoading}
                 departments={departments}
+                npsData={departmentNpsData}
               />,
               <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -820,8 +854,9 @@ export default function SurveyReportsPage() {
                 wards={wards}
                 pagination={wardPagination}
                 onLoadMore={loadMoreWards}
+                npsData={wardNpsData}
               />,
-              <WardsTab isLoading={true} wards={[]} />
+              <WardsTab isLoading={true} wards={[]} npsData={null} />
             )}
           </TabsContent>
 
@@ -836,6 +871,7 @@ export default function SurveyReportsPage() {
                   from: format(dateRange.from!, "yyyy-MM-dd"),
                   to: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : format(dateRange.from!, "yyyy-MM-dd")
                 } : null}
+                npsData={canteenNpsData}
               />,
               <div className="space-y-6">
                 <Card>

@@ -45,6 +45,8 @@ export interface DetailedSubmission {
     promptnessCare?: string;
     promptnessFeedback?: string;
     overall?: string | number;
+    wouldRecommend?: string;
+    npsRating?: number;
     comment?: string;
   }[];
   concerns: {
@@ -339,7 +341,8 @@ export async function getSubmissionById(
         nurseProfessionalism,
         doctorProfessionalism,
         discharge,
-        wouldRecommend
+        wouldRecommend,
+        npsRating
       ),
       GeneralObservation (
         cleanliness,
@@ -419,6 +422,10 @@ export async function getSubmissionById(
           wouldRecommend: locationRating.wouldRecommend !== null && locationRating.wouldRecommend !== undefined
             ? (locationRating.wouldRecommend ? "Yes" : "No")
             : "",
+          // Add NPS rating
+          npsRating: locationRating.npsRating !== null && locationRating.npsRating !== undefined
+            ? locationRating.npsRating
+            : undefined,
           comment: "",
         });
       } else {

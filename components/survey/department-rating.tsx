@@ -64,9 +64,11 @@ export default function DepartmentRating({
     const complete = ratingCategories.every((category) => ratings[category.id]);
     // Also check if recommendation is filled
     const hasRecommendation = !!ratings.wouldRecommend;
+    // Check if NPS rating is filled (required after recommendation)
+    const hasNpsRating = ratings.npsRating !== undefined && ratings.npsRating !== null;
 
-    // Return true only if all ratings and recommendation are complete
-    return complete && hasRecommendation;
+    // Return true only if all ratings, recommendation, and NPS are complete
+    return complete && hasRecommendation && hasNpsRating;
   };
 
   return (
@@ -166,6 +168,47 @@ export default function DepartmentRating({
                 </div>
               </RadioGroup>
             </div>
+
+            {surveyData.departmentRatings[location]?.wouldRecommend && (
+              <div className="space-y-3 pt-4 border-t">
+                <Label className="text-base font-medium">
+                  On a scale of 0-10, how likely are you to recommend the{" "}
+                  {location} to a friend or colleague?{" "}
+                  <span className="text-red-500">*</span>
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  0 = Not at all likely, 10 = Extremely likely
+                </p>
+                <RadioGroup
+                  value={
+                    surveyData.departmentRatings[location]?.npsRating?.toString() || ""
+                  }
+                  onValueChange={(value) =>
+                    handleRatingChange("npsRating", parseInt(value))
+                  }
+                  className="flex flex-wrap gap-2"
+                >
+                  {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    <div
+                      key={num}
+                      className="flex items-center justify-center"
+                    >
+                      <RadioGroupItem
+                        value={num.toString()}
+                        id={`${location}-nps-${num}`}
+                        className="peer sr-only"
+                      />
+                      <Label
+                        htmlFor={`${location}-nps-${num}`}
+                        className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border-2 border-muted bg-popover hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground transition-colors"
+                      >
+                        {num}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor={`${location}-concerns`} className="text-base">

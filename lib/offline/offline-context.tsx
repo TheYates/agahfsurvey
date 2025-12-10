@@ -93,7 +93,8 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [isBrowser, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBrowser]);
 
   /**
    * Update pending count on mount and when online status changes
@@ -105,7 +106,8 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
     if (isBrowser) {
       cleanupOldSubmissions(7).catch(console.error);
     }
-  }, [updatePendingCount, isBrowser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBrowser]);
 
   /**
    * Save submission (offline or online)
@@ -165,7 +167,8 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
         return id;
       }
     }
-  }, [isOnline, updatePendingCount, toast, isBrowser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline, updatePendingCount, isBrowser]);
 
   /**
    * Sync pending submissions
@@ -238,7 +241,8 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
     } finally {
       setIsSyncing(false);
     }
-  }, [isOnline, isSyncing, updatePendingCount, toast, isBrowser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline, isSyncing, updatePendingCount, isBrowser]);
 
   /**
    * Get pending submissions

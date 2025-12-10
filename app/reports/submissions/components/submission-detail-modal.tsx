@@ -558,6 +558,9 @@ export default function SubmissionDetailModal({
               // Add location-specific recommendation
               if (ratingAny.wouldRecommend !== undefined && ratingAny.wouldRecommend !== "")
                 ratingObj.wouldRecommend = ratingAny.wouldRecommend;
+              // Add NPS rating
+              if (ratingAny.npsRating !== undefined && ratingAny.npsRating !== null)
+                ratingObj.npsRating = ratingAny.npsRating;
 
               departmentRatings[rating.locationName] = ratingObj;
             }

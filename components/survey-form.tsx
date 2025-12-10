@@ -28,7 +28,7 @@ interface SurveyData {
   visitTime: string;
   visitPurpose: string;
   locations: string[];
-  departmentRatings: Record<string, Record<string, string>>;
+  departmentRatings: Record<string, Record<string, string | number>>;
   departmentConcerns: Record<string, string>;
   visitedOtherPlaces: boolean;
   otherLocations: string[];

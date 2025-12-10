@@ -504,9 +504,9 @@ export async function getNPS(): Promise<{
 }> {
   try {
     const { data, error } = await supabase
-      .from("SurveySubmission")
-      .select("recommendation")
-      .not("recommendation", "is", null);
+      .from("Rating")
+      .select("npsRating")
+      .not("npsRating", "is", null);
 
     if (error) {
       console.error("Error fetching NPS data:", error);
@@ -523,7 +523,7 @@ export async function getNPS(): Promise<{
     let detractors = 0;
 
     data.forEach((item) => {
-      const rating = item.recommendation;
+      const rating = item.npsRating;
       if (rating >= 9) {
         promoters++;
       } else if (rating >= 7) {
@@ -547,6 +547,125 @@ export async function getNPS(): Promise<{
     };
   } catch (error) {
     console.error("Error in getNPS:", error);
+    return { score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 };
+  }
+}
+
+// Get Net Promoter Score (NPS) for specific location
+export async function getNPSByLocation(locationId: number | string): Promise<{
+  score: number;
+  promoters: number;
+  passives: number;
+  detractors: number;
+  total: number;
+}> {
+  try {
+    const { data, error } = await supabase
+      .from("Rating")
+      .select("npsRating")
+      .eq("locationId", locationId)
+      .not("npsRating", "is", null);
+
+    if (error) {
+      console.error("Error fetching NPS data for location:", error);
+      return { score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 };
+    }
+
+    if (!data || data.length === 0) {
+      return { score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 };
+    }
+
+    // Categorize responses based on NPS methodology
+    let promoters = 0;
+    let passives = 0;
+    let detractors = 0;
+
+    data.forEach((item) => {
+      const rating = item.npsRating;
+      if (rating >= 9) {
+        promoters++;
+      } else if (rating >= 7) {
+        passives++;
+      } else {
+        detractors++;
+      }
+    });
+
+    const total = data.length;
+    const promoterPercentage = (promoters / total) * 100;
+    const detractorPercentage = (detractors / total) * 100;
+    const npsScore = promoterPercentage - detractorPercentage;
+
+    return {
+      score: Math.round(npsScore),
+      promoters,
+      passives,
+      detractors,
+      total,
+    };
+  } catch (error) {
+    console.error("Error in getNPSByLocation:", error);
+    return { score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 };
+  }
+}
+
+// Get Net Promoter Score (NPS) for multiple locations by type
+export async function getNPSByLocationType(locationType: string): Promise<{
+  score: number;
+  promoters: number;
+  passives: number;
+  detractors: number;
+  total: number;
+}> {
+  try {
+    const { data, error } = await supabase
+      .from("Rating")
+      .select(`
+        npsRating,
+        Location!inner(locationType)
+      `)
+      .eq("Location.locationType", locationType)
+      .not("npsRating", "is", null);
+
+    if (error) {
+      console.error("Error fetching NPS data for location type:", error);
+      return { score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 };
+    }
+
+    if (!data || data.length === 0) {
+      return { score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 };
+    }
+
+    // Categorize responses based on NPS methodology
+    let promoters = 0;
+    let passives = 0;
+    let detractors = 0;
+
+    data.forEach((item) => {
+      const rating = item.npsRating;
+      if (rating >= 9) {
+        promoters++;
+      } else if (rating >= 7) {
+        passives++;
+      } else {
+        detractors++;
+      }
+    });
+
+    const total = data.length;
+    const promoterPercentage = (promoters / total) * 100;
+    const detractorPercentage = (detractors / total) * 100;
+    const npsScore = promoterPercentage - detractorPercentage;
+
+    return {
+      score: Math.round(npsScore),
+      promoters,
+      passives,
+      detractors,
+      total,
+    };
+  } catch (error) {
+    console.error("Error in getNPSByLocationType:", error);
     return { score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 };
   }
 }

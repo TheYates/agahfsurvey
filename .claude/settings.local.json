@@ -9,7 +9,10 @@
       "Bash(findstr:*)",
       "Bash(bun add:*)",
       "Bash(bun remove:*)",
-      "WebFetch(domain:ui.shadcn.com)"
+      "WebFetch(domain:ui.shadcn.com)",
+      "Bash(del /F /Q \"C:\\Users\\AGAHF USER\\Desktop\\BUILDS\\hospitalsurvey\\.next\\NUL\")",
+      "Bash(cmd /c \"if exist .next rd /s /q .next\")",
+      "Bash(cmd /c \"cd /d C:\\Users\\AGAHF USER\\Desktop\\BUILDS\\hospitalsurvey &amp;&amp; if exist .next rd /s /q .next\")"
     ],
     "deny": [],
     "ask": []
