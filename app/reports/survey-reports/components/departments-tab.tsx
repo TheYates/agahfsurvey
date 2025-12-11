@@ -43,18 +43,8 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { NPSCard } from "@/components/ui/nps-card";
 import { NPSFeedbackCard } from "@/components/ui/nps-feedback-card";
 
-import {
-  BarChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Bar,
-  LineChart,
-  Line,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import { Bar as ChartJSBar, Line } from "react-chartjs-2";
+import "chart.js/auto";
 
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -115,7 +105,7 @@ interface NPSFeedback {
   visitPurpose: string;
   patientType: string;
   userType: string;
-  category: 'promoter' | 'passive' | 'detractor';
+  category: "promoter" | "passive" | "detractor";
 }
 
 interface DepartmentsTabProps {
@@ -549,348 +539,352 @@ export function DepartmentsTab({
   // Department overview and list
   return (
     <TooltipProvider>
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-medium">Department Performance Overview</h2>
-        <div className="w-[280px]">
-          <Select
-            onValueChange={(value) => {
-              const dept = departmentsOnly.find((d) => d.id === value);
-              if (dept) {
-                setSelectedDepartment(dept);
-              }
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a department" />
-            </SelectTrigger>
-            <SelectContent>
-              {departmentsOnly
-                .sort((a, b) => a.name.localeCompare(b.name))
-                .map((dept) => (
-                  <SelectItem key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-1">
-              Total Responses
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <span className="cursor-help">
-                    <Info size={14} className="text-muted-foreground" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-xs">
-                  <p>
-                    Total number of survey submissions across all departments
-                    within the selected date range.
-                  </p>
-                </TooltipContent>
-              </UITooltip>
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalResponses}</div>
-            <p className="text-xs text-muted-foreground">
-              From {departmentsOnly.length} departments
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-1">
-              Top Performing
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <span className="cursor-help">
-                    <Info size={14} className="text-muted-foreground" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-xs">
-                  <p>
-                    The department with the highest satisfaction rating. Scores are
-                    calculated using a weighted average that prevents departments with
-                    only a few responses from appearing at the top unfairly.
-                  </p>
-                </TooltipContent>
-              </UITooltip>
-            </CardTitle>
-            <Star className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold">
-              {topDepartment.name}
-            </div>
-            <div className="flex items-center">
-              <span className="text-sm">
-                {topDepartment.satisfaction.toFixed(1)}/5.0
-              </span>
-              <span className="text-xs ml-2 text-muted-foreground">
-                ({topDepartment.visitCount} responses)
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-1">
-              Needs Attention
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <span className="cursor-help">
-                    <Info size={14} className="text-muted-foreground" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-xs">
-                  <p>
-                    The department with the lowest satisfaction rating. Scores are
-                    calculated using a weighted average that prevents departments with
-                    only a few responses from appearing at the bottom unfairly.
-                  </p>
-                </TooltipContent>
-              </UITooltip>
-            </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold">
-              {needsAttentionDepartment.name}
-            </div>
-            <div className="flex items-center">
-              <span className="text-sm">
-                {needsAttentionDepartment.satisfaction.toFixed(1)}/5.0
-              </span>
-              <span className="text-xs ml-2 text-muted-foreground">
-                ({needsAttentionDepartment.visitCount} responses)
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <NPSCard npsData={npsData} title="Department NPS" />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Average Ratings by Category</CardTitle>
-          <CardDescription>
-            Overall performance for each rating category
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {ratingCategories.map((category) => {
-              const rating = avgRatings[category.id];
-              return (
-                <div key={category.id} className="space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">
-                      {category.label}
-                    </span>
-                    <span className="text-sm font-medium">
-                      {rating.toFixed(1)}/5.0
-                      <span className="text-xs ml-1 text-muted-foreground">
-                        ({valueToRating(rating)})
-                      </span>
-                    </span>
-                  </div>
-                  <Progress value={rating * 20} className="h-2" />
-                </div>
-              );
-            })}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-medium">
+            Department Performance Overview
+          </h2>
+          <div className="w-[280px]">
+            <Select
+              onValueChange={(value) => {
+                const dept = departmentsOnly.find((d) => d.id === value);
+                if (dept) {
+                  setSelectedDepartment(dept);
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a department" />
+              </SelectTrigger>
+              <SelectContent>
+                {departmentsOnly
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Department Ratings</CardTitle>
-          <CardDescription>
-            Click on a department to view detailed performance
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Rank</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Response Count</TableHead>
-                <TableHead>Satisfaction</TableHead>
-                <TableHead>Recommend Rate</TableHead>
-                <TableHead>Top Rating</TableHead>
-                <TableHead>Lowest Rating</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {departmentsOnly
-                .sort((a, b) => b.satisfaction - a.satisfaction)
-                .map((dept, index) => {
-                  // Find highest and lowest rated categories
-                  const ratings = Object.entries(dept.ratings);
-                  const topRated = ratings.reduce(
-                    (max, curr) => (curr[1] > max[1] ? curr : max),
-                    ratings[0]
-                  );
-                  const lowestRated = ratings.reduce(
-                    (min, curr) => (curr[1] < min[1] ? curr : min),
-                    ratings[0]
-                  );
-
-                  // Get label for category
-                  const getLabel = (id: string) => {
-                    const category = ratingCategories.find(
-                      (cat) => cat.id === id
-                    );
-                    return category ? category.label : id;
-                  };
-
-                  // Create ranking suffix
-                  const getRankingSuffix = (ranking: number) => {
-                    if (ranking === 1) return "st";
-                    if (ranking === 2) return "nd";
-                    if (ranking === 3) return "rd";
-                    return "th";
-                  };
-
-                  const rank = index + 1;
-                  const rankDisplay = `${rank}${getRankingSuffix(rank)}`;
-
-                  return (
-                    <TableRow
-                      key={dept.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => setSelectedDepartment(dept)}
-                    >
-                      <TableCell className="font-bold text-center">
-                        {rankDisplay}
-                      </TableCell>
-                      <TableCell className="font-medium">{dept.name}</TableCell>
-                      <TableCell>{dept.visitCount}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <span className="font-medium mr-2">
-                            {dept.satisfaction.toFixed(1)}
-                          </span>
-                          <Progress
-                            value={dept.satisfaction * 20}
-                            className="h-2 w-16"
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell>{dept.recommendRate.toFixed(0)}%</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          {getLabel(topRated[0])}
-                          <span className="text-xs ml-1">
-                            ({topRated[1].toFixed(1)})
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          {getLabel(lowestRated[0])}
-                          <span className="text-xs ml-1">
-                            ({lowestRated[1].toFixed(1)})
-                          </span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* NPS Feedback Section */}
-      {npsFeedback && npsFeedback.length > 0 && (
-        <NPSFeedbackCard
-          feedback={npsFeedback}
-          title="Department NPS Feedback"
-          description="Customer feedback based on Net Promoter Score ratings"
-          showLocationFilter={true}
-        />
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Department Feedback</CardTitle>
-          <CardDescription>
-            Latest concerns and recommendations from departments
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingConcerns ? (
-            <LoadingSpinner />
-          ) : combinedFeedback.length > 0 ? (
-            <div className="space-y-3">
-              {combinedFeedback.map((feedback, index) => (
-                <Card
-                  key={`${feedback.type}-${feedback.submissionId}-${index}`}
-                  className={`${
-                    feedback.type === "recommendation"
-                      ? "border-l-4 border-l-blue-500"
-                      : "border-l-4 border-l-amber-500"
-                  }`}
-                >
-                  <CardHeader className="p-3 pb-1">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-sm font-medium">
-                          {feedback.locationName}
-                        </CardTitle>
-                        <Badge
-                          variant={
-                            feedback.type === "recommendation"
-                              ? "outline"
-                              : "secondary"
-                          }
-                          className="text-xs"
-                        >
-                          {feedback.type === "recommendation"
-                            ? "Recommendation"
-                            : "Concern"}
-                        </Badge>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(feedback.submittedAt).toLocaleDateString(
-                          "en-US",
-                          { year: "numeric", month: "long", day: "numeric" }
-                        )}
-                      </span>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-3 pt-1">
-                    <p className="text-sm italic text-muted-foreground">
-                      "{feedback.text}"
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1">
+                Total Responses
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-help">
+                      <Info size={14} className="text-muted-foreground" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>
+                      Total number of survey submissions across all departments
+                      within the selected date range.
                     </p>
-                    <div className="flex justify-end mt-1">
-                      <span className="text-xs text-muted-foreground">
-                        User: {feedback.userType}
+                  </TooltipContent>
+                </UITooltip>
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalResponses}</div>
+              <p className="text-xs text-muted-foreground">
+                From {departmentsOnly.length} departments
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1">
+                Top Performing
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-help">
+                      <Info size={14} className="text-muted-foreground" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>
+                      The department with the highest satisfaction rating.
+                      Scores are calculated using a weighted average that
+                      prevents departments with only a few responses from
+                      appearing at the top unfairly.
+                    </p>
+                  </TooltipContent>
+                </UITooltip>
+              </CardTitle>
+              <Star className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-bold">{topDepartment.name}</div>
+              <div className="flex items-center">
+                <span className="text-sm">
+                  {topDepartment.satisfaction.toFixed(1)}/5.0
+                </span>
+                <span className="text-xs ml-2 text-muted-foreground">
+                  ({topDepartment.visitCount} responses)
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1">
+                Needs Attention
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-help">
+                      <Info size={14} className="text-muted-foreground" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>
+                      The department with the lowest satisfaction rating. Scores
+                      are calculated using a weighted average that prevents
+                      departments with only a few responses from appearing at
+                      the bottom unfairly.
+                    </p>
+                  </TooltipContent>
+                </UITooltip>
+              </CardTitle>
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-lg font-bold">
+                {needsAttentionDepartment.name}
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm">
+                  {needsAttentionDepartment.satisfaction.toFixed(1)}/5.0
+                </span>
+                <span className="text-xs ml-2 text-muted-foreground">
+                  ({needsAttentionDepartment.visitCount} responses)
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <NPSCard npsData={npsData} title="Department NPS" />
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Average Ratings by Category</CardTitle>
+            <CardDescription>
+              Overall performance for each rating category
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {ratingCategories.map((category) => {
+                const rating = avgRatings[category.id];
+                return (
+                  <div key={category.id} className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">
+                        {category.label}
+                      </span>
+                      <span className="text-sm font-medium">
+                        {rating.toFixed(1)}/5.0
+                        <span className="text-xs ml-1 text-muted-foreground">
+                          ({valueToRating(rating)})
+                        </span>
                       </span>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    <Progress value={rating * 20} className="h-2" />
+                  </div>
+                );
+              })}
             </div>
-          ) : (
-            <p>No department feedback reported.</p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Department Ratings</CardTitle>
+            <CardDescription>
+              Click on a department to view detailed performance
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Rank</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Response Count</TableHead>
+                  <TableHead>Satisfaction</TableHead>
+                  <TableHead>Recommend Rate</TableHead>
+                  <TableHead>Top Rating</TableHead>
+                  <TableHead>Lowest Rating</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {departmentsOnly
+                  .sort((a, b) => b.satisfaction - a.satisfaction)
+                  .map((dept, index) => {
+                    // Find highest and lowest rated categories
+                    const ratings = Object.entries(dept.ratings);
+                    const topRated = ratings.reduce(
+                      (max, curr) => (curr[1] > max[1] ? curr : max),
+                      ratings[0]
+                    );
+                    const lowestRated = ratings.reduce(
+                      (min, curr) => (curr[1] < min[1] ? curr : min),
+                      ratings[0]
+                    );
+
+                    // Get label for category
+                    const getLabel = (id: string) => {
+                      const category = ratingCategories.find(
+                        (cat) => cat.id === id
+                      );
+                      return category ? category.label : id;
+                    };
+
+                    // Create ranking suffix
+                    const getRankingSuffix = (ranking: number) => {
+                      if (ranking === 1) return "st";
+                      if (ranking === 2) return "nd";
+                      if (ranking === 3) return "rd";
+                      return "th";
+                    };
+
+                    const rank = index + 1;
+                    const rankDisplay = `${rank}${getRankingSuffix(rank)}`;
+
+                    return (
+                      <TableRow
+                        key={dept.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setSelectedDepartment(dept)}
+                      >
+                        <TableCell className="font-bold text-center">
+                          {rankDisplay}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {dept.name}
+                        </TableCell>
+                        <TableCell>{dept.visitCount}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <span className="font-medium mr-2">
+                              {dept.satisfaction.toFixed(1)}
+                            </span>
+                            <Progress
+                              value={dept.satisfaction * 20}
+                              className="h-2 w-16"
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell>{dept.recommendRate.toFixed(0)}%</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            {getLabel(topRated[0])}
+                            <span className="text-xs ml-1">
+                              ({topRated[1].toFixed(1)})
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            {getLabel(lowestRated[0])}
+                            <span className="text-xs ml-1">
+                              ({lowestRated[1].toFixed(1)})
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* NPS Feedback Section */}
+        {npsFeedback && npsFeedback.length > 0 && (
+          <NPSFeedbackCard
+            feedback={npsFeedback}
+            title="Department NPS Feedback"
+            description="Customer feedback based on Net Promoter Score ratings"
+            showLocationFilter={true}
+          />
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Department Feedback</CardTitle>
+            <CardDescription>
+              Latest concerns and recommendations from departments
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingConcerns ? (
+              <LoadingSpinner />
+            ) : combinedFeedback.length > 0 ? (
+              <div className="space-y-3">
+                {combinedFeedback.map((feedback, index) => (
+                  <Card
+                    key={`${feedback.type}-${feedback.submissionId}-${index}`}
+                    className={`${
+                      feedback.type === "recommendation"
+                        ? "border-l-4 border-l-blue-500"
+                        : "border-l-4 border-l-amber-500"
+                    }`}
+                  >
+                    <CardHeader className="p-3 pb-1">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-sm font-medium">
+                            {feedback.locationName}
+                          </CardTitle>
+                          <Badge
+                            variant={
+                              feedback.type === "recommendation"
+                                ? "outline"
+                                : "secondary"
+                            }
+                            className="text-xs"
+                          >
+                            {feedback.type === "recommendation"
+                              ? "Recommendation"
+                              : "Concern"}
+                          </Badge>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(feedback.submittedAt).toLocaleDateString(
+                            "en-US",
+                            { year: "numeric", month: "long", day: "numeric" }
+                          )}
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-3 pt-1">
+                      <p className="text-sm italic text-muted-foreground">
+                        "{feedback.text}"
+                      </p>
+                      <div className="flex justify-end mt-1">
+                        <span className="text-xs text-muted-foreground">
+                          User: {feedback.userType}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <p>No department feedback reported.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </TooltipProvider>
   );
 }

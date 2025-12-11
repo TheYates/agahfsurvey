@@ -1,23 +1,16 @@
 "use client";
 
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts";
+import { Pie, Bar } from "react-chartjs-2";
+import "chart.js/auto";
+
+// Chart colors
+const COLORS = [
+  "#0a6a74", // Dark teal
+  "#22c5bf", // Light teal
+  "#e8e5c0", // Beige
+  "#f6a050", // Orange
+  "#e84e3c", // Red/coral
+];
 
 // Pie Chart Component
 interface CustomPieChartProps {
@@ -25,60 +18,32 @@ interface CustomPieChartProps {
 }
 
 export function CustomPieChart({ data }: CustomPieChartProps) {
-  const chartConfig = {
-    value: {
-      label: "Count",
-    },
-    excellent: {
-      label: "Excellent",
-      color: "hsl(var(--chart-1))",
-    },
-    veryGood: {
-      label: "Very Good",
-      color: "hsl(var(--chart-2))",
-    },
-    good: {
-      label: "Good",
-      color: "hsl(var(--chart-3))",
-    },
-    fair: {
-      label: "Fair",
-      color: "hsl(var(--chart-4))",
-    },
-    poor: {
-      label: "Poor",
-      color: "hsl(var(--chart-5))",
-    },
-  } satisfies ChartConfig;
+  const chartData = {
+    labels: data.map((item) => item.name),
+    datasets: [
+      {
+        data: data.map((item) => item.value),
+        backgroundColor: COLORS,
+        borderColor: COLORS.map((color) => color + "80"),
+        borderWidth: 1,
+      },
+    ],
+  };
 
-  const COLORS = [
-    "hsl(var(--chart-1))",
-    "hsl(var(--chart-2))",
-    "hsl(var(--chart-3))",
-    "hsl(var(--chart-4))",
-    "hsl(var(--chart-5))",
-  ];
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "bottom" as const,
+      },
+    },
+  };
 
   return (
-    <ChartContainer config={chartConfig} className="h-full w-full">
-      <PieChart>
-        <ChartTooltip content={<ChartTooltipContent />} />
-        <ChartLegend content={<ChartLegendContent />} />
-        <Pie
-          data={data}
-          dataKey="value"
-          nameKey="name"
-          cx="50%"
-          cy="50%"
-          outerRadius={100}
-          label
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Pie>
-      </PieChart>
-    </ChartContainer>
+    <div className="h-full w-full">
+      <Pie data={chartData} options={options} />
+    </div>
   );
 }
 
@@ -88,24 +53,39 @@ interface CustomBarChartProps {
 }
 
 export function CustomBarChart({ data }: CustomBarChartProps) {
-  const chartConfig = {
-    value: {
-      label: "Visit Count",
-      color: "hsl(var(--chart-1))",
+  const chartData = {
+    labels: data.map((item) => item.name),
+    datasets: [
+      {
+        label: "Visits",
+        data: data.map((item) => item.value),
+        backgroundColor: "#22c5bf",
+        borderColor: "#1a9b96",
+        borderWidth: 1,
+        borderRadius: 4,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "top" as const,
+      },
     },
-  } satisfies ChartConfig;
+    scales: {
+      y: {
+        beginAtZero: true,
+      },
+    },
+  };
 
   return (
-    <ChartContainer config={chartConfig} className="h-full w-full">
-      <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="name" tickLine={false} tickMargin={10} axisLine={false} />
-        <YAxis tickLine={false} axisLine={false} />
-        <ChartTooltip content={<ChartTooltipContent />} />
-        <ChartLegend content={<ChartLegendContent />} />
-        <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-      </BarChart>
-    </ChartContainer>
+    <div className="h-full w-full">
+      <Bar data={chartData} options={options} />
+    </div>
   );
 }
 
@@ -122,43 +102,59 @@ interface CustomStackedBarChartProps {
 }
 
 export function CustomStackedBarChart({ data }: CustomStackedBarChartProps) {
-  const chartConfig = {
-    excellent: {
-      label: "Excellent",
-      color: "hsl(var(--chart-1))",
+  const chartData = {
+    labels: data.map((item) => item.name),
+    datasets: [
+      {
+        label: "Excellent",
+        data: data.map((item) => item.excellent),
+        backgroundColor: COLORS[0],
+      },
+      {
+        label: "Very Good",
+        data: data.map((item) => item.veryGood),
+        backgroundColor: COLORS[1],
+      },
+      {
+        label: "Good",
+        data: data.map((item) => item.good),
+        backgroundColor: COLORS[2],
+      },
+      {
+        label: "Fair",
+        data: data.map((item) => item.fair),
+        backgroundColor: COLORS[3],
+      },
+      {
+        label: "Poor",
+        data: data.map((item) => item.poor),
+        backgroundColor: COLORS[4],
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    indexAxis: "y" as const,
+    plugins: {
+      legend: {
+        position: "top" as const,
+      },
     },
-    veryGood: {
-      label: "Very Good",
-      color: "hsl(var(--chart-2))",
+    scales: {
+      x: {
+        stacked: true,
+      },
+      y: {
+        stacked: true,
+      },
     },
-    good: {
-      label: "Good",
-      color: "hsl(var(--chart-3))",
-    },
-    fair: {
-      label: "Fair",
-      color: "hsl(var(--chart-4))",
-    },
-    poor: {
-      label: "Poor",
-      color: "hsl(var(--chart-5))",
-    },
-  } satisfies ChartConfig;
+  };
 
   return (
-    <ChartContainer config={chartConfig} className="h-full w-full">
-      <BarChart layout="vertical" data={data}>
-        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-        <XAxis type="number" />
-        <YAxis dataKey="name" type="category" width={150} />
-        <ChartTooltip content={<ChartTooltipContent />} />
-        <ChartLegend content={<ChartLegendContent />} />
-        <Bar dataKey="excellent" stackId="a" fill="hsl(var(--chart-1))" />
-        <Bar dataKey="veryGood" stackId="a" fill="hsl(var(--chart-2))" />
-        <Bar dataKey="good" stackId="a" fill="hsl(var(--chart-3))" />
-        <Bar dataKey="fair" stackId="a" fill="hsl(var(--chart-4))" />
-        <Bar dataKey="poor" stackId="a" fill="hsl(var(--chart-5))" />
-      </BarChart>
-    </ChartContainer>
+    <div className="h-full w-full">
+      <Bar data={chartData} options={options} />
+    </div>
   );
 }

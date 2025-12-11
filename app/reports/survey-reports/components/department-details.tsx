@@ -12,21 +12,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ThumbsUp, RefreshCcw, Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-} from "recharts";
+import { Bar as ChartJSBar, Line } from "react-chartjs-2";
+import "chart.js/auto";
 
 import {
   DepartmentConcern,
@@ -109,12 +96,14 @@ export function DepartmentDetails({
         // Filter submissions for this specific department
         const deptSubmissions = surveyData.filter((submission: any) => {
           return submission.Rating?.some(
-            (rating: any) => rating.locationId === parseInt(selectedDepartment.id as string)
+            (rating: any) =>
+              rating.locationId === parseInt(selectedDepartment.id as string)
           );
         });
 
         // Group by month and calculate average satisfaction
-        const monthlyData: Record<string, { total: number; count: number }> = {};
+        const monthlyData: Record<string, { total: number; count: number }> =
+          {};
         const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
 
         // Initialize months with empty data
@@ -129,7 +118,8 @@ export function DepartmentDetails({
 
           if (monthlyData[month]) {
             const deptRating = submission.Rating?.find(
-              (rating: any) => rating.locationId === parseInt(selectedDepartment.id as string)
+              (rating: any) =>
+                rating.locationId === parseInt(selectedDepartment.id as string)
             );
 
             if (deptRating?.overall) {
@@ -146,17 +136,25 @@ export function DepartmentDetails({
             month,
             satisfaction:
               monthlyData[month].count > 0
-                ? Math.round((monthlyData[month].total / monthlyData[month].count) * 10) / 10
+                ? Math.round(
+                    (monthlyData[month].total / monthlyData[month].count) * 10
+                  ) / 10
                 : null,
           }))
           .filter((item) => item.satisfaction !== null);
 
-        setDeptSatisfactionTrend(trend.length > 0 ? trend : [
-          {
-            month: new Date().toLocaleString("default", { month: "short" }),
-            satisfaction: selectedDepartment.satisfaction || 3.5,
-          },
-        ]);
+        setDeptSatisfactionTrend(
+          trend.length > 0
+            ? trend
+            : [
+                {
+                  month: new Date().toLocaleString("default", {
+                    month: "short",
+                  }),
+                  satisfaction: selectedDepartment.satisfaction || 3.5,
+                },
+              ]
+        );
       } catch (error) {
         console.error("Error generating department satisfaction trend:", error);
         setDeptSatisfactionTrend([
@@ -386,58 +384,50 @@ export function DepartmentDetails({
                 <h4 className="text-sm font-medium mb-3">
                   Ratings by Category
                 </h4>
-                <ChartContainer
-                  config={{
-                    rating: {
-                      label: "Rating",
-                      color: "hsl(var(--chart-1))",
-                    },
-                  }}
-                  className="h-80 w-full"
-                >
-                  <BarChart
-                    data={Object.entries(selectedDepartment.ratings).map(
-                      ([key, value]) => {
-                        const category = ratingCategories.find(
-                          (cat) => cat.id === key
-                        ) || {
-                          id: key,
-                          label: key
-                            .replace(/-/g, " ")
-                            .replace(/\b\w/g, (l) => l.toUpperCase()),
-                        };
-                        return {
-                          category: category.label,
-                          rating: value,
-                        };
-                      }
-                    )}
-                    margin={{ top: 20, right: 30, left: 0, bottom: 60 }}
-                  >
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                      dataKey="category"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      angle={-45}
-                      textAnchor="end"
-                      height={100}
-                    />
-                    <YAxis
-                      domain={[0, 5]}
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar
-                      dataKey="rating"
-                      fill="var(--color-rating)"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ChartContainer>
+                <div className="h-80 w-full">
+                  <ChartJSBar
+                    data={{
+                      labels: Object.entries(selectedDepartment.ratings).map(
+                        ([key]) => {
+                          const category = ratingCategories.find(
+                            (cat) => cat.id === key
+                          ) || {
+                            id: key,
+                            label: key
+                              .replace(/-/g, " ")
+                              .replace(/\b\w/g, (l) => l.toUpperCase()),
+                          };
+                          return category.label;
+                        }
+                      ),
+                      datasets: [
+                        {
+                          label: "Rating",
+                          data: Object.entries(selectedDepartment.ratings).map(
+                            ([, value]) => value
+                          ),
+                          backgroundColor: "#22c5bf",
+                          borderRadius: 4,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: "top",
+                        },
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          max: 5,
+                        },
+                      },
+                    }}
+                  />
+                </div>
               </div>
 
               <div>

@@ -29,7 +29,6 @@ import {
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -44,11 +43,9 @@ import {
 } from "@/components/ui/select";
 import {
   Home,
-  Download,
   Filter,
   RefreshCw,
   Map,
-  TrendingUp,
   BarChart3,
   FileText,
   Info,
@@ -71,6 +68,7 @@ import {
   getSatisfactionByLocation,
   getNPS,
 } from "../actions/report-actions";
+import "chart.js/auto";
 
 // Colors for charts
 const COLORS = [
@@ -131,12 +129,6 @@ export default function ReportsPage() {
     detractors: number;
     total: number;
   }>({ score: 0, promoters: 0, passives: 0, detractors: 0, total: 0 });
-
-  // Log satisfaction data when it changes
-  useEffect(() => {
-    if (satisfactionData.length > 0) {
-    }
-  }, [satisfactionData]);
 
   // Redirect to home if not authenticated (only after auth check completes)
   useEffect(() => {
@@ -308,12 +300,6 @@ export default function ReportsPage() {
     }
   };
 
-  // In the component, add a useEffect to log the locationData changes
-  useEffect(() => {
-    if (locationData.length > 0) {
-    }
-  }, [locationData]);
-
   // Show nothing while auth is loading or if not authenticated
   if (authLoading) {
     return null;
@@ -364,6 +350,7 @@ export default function ReportsPage() {
               variant="outline"
               size="sm"
               className="flex items-center gap-1"
+              onClick={fetchData}
             >
               <RefreshCw size={16} />
               <span className="hidden md:inline">Refresh</span>

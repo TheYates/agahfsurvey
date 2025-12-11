@@ -45,22 +45,8 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { NPSCard } from "@/components/ui/nps-card";
 import { NPSFeedbackCard } from "@/components/ui/nps-feedback-card";
 import { fetchNPSFeedback } from "@/app/actions/department-actions";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
+import { Pie as ChartJSPie, Bar as ChartJSBar } from "react-chartjs-2";
+import "chart.js/auto";
 import {
   fetchOccupationalHealthData,
   fetchAllSurveyData,
@@ -80,7 +66,7 @@ interface NPSFeedback {
   visitPurpose: string;
   patientType: string;
   userType: string;
-  category: 'promoter' | 'passive' | 'detractor';
+  category: "promoter" | "passive" | "detractor";
 }
 
 interface OccupationalHealthTabProps {
@@ -113,7 +99,11 @@ const COLORS = [
   "#e84e3c", // red
 ];
 
-export function MedicalsTab({ isLoading, dateRange, npsData }: OccupationalHealthTabProps) {
+export function MedicalsTab({
+  isLoading,
+  dateRange,
+  npsData,
+}: OccupationalHealthTabProps) {
   const [ohData, setOhData] = useState<OccupationalHealthData | null>(null);
   const [ohConcerns, setOhConcerns] = useState<DepartmentConcern[]>([]);
   const [isLoadingConcerns, setIsLoadingConcerns] = useState(false);
@@ -148,10 +138,13 @@ export function MedicalsTab({ isLoading, dateRange, npsData }: OccupationalHealt
   useEffect(() => {
     async function loadNPSFeedback() {
       try {
-        const feedback = await fetchNPSFeedback('occupational_health', dateRange);
+        const feedback = await fetchNPSFeedback(
+          "occupational_health",
+          dateRange
+        );
         setNpsFeedback(feedback);
       } catch (error) {
-        console.error('Error fetching NPS feedback:', error);
+        console.error("Error fetching NPS feedback:", error);
       }
     }
     loadNPSFeedback();
@@ -870,50 +863,35 @@ export function MedicalsTab({ isLoading, dateRange, npsData }: OccupationalHealt
                     <h3 className="font-medium text-base mb-3 flex items-center justify-between">
                       <span>User Type Distribution</span>
                     </h3>
-                    <ChartContainer
-                      config={{
-                        value: {
-                          label: "Count",
-                        },
-                      }}
-                      className="h-[400px] w-full"
-                    >
-                      <PieChart>
-                        <ChartTooltip 
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <div className="bg-background border rounded-lg p-2 shadow-lg">
-                                  <p className="font-semibold text-sm">{payload[0].name}</p>
-                                  <p className="text-sm">Count: {payload[0].value}</p>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Pie
-                          data={userTypeData.map((item, index) => ({
-                            name: item.name,
-                            value: item.value,
-                            fill: `hsl(var(--chart-${(index % 5) + 1}))`,
-                          }))}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={130}
-                          label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                        >
-                          {userTypeData.map((entry, index) => (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={`hsl(var(--chart-${(index % 5) + 1}))`}
-                            />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ChartContainer>
+                    <div className="h-[400px] w-full">
+                      <ChartJSPie
+                        data={{
+                          labels: userTypeData.map((item) => item.name),
+                          datasets: [
+                            {
+                              data: userTypeData.map((item) => item.value),
+                              backgroundColor: [
+                                "#0a6a74",
+                                "#22c5bf",
+                                "#e8e5c0",
+                                "#f6a050",
+                                "#e84e3c",
+                              ],
+                              borderWidth: 1,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: "bottom",
+                            },
+                          },
+                        }}
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -921,43 +899,43 @@ export function MedicalsTab({ isLoading, dateRange, npsData }: OccupationalHealt
                       <h3 className="font-medium text-base mb-3">
                         User Type Breakdown
                       </h3>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>User Type</TableHead>
-                          <TableHead className="text-right">Count</TableHead>
-                          <TableHead className="text-right">
-                            Percentage
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {userTypeData.map(
-                          (item: UserTypeData, index: number) => {
-                            const total = userTypeData.reduce(
-                              (sum: number, entry: UserTypeData) =>
-                                sum + entry.value,
-                              0
-                            );
-                            const percentage = total
-                              ? ((item.value / total) * 100).toFixed(1)
-                              : "0.0";
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>User Type</TableHead>
+                            <TableHead className="text-right">Count</TableHead>
+                            <TableHead className="text-right">
+                              Percentage
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {userTypeData.map(
+                            (item: UserTypeData, index: number) => {
+                              const total = userTypeData.reduce(
+                                (sum: number, entry: UserTypeData) =>
+                                  sum + entry.value,
+                                0
+                              );
+                              const percentage = total
+                                ? ((item.value / total) * 100).toFixed(1)
+                                : "0.0";
 
-                            return (
-                              <TableRow key={`user-type-${index}`}>
-                                <TableCell>{item.name}</TableCell>
-                                <TableCell className="text-right">
-                                  {item.value}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {percentage}%
-                                </TableCell>
-                              </TableRow>
-                            );
-                          }
-                        )}
-                      </TableBody>
-                    </Table>
+                              return (
+                                <TableRow key={`user-type-${index}`}>
+                                  <TableCell>{item.name}</TableCell>
+                                  <TableCell className="text-right">
+                                    {item.value}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {percentage}%
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            }
+                          )}
+                        </TableBody>
+                      </Table>
 
                       <div className="mt-4 p-3 bg-muted/30 rounded-md">
                         <p className="text-sm text-muted-foreground">

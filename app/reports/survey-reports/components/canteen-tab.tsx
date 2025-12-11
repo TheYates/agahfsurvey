@@ -44,19 +44,8 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { NPSCard } from "@/components/ui/nps-card";
 import { NPSFeedbackCard } from "@/components/ui/nps-feedback-card";
 import { fetchNPSFeedback } from "@/app/actions/department-actions";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-} from "recharts";
+import { Bar as ChartJSBar } from "react-chartjs-2";
+import "chart.js/auto";
 
 import {
   fetchCanteenData,
@@ -98,7 +87,7 @@ interface NPSFeedback {
   visitPurpose: string;
   patientType: string;
   userType: string;
-  category: 'promoter' | 'passive' | 'detractor';
+  category: "promoter" | "passive" | "detractor";
 }
 
 interface CanteenTabProps {
@@ -120,7 +109,12 @@ function fetchCanteenReviews(): Promise<any[]> {
   return Promise.resolve([]);
 }
 
-export function CanteenTab({ isLoading, departments, dateRange, npsData }: CanteenTabProps) {
+export function CanteenTab({
+  isLoading,
+  departments,
+  dateRange,
+  npsData,
+}: CanteenTabProps) {
   const [canteenData, setCanteenData] = useState<CanteenData | null>(null);
   const [canteenConcerns, setCanteenConcerns] = useState<DepartmentConcern[]>(
     []
@@ -205,10 +199,10 @@ export function CanteenTab({ isLoading, departments, dateRange, npsData }: Cante
   useEffect(() => {
     async function loadNPSFeedback() {
       try {
-        const feedback = await fetchNPSFeedback('canteen', dateRange);
+        const feedback = await fetchNPSFeedback("canteen", dateRange);
         setNpsFeedback(feedback);
       } catch (error) {
-        console.error('Error fetching NPS feedback:', error);
+        console.error("Error fetching NPS feedback:", error);
       }
     }
     loadNPSFeedback();

@@ -11,23 +11,14 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { BedDouble, ArrowLeft, ThumbsUp, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-} from "recharts";
+import { Bar as ChartJSBar, Line } from "react-chartjs-2";
+import "chart.js/auto";
 
-import { WardConcern, SurveySubmission, fetchAllSurveyData } from "@/app/actions/ward-actions";
+import {
+  WardConcern,
+  SurveySubmission,
+  fetchAllSurveyData,
+} from "@/app/actions/ward-actions";
 import { ExtendedWard } from "./wards-tab";
 import { COLORS, barAveragePlugin } from "../utils/chart-utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -90,14 +81,18 @@ export function WardDetails({
         const surveyData = await fetchAllSurveyData();
 
         // Filter submissions for this specific ward
-        const wardSubmissions = surveyData.filter((submission: SurveySubmission) => {
-          return submission.Rating?.some(
-            (rating) => rating.locationId === parseInt(selectedWard.id as string)
-          );
-        });
+        const wardSubmissions = surveyData.filter(
+          (submission: SurveySubmission) => {
+            return submission.Rating?.some(
+              (rating) =>
+                rating.locationId === parseInt(selectedWard.id as string)
+            );
+          }
+        );
 
         // Group by month and calculate average satisfaction
-        const monthlyData: Record<string, { total: number; count: number }> = {};
+        const monthlyData: Record<string, { total: number; count: number }> =
+          {};
         const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
 
         // Initialize months with empty data
@@ -112,7 +107,8 @@ export function WardDetails({
 
           if (monthlyData[month]) {
             const wardRating = submission.Rating?.find(
-              (rating) => rating.locationId === parseInt(selectedWard.id as string)
+              (rating) =>
+                rating.locationId === parseInt(selectedWard.id as string)
             );
 
             if (wardRating?.overall) {
@@ -129,17 +125,25 @@ export function WardDetails({
             month,
             satisfaction:
               monthlyData[month].count > 0
-                ? Math.round((monthlyData[month].total / monthlyData[month].count) * 10) / 10
+                ? Math.round(
+                    (monthlyData[month].total / monthlyData[month].count) * 10
+                  ) / 10
                 : null,
           }))
           .filter((item) => item.satisfaction !== null);
 
-        setWardSatisfactionTrend(trend.length > 0 ? trend : [
-          {
-            month: new Date().toLocaleString("default", { month: "short" }),
-            satisfaction: selectedWard.satisfaction || 3.5,
-          },
-        ]);
+        setWardSatisfactionTrend(
+          trend.length > 0
+            ? trend
+            : [
+                {
+                  month: new Date().toLocaleString("default", {
+                    month: "short",
+                  }),
+                  satisfaction: selectedWard.satisfaction || 3.5,
+                },
+              ]
+        );
       } catch (error) {
         console.error("Error generating ward satisfaction trend:", error);
         setWardSatisfactionTrend([
@@ -393,52 +397,51 @@ export function WardDetails({
 
               <div>
                 <h4 className="text-sm font-medium mb-3">Rating Comparison</h4>
-                <ChartContainer
-                  config={{
-                    rating: {
-                      label: "Rating",
-                      color: "hsl(var(--chart-1))",
-                    },
-                  }}
-                  className="h-80 w-full"
-                >
-                  <BarChart
-                    data={ratingCategories
-                      .filter(
-                        (category) =>
-                          category.id !== "reception" &&
-                          category.id !== "professionalism"
-                      )
-                      .map((category) => ({
-                        category: category.label,
-                        rating: (selectedWard.ratings as any)[category.id] || 0,
-                      }))}
-                    margin={{ top: 20, right: 30, left: 0, bottom: 60 }}
-                  >
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                      dataKey="category"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      angle={-45}
-                      textAnchor="end"
-                      height={100}
-                    />
-                    <YAxis
-                      domain={[0, 5]}
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar
-                      dataKey="rating"
-                      fill="var(--color-rating)"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ChartContainer>
+                <div className="h-80 w-full">
+                  <ChartJSBar
+                    data={{
+                      labels: ratingCategories
+                        .filter(
+                          (category) =>
+                            category.id !== "reception" &&
+                            category.id !== "professionalism"
+                        )
+                        .map((category) => category.label),
+                      datasets: [
+                        {
+                          label: "Rating",
+                          data: ratingCategories
+                            .filter(
+                              (category) =>
+                                category.id !== "reception" &&
+                                category.id !== "professionalism"
+                            )
+                            .map(
+                              (category) =>
+                                (selectedWard.ratings as any)[category.id] || 0
+                            ),
+                          backgroundColor: "#22c5bf",
+                          borderRadius: 4,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          position: "top",
+                        },
+                      },
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          max: 5,
+                        },
+                      },
+                    }}
+                  />
+                </div>
               </div>
 
               <div>

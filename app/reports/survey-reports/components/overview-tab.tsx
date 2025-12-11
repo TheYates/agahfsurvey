@@ -36,21 +36,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Cell,
-} from "recharts";
+import { Pie as ChartJSPie, Bar as ChartJSBar } from "react-chartjs-2";
+import "chart.js/auto";
 import { Skeleton } from "@/components/ui/skeleton";
 import { COLORS } from "../utils/chart-utils";
 import {
@@ -376,8 +363,9 @@ export function OverviewTab({
                   </TooltipTrigger>
                   <TooltipContent side="right" className="max-w-xs">
                     <p>
-                      NPS measures customer loyalty. Score = % Promoters (9-10) - % Detractors (0-6).
-                      Range: -100 to +100. Above 0 is good, above 50 is excellent.
+                      NPS measures customer loyalty. Score = % Promoters (9-10)
+                      - % Detractors (0-6). Range: -100 to +100. Above 0 is
+                      good, above 50 is excellent.
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -392,7 +380,9 @@ export function OverviewTab({
                     <TooltipTrigger asChild>
                       <div className="flex items-center gap-1 cursor-help">
                         <ThumbsUp className="h-3 w-3 text-[#22c5bf]" />
-                        <span className="font-medium">{npsData?.promoters || 0}</span>
+                        <span className="font-medium">
+                          {npsData?.promoters || 0}
+                        </span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -400,7 +390,7 @@ export function OverviewTab({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                
+
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -408,7 +398,9 @@ export function OverviewTab({
                         <div className="h-3 w-3 flex items-center justify-center">
                           <div className="h-0.5 w-2 bg-[#f6a050]" />
                         </div>
-                        <span className="font-medium">{npsData?.passives || 0}</span>
+                        <span className="font-medium">
+                          {npsData?.passives || 0}
+                        </span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -416,13 +408,15 @@ export function OverviewTab({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                
+
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="flex items-center gap-1 cursor-help">
                         <ThumbsDown className="h-3 w-3 text-[#e84e3c]" />
-                        <span className="font-medium">{npsData?.detractors || 0}</span>
+                        <span className="font-medium">
+                          {npsData?.detractors || 0}
+                        </span>
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -535,11 +529,13 @@ export function OverviewTab({
                                   className="max-w-xs"
                                 >
                                   <p>
-                                    Average of all ratings (reception, professionalism,
-                                    understanding, promptness, overall, etc.) across all
-                                    locations visited for General Practice visits. Patients
-                                    rate from "Excellent" (5) to "Poor" (1). Calculated as:
-                                    Sum of all ratings Ã· Number of ratings.
+                                    Average of all ratings (reception,
+                                    professionalism, understanding, promptness,
+                                    overall, etc.) across all locations visited
+                                    for General Practice visits. Patients rate
+                                    from "Excellent" (5) to "Poor" (1).
+                                    Calculated as: Sum of all ratings Ã· Number
+                                    of ratings.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -587,7 +583,8 @@ export function OverviewTab({
                                     Percentage of General Practice patients who
                                     answered "Yes" to "Would you recommend our
                                     facility to others?" Calculated as: (Number
-                                    of "Yes" responses Ã· Total responses) Ã— 100.
+                                    of "Yes" responses Ã· Total responses) Ã—
+                                    100.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -720,11 +717,13 @@ export function OverviewTab({
                                   className="max-w-xs"
                                 >
                                   <p>
-                                    Average of all ratings (reception, professionalism,
-                                    understanding, promptness, overall, etc.) across all
-                                    locations visited for Occupational Health visits. Patients
-                                    rate from "Excellent" (5) to "Poor" (1). Calculated as:
-                                    Sum of all ratings Ã· Number of ratings.
+                                    Average of all ratings (reception,
+                                    professionalism, understanding, promptness,
+                                    overall, etc.) across all locations visited
+                                    for Occupational Health visits. Patients
+                                    rate from "Excellent" (5) to "Poor" (1).
+                                    Calculated as: Sum of all ratings Ã· Number
+                                    of ratings.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -1000,11 +999,13 @@ export function OverviewTab({
                                   className="max-w-xs"
                                 >
                                   <p>
-                                    Average of all ratings (reception, professionalism,
-                                    understanding, promptness, overall, etc.) across all
-                                    locations visited by new patients. Patients rate from
-                                    "Excellent" (5) to "Poor" (1). Calculated as: Sum of
-                                    all ratings from new patients Ã· Number of ratings.
+                                    Average of all ratings (reception,
+                                    professionalism, understanding, promptness,
+                                    overall, etc.) across all locations visited
+                                    by new patients. Patients rate from
+                                    "Excellent" (5) to "Poor" (1). Calculated
+                                    as: Sum of all ratings from new patients Ã·
+                                    Number of ratings.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -1106,11 +1107,13 @@ export function OverviewTab({
                                   className="max-w-xs"
                                 >
                                   <p>
-                                    Average of all ratings (reception, professionalism,
-                                    understanding, promptness, overall, etc.) across all
-                                    locations visited by returning patients. Patients rate
-                                    from "Excellent" (5) to "Poor" (1). Calculated as: Sum
-                                    of all ratings from returning patients Ã· Number of ratings.
+                                    Average of all ratings (reception,
+                                    professionalism, understanding, promptness,
+                                    overall, etc.) across all locations visited
+                                    by returning patients. Patients rate from
+                                    "Excellent" (5) to "Poor" (1). Calculated
+                                    as: Sum of all ratings from returning
+                                    patients Ã· Number of ratings.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -1157,8 +1160,9 @@ export function OverviewTab({
                                     Percentage of returning patients who
                                     answered "Yes" to "Would you recommend our
                                     facility to others?" Calculated as: (Number
-                                    of "Yes" responses from returning patients Ã·
-                                    Total returning patient responses) Ã— 100.
+                                    of "Yes" responses from returning patients
+                                    Ã· Total returning patient responses) Ã—
+                                    100.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -1194,105 +1198,77 @@ export function OverviewTab({
                     User Type Distribution & General Observations
                   </h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div>
-                      <ChartContainer
-                        config={{
-                          value: {
-                            label: "Count",
+                    <div className="h-[400px] w-full">
+                      <ChartJSPie
+                        data={{
+                          labels: satisfactionByDemographic.byUserType.map(
+                            (item) => item.userType
+                          ),
+                          datasets: [
+                            {
+                              data: satisfactionByDemographic.byUserType.map(
+                                (item) => item.count
+                              ),
+                              backgroundColor: COLORS,
+                              borderWidth: 1,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: "bottom",
+                            },
                           },
                         }}
-                        className="h-[400px] w-full"
-                      >
-                          <PieChart>
-                            <ChartTooltip 
-                              content={({ active, payload }) => {
-                                if (active && payload && payload.length) {
-                                  return (
-                                    <div className="bg-background border rounded-lg p-2 shadow-lg">
-                                      <p className="font-semibold text-sm">{payload[0].name}</p>
-                                      <p className="text-sm">Count: {payload[0].value}</p>
-                                    </div>
-                                  );
-                                }
-                                return null;
-                              }}
-                            />
-                            <Pie
-                              data={satisfactionByDemographic.byUserType.map((item, index) => ({
-                                name: item.userType,
-                                value: item.count,
-                                fill: `hsl(var(--chart-${(index % 5) + 1}))`,
-                              }))}
-                              dataKey="value"
-                              nameKey="name"
-                              cx="50%"
-                              cy="50%"
-                              outerRadius={130}
-                              label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                            >
-                              {satisfactionByDemographic.byUserType.map((entry, index) => (
-                                <Cell 
-                                  key={`cell-${index}`} 
-                                  fill={`hsl(var(--chart-${(index % 5) + 1}))`}
-                                />
-                              ))}
-                            </Pie>
-                          </PieChart>
-                      </ChartContainer>
+                      />
                     </div>
 
-                    <div>
-                      <ChartContainer
-                        config={{
-                          rating: {
-                            label: "Rating",
-                            color: "hsl(var(--chart-3))",
+                    <div className="h-[400px] w-full">
+                      <ChartJSBar
+                        data={{
+                          labels: [
+                            "Cleanliness",
+                            "Facilities",
+                            "Security",
+                            "Overall",
+                          ],
+                          datasets: [
+                            {
+                              label: "Rating",
+                              data: [
+                                surveyData.generalObservationStats
+                                  ?.cleanliness || 0,
+                                surveyData.generalObservationStats
+                                  ?.facilities || 0,
+                                surveyData.generalObservationStats?.security ||
+                                  0,
+                                surveyData.generalObservationStats?.overall ||
+                                  0,
+                              ],
+                              backgroundColor: "#22c5bf",
+                              borderRadius: 4,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: "top",
+                            },
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              max: 5,
+                            },
                           },
                         }}
-                        className="h-[400px] w-full"
-                      >
-                        <BarChart
-                          data={[
-                            {
-                              category: "Cleanliness",
-                              rating: surveyData.generalObservationStats?.cleanliness || 0,
-                            },
-                            {
-                              category: "Facilities",
-                              rating: surveyData.generalObservationStats?.facilities || 0,
-                            },
-                            {
-                              category: "Security",
-                              rating: surveyData.generalObservationStats?.security || 0,
-                            },
-                            {
-                              category: "Overall",
-                              rating: surveyData.generalObservationStats?.overall || 0,
-                            },
-                          ]}
-                          margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
-                        >
-                          <CartesianGrid vertical={false} />
-                          <XAxis 
-                            dataKey="category"
-                            tickLine={false}
-                            axisLine={false}
-                            tickMargin={8}
-                          />
-                          <YAxis 
-                            domain={[0, 5]}
-                            tickLine={false}
-                            axisLine={false}
-                            tickMargin={8}
-                          />
-                          <ChartTooltip content={<ChartTooltipContent />} />
-                          <Bar
-                            dataKey="rating"
-                            fill="var(--color-rating)"
-                            radius={[4, 4, 0, 0]}
-                          />
-                        </BarChart>
-                      </ChartContainer>
+                      />
                     </div>
                   </div>
                 </div>
@@ -1316,62 +1292,60 @@ export function OverviewTab({
                             <TableHead className="text-right">
                               Recommend Rate
                             </TableHead>
-                            <TableHead className="text-right">
-                              Count
-                            </TableHead>
+                            <TableHead className="text-right">Count</TableHead>
                           </TableRow>
                         </TableHeader>
-                          <TableBody>
-                            {satisfactionByDemographic.byUserType.map(
-                              (item, index) => (
-                                <TableRow key={`user-type-recommend-${index}`}>
-                                  <TableCell>{item.userType}</TableCell>
-                                  <TableCell className="text-right">
-                                    <div className="flex flex-col items-end gap-1">
-                                      <span
-                                        className={cn(
-                                          "font-medium text-sm",
-                                          item.recommendRate >= 75
-                                            ? "text-[#22c5bf]"
-                                            : "text-[#e84e3c]"
+                        <TableBody>
+                          {satisfactionByDemographic.byUserType.map(
+                            (item, index) => (
+                              <TableRow key={`user-type-recommend-${index}`}>
+                                <TableCell>{item.userType}</TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex flex-col items-end gap-1">
+                                    <span
+                                      className={cn(
+                                        "font-medium text-sm",
+                                        item.recommendRate >= 75
+                                          ? "text-[#22c5bf]"
+                                          : "text-[#e84e3c]"
+                                      )}
+                                    >
+                                      {item.recommendRate}%
+                                    </span>
+                                    <div className="flex items-center gap-1 w-full justify-end">
+                                      <span className="text-xs text-[#22c5bf]">
+                                        {Math.round(
+                                          (item.count * item.recommendRate) /
+                                            100
                                         )}
-                                      >
-                                        {item.recommendRate}%
                                       </span>
-                                      <div className="flex items-center gap-1 w-full justify-end">
-                                        <span className="text-xs text-[#22c5bf]">
-                                          {Math.round(
-                                            (item.count * item.recommendRate) /
-                                              100
-                                          )}
-                                        </span>
-                                        <Progress
-                                          value={item.recommendRate}
-                                          className={cn(
-                                            "h-1.5 w-16",
-                                            item.recommendRate >= 75
-                                              ? "bg-[#22c5bf]/20"
-                                              : "bg-[#e84e3c]/20"
-                                          )}
-                                        />
-                                        <span className="text-xs text-[#e84e3c]">
-                                          {Math.round(
-                                            (item.count *
-                                              (100 - item.recommendRate)) /
-                                              100
-                                          )}
-                                        </span>
-                                      </div>
+                                      <Progress
+                                        value={item.recommendRate}
+                                        className={cn(
+                                          "h-1.5 w-16",
+                                          item.recommendRate >= 75
+                                            ? "bg-[#22c5bf]/20"
+                                            : "bg-[#e84e3c]/20"
+                                        )}
+                                      />
+                                      <span className="text-xs text-[#e84e3c]">
+                                        {Math.round(
+                                          (item.count *
+                                            (100 - item.recommendRate)) /
+                                            100
+                                        )}
+                                      </span>
                                     </div>
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    {item.count}
-                                  </TableCell>
-                                </TableRow>
-                              )
-                            )}
-                          </TableBody>
-                        </Table>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {item.count}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          )}
+                        </TableBody>
+                      </Table>
                     </div>
 
                     <div className="space-y-4">
@@ -1379,143 +1353,140 @@ export function OverviewTab({
                         Rating Details
                       </h4>
                       <div className="space-y-3">
-                          {[
-                            {
-                              id: "cleanliness",
-                              label: "Cleanliness/serenity",
-                            },
-                            { id: "facilities", label: "Facilities" },
-                            { id: "security", label: "Security" },
-                            { id: "overall", label: "Overall impression" },
-                          ].map((category) => {
-                            const rating =
-                              surveyData.generalObservationStats?.[
-                                category.id
-                              ] || 0;
-                            return (
-                              <div key={category.id} className="space-y-1">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-sm">
-                                    {category.label}
+                        {[
+                          {
+                            id: "cleanliness",
+                            label: "Cleanliness/serenity",
+                          },
+                          { id: "facilities", label: "Facilities" },
+                          { id: "security", label: "Security" },
+                          { id: "overall", label: "Overall impression" },
+                        ].map((category) => {
+                          const rating =
+                            surveyData.generalObservationStats?.[category.id] ||
+                            0;
+                          return (
+                            <div key={category.id} className="space-y-1">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm">
+                                  {category.label}
+                                </span>
+                                <span className="text-sm font-medium">
+                                  {rating.toFixed(1)}/5.0
+                                  <span className="text-xs ml-1 text-muted-foreground">
+                                    ({valueToRating(rating)})
                                   </span>
-                                  <span className="text-sm font-medium">
-                                    {rating.toFixed(1)}/5.0
-                                    <span className="text-xs ml-1 text-muted-foreground">
-                                      ({valueToRating(rating)})
-                                    </span>
-                                  </span>
-                                </div>
-                                <Progress
-                                  value={rating * 20}
-                                  className={cn(
-                                    "h-2",
-                                    rating >= 4
-                                      ? "bg-[#22c5bf]/30"
-                                      : rating >= 3
-                                      ? "bg-[#f6a050]/30"
-                                      : "bg-[#e84e3c]/30"
-                                  )}
-                                />
+                                </span>
                               </div>
-                            );
-                          })}
-                        </div>
+                              <Progress
+                                value={rating * 20}
+                                className={cn(
+                                  "h-2",
+                                  rating >= 4
+                                    ? "bg-[#22c5bf]/30"
+                                    : rating >= 3
+                                    ? "bg-[#f6a050]/30"
+                                    : "bg-[#e84e3c]/30"
+                                )}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="mt-6 space-y-4">
+                        <h4 className="text-sm font-medium">Key Insights</h4>
+                        <ul className="space-y-2 text-sm">
+                          {surveyData.generalObservationStats ? (
+                            <>
+                              <li className="flex items-start">
+                                <span className="bg-[#22c5bf]/10 p-1 rounded mr-2">
+                                  <Star className="h-4 w-4 text-[#22c5bf]" />
+                                </span>
+                                <span>
+                                  {(() => {
+                                    const categories = [
+                                      {
+                                        id: "cleanliness",
+                                        label: "Cleanliness/serenity",
+                                      },
+                                      { id: "facilities", label: "Facilities" },
+                                      { id: "security", label: "Security" },
+                                      {
+                                        id: "overall",
+                                        label: "Overall impression",
+                                      },
+                                    ];
+                                    const stats =
+                                      surveyData.generalObservationStats || {};
+                                    const topCategory = categories.reduce(
+                                      (max, curr) => {
+                                        if (!stats[curr.id] || !stats[max.id])
+                                          return max;
+                                        return stats[curr.id] > stats[max.id]
+                                          ? curr
+                                          : max;
+                                      },
+                                      categories[0]
+                                    );
+                                    return `${
+                                      topCategory.label
+                                    } is our highest-rated area with ${
+                                      stats[topCategory.id]?.toFixed(1) || "0.0"
+                                    }/5.0 score.`;
+                                  })()}
+                                </span>
+                              </li>
+                              <li className="flex items-start">
+                                <span className="bg-[#f6a050]/10 p-1 rounded mr-2">
+                                  <AlertTriangle className="h-4 w-4 text-[#f6a050]" />
+                                </span>
+                                <span>
+                                  {(() => {
+                                    const categories = [
+                                      {
+                                        id: "cleanliness",
+                                        label: "Cleanliness/serenity",
+                                      },
+                                      { id: "facilities", label: "Facilities" },
+                                      { id: "security", label: "Security" },
+                                      {
+                                        id: "overall",
+                                        label: "Overall impression",
+                                      },
+                                    ];
+                                    const stats =
+                                      surveyData.generalObservationStats || {};
+                                    const lowestCategory = categories.reduce(
+                                      (min, curr) => {
+                                        if (!stats[curr.id] || !stats[min.id])
+                                          return min;
+                                        return stats[curr.id] < stats[min.id]
+                                          ? curr
+                                          : min;
+                                      },
+                                      categories[0]
+                                    );
+                                    return `${
+                                      lowestCategory.label
+                                    } may need attention with ${
+                                      stats[lowestCategory.id]?.toFixed(1) ||
+                                      "0.0"
+                                    }/5.0 score.`;
+                                  })()}
+                                </span>
+                              </li>
+                            </>
+                          ) : (
+                            <li className="text-muted-foreground">
+                              No general observation data available
+                            </li>
+                          )}
+                        </ul>
                       </div>
                     </div>
                   </div>
-
-                  <div className="mt-6 space-y-4">
-                    <h4 className="text-sm font-medium">Key Insights</h4>
-                    <ul className="space-y-2 text-sm">
-                      {surveyData.generalObservationStats ? (
-                        <>
-                          <li className="flex items-start">
-                            <span className="bg-[#22c5bf]/10 p-1 rounded mr-2">
-                              <Star className="h-4 w-4 text-[#22c5bf]" />
-                            </span>
-                            <span>
-                              {(() => {
-                                const categories = [
-                                  {
-                                    id: "cleanliness",
-                                    label: "Cleanliness/serenity",
-                                  },
-                                  { id: "facilities", label: "Facilities" },
-                                  { id: "security", label: "Security" },
-                                  {
-                                    id: "overall",
-                                    label: "Overall impression",
-                                  },
-                                ];
-                                const stats =
-                                  surveyData.generalObservationStats || {};
-                                const topCategory = categories.reduce(
-                                  (max, curr) => {
-                                    if (!stats[curr.id] || !stats[max.id])
-                                      return max;
-                                    return stats[curr.id] > stats[max.id]
-                                      ? curr
-                                      : max;
-                                  },
-                                  categories[0]
-                                );
-                                return `${
-                                  topCategory.label
-                                } is our highest-rated area with ${
-                                  stats[topCategory.id]?.toFixed(1) || "0.0"
-                                }/5.0 score.`;
-                              })()}
-                            </span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="bg-[#f6a050]/10 p-1 rounded mr-2">
-                              <AlertTriangle className="h-4 w-4 text-[#f6a050]" />
-                            </span>
-                            <span>
-                              {(() => {
-                                const categories = [
-                                  {
-                                    id: "cleanliness",
-                                    label: "Cleanliness/serenity",
-                                  },
-                                  { id: "facilities", label: "Facilities" },
-                                  { id: "security", label: "Security" },
-                                  {
-                                    id: "overall",
-                                    label: "Overall impression",
-                                  },
-                                ];
-                                const stats =
-                                  surveyData.generalObservationStats || {};
-                                const lowestCategory = categories.reduce(
-                                  (min, curr) => {
-                                    if (!stats[curr.id] || !stats[min.id])
-                                      return min;
-                                    return stats[curr.id] < stats[min.id]
-                                      ? curr
-                                      : min;
-                                  },
-                                  categories[0]
-                                );
-                                return `${
-                                  lowestCategory.label
-                                } may need attention with ${
-                                  stats[lowestCategory.id]?.toFixed(1) ||
-                                  "0.0"
-                                }/5.0 score.`;
-                              })()}
-                            </span>
-                          </li>
-                        </>
-                      ) : (
-                        <li className="text-muted-foreground">
-                          No general observation data available
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                
-                
+                </div>
               </CardContent>
             </Card>
           )}
