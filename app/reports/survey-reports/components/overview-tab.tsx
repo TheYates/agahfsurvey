@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   Card,
@@ -12,19 +12,14 @@ import {
   TrendingUp,
   Users,
   Clock,
-  Lightbulb,
   AlertTriangle,
-  CheckCircle2,
   ThumbsUp,
   ThumbsDown,
-  Sparkles,
   Stethoscope,
   Hospital,
   Star,
   Info,
 } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
@@ -40,43 +35,24 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
 
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
 } from "@/components/ui/chart";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
   XAxis,
   YAxis,
   CartesianGrid,
-  ResponsiveContainer,
   Cell,
-  Legend,
-  Tooltip as RechartsTooltip,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  COLORS,
-  barAveragePlugin,
-  legendLabelsPlugin,
-  legendValueLabelsPlugin,
-} from "../utils/chart-utils";
+import { COLORS } from "../utils/chart-utils";
 import {
   Table,
   TableBody,
@@ -314,50 +290,7 @@ export function OverviewTab({
         )
       : { visitTime: "N/A", count: 0, recommendRate: 0 };
 
-  // Get quick wins (high impact + easy to implement)
-  const quickWins = improvementAreas.filter((area) => area.isQuickWin);
-
-  // Get critical issues (low satisfaction + high visit count)
-  const criticalIssues = improvementAreas.filter((area) => area.isCritical);
-
-  // Get best and worst departments from locations data
-  const getBestAndWorstDepartments = () => {
-    if (!locations || locations.length === 0) {
-      return {
-        best: { name: "N/A", score: 0 },
-        worst: { name: "N/A", score: 0 },
-      };
-    }
-
-    // Sort locations by satisfaction (descending)
-    const sortedLocations = [...locations].sort(
-      (a, b) => b.satisfaction - a.satisfaction
-    );
-
-    const best = {
-      name: sortedLocations[0].name,
-      score: sortedLocations[0].satisfaction,
-    };
-
-    const worst = {
-      name: sortedLocations[sortedLocations.length - 1].name,
-      score: sortedLocations[sortedLocations.length - 1].satisfaction,
-    };
-
-    return { best, worst };
-  };
-
-  const { best: topDepartment, worst: bottomDepartment } =
-    getBestAndWorstDepartments();
-
-  // Log satisfaction calculation data for debugging
-  useEffect(() => {
-    if (surveyData && visitPurposeData) {
-    }
-  }, [surveyData, visitPurposeData, patientTypeData]);
-
-  // Debug flag to show calculation data in the UI
-  const [showDebug, setShowDebug] = useState(false);
+  // Unused variables removed to clean up the code
 
   return (
     <TooltipProvider>
@@ -409,7 +342,7 @@ export function OverviewTab({
                     <p>
                       Percentage of respondents who answered "Yes" to whether
                       they would recommend the facility to others. Calculated
-                      as: (Total "Yes" responses ÷ Total responses) × 100.
+                      as: (Total "Yes" responses Ã· Total responses) Ã— 100.
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -452,38 +385,51 @@ export function OverviewTab({
               <Star className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold mb-2">
-                <span
-                  className={cn(
-                    (npsData?.score || 0) >= 50
-                      ? "text-[#22c5bf]"
-                      : (npsData?.score || 0) >= 0
-                      ? "text-[#f6a050]"
-                      : "text-[#e84e3c]"
-                  )}
-                >
-                  {npsData?.score || 0}
-                </span>
-              </div>
-              <div className="space-y-1 text-xs text-muted-foreground">
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-1">
-                    <ThumbsUp className="h-3 w-3 text-[#22c5bf]" />
-                    Promoters
-                  </span>
-                  <span className="font-medium">{npsData?.promoters || 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Passives</span>
-                  <span className="font-medium">{npsData?.passives || 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="flex items-center gap-1">
-                    <ThumbsDown className="h-3 w-3 text-[#e84e3c]" />
-                    Detractors
-                  </span>
-                  <span className="font-medium">{npsData?.detractors || 0}</span>
-                </div>
+              <div className="text-2xl font-bold">{npsData?.score || 0}</div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1 cursor-help">
+                        <ThumbsUp className="h-3 w-3 text-[#22c5bf]" />
+                        <span className="font-medium">{npsData?.promoters || 0}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Promoters (9-10)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1 cursor-help">
+                        <div className="h-3 w-3 flex items-center justify-center">
+                          <div className="h-0.5 w-2 bg-[#f6a050]" />
+                        </div>
+                        <span className="font-medium">{npsData?.passives || 0}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Passives (7-8)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1 cursor-help">
+                        <ThumbsDown className="h-3 w-3 text-[#e84e3c]" />
+                        <span className="font-medium">{npsData?.detractors || 0}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Detractors (0-6)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </CardContent>
           </Card>
@@ -593,7 +539,7 @@ export function OverviewTab({
                                     understanding, promptness, overall, etc.) across all
                                     locations visited for General Practice visits. Patients
                                     rate from "Excellent" (5) to "Poor" (1). Calculated as:
-                                    Sum of all ratings ÷ Number of ratings.
+                                    Sum of all ratings Ã· Number of ratings.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -641,7 +587,7 @@ export function OverviewTab({
                                     Percentage of General Practice patients who
                                     answered "Yes" to "Would you recommend our
                                     facility to others?" Calculated as: (Number
-                                    of "Yes" responses ÷ Total responses) × 100.
+                                    of "Yes" responses Ã· Total responses) Ã— 100.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -778,7 +724,7 @@ export function OverviewTab({
                                     understanding, promptness, overall, etc.) across all
                                     locations visited for Occupational Health visits. Patients
                                     rate from "Excellent" (5) to "Poor" (1). Calculated as:
-                                    Sum of all ratings ÷ Number of ratings.
+                                    Sum of all ratings Ã· Number of ratings.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -827,8 +773,8 @@ export function OverviewTab({
                                     Percentage of Occupational Health patients
                                     who answered "Yes" to "Would you recommend
                                     our facility to others?" Calculated as:
-                                    (Number of "Yes" responses ÷ Total
-                                    responses) × 100.
+                                    (Number of "Yes" responses Ã· Total
+                                    responses) Ã— 100.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -990,30 +936,6 @@ export function OverviewTab({
                     </div>
                   </div>
                 </div>
-
-                <div className="mt-8">
-                  <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-                    Satisfaction Comparison
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="cursor-help">
-                          <Info size={14} className="text-muted-foreground" />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-xs">
-                        <p>
-                          Visual comparison of satisfaction ratings between
-                          General Practice and Occupational Health departments.
-                          Values represent average ratings on a 5-point scale.
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </h3>
-                  {/* Chart temporarily disabled - TODO: Convert to Recharts */}
-                  <div className="h-80 flex items-center justify-center bg-muted/30 rounded-lg">
-                    <p className="text-muted-foreground">Chart visualization coming soon</p>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           )}
@@ -1082,7 +1004,7 @@ export function OverviewTab({
                                     understanding, promptness, overall, etc.) across all
                                     locations visited by new patients. Patients rate from
                                     "Excellent" (5) to "Poor" (1). Calculated as: Sum of
-                                    all ratings from new patients ÷ Number of ratings.
+                                    all ratings from new patients Ã· Number of ratings.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -1127,8 +1049,8 @@ export function OverviewTab({
                                     Percentage of new patients who answered
                                     "Yes" to "Would you recommend our facility
                                     to others?" Calculated as: (Number of "Yes"
-                                    responses from new patients ÷ Total new
-                                    patient responses) × 100.
+                                    responses from new patients Ã· Total new
+                                    patient responses) Ã— 100.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -1188,7 +1110,7 @@ export function OverviewTab({
                                     understanding, promptness, overall, etc.) across all
                                     locations visited by returning patients. Patients rate
                                     from "Excellent" (5) to "Poor" (1). Calculated as: Sum
-                                    of all ratings from returning patients ÷ Number of ratings.
+                                    of all ratings from returning patients Ã· Number of ratings.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -1235,8 +1157,8 @@ export function OverviewTab({
                                     Percentage of returning patients who
                                     answered "Yes" to "Would you recommend our
                                     facility to others?" Calculated as: (Number
-                                    of "Yes" responses from returning patients ÷
-                                    Total returning patient responses) × 100.
+                                    of "Yes" responses from returning patients Ã·
+                                    Total returning patient responses) Ã— 100.
                                   </p>
                                 </TooltipContent>
                               </Tooltip>
@@ -1269,31 +1191,136 @@ export function OverviewTab({
 
                   <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
                     <Users size={18} />
-                    User Type Distribution
+                    User Type Distribution & General Observations
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div>
-                      {/* Chart temporarily disabled - TODO: Convert to Recharts */}
-                      <div className="h-80 w-full flex items-center justify-center bg-muted/30 rounded-lg">
-                        <p className="text-muted-foreground">Chart visualization coming soon</p>
-                      </div>
+                      <ChartContainer
+                        config={{
+                          value: {
+                            label: "Count",
+                          },
+                        }}
+                        className="h-[400px] w-full"
+                      >
+                          <PieChart>
+                            <ChartTooltip 
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  return (
+                                    <div className="bg-background border rounded-lg p-2 shadow-lg">
+                                      <p className="font-semibold text-sm">{payload[0].name}</p>
+                                      <p className="text-sm">Count: {payload[0].value}</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <Pie
+                              data={satisfactionByDemographic.byUserType.map((item, index) => ({
+                                name: item.userType,
+                                value: item.count,
+                                fill: `hsl(var(--chart-${(index % 5) + 1}))`,
+                              }))}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={130}
+                              label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                            >
+                              {satisfactionByDemographic.byUserType.map((entry, index) => (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={`hsl(var(--chart-${(index % 5) + 1}))`}
+                                />
+                              ))}
+                            </Pie>
+                          </PieChart>
+                      </ChartContainer>
+                    </div>
 
-                      <div className="mt-6 space-y-4">
-                        <h4 className="text-sm font-medium">
-                          Recommendation Rate by User Type
-                        </h4>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>User Type</TableHead>
-                              <TableHead className="text-right">
-                                Recommend Rate
-                              </TableHead>
-                              <TableHead className="text-right">
-                                Count
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
+                    <div>
+                      <ChartContainer
+                        config={{
+                          rating: {
+                            label: "Rating",
+                            color: "hsl(var(--chart-3))",
+                          },
+                        }}
+                        className="h-[400px] w-full"
+                      >
+                        <BarChart
+                          data={[
+                            {
+                              category: "Cleanliness",
+                              rating: surveyData.generalObservationStats?.cleanliness || 0,
+                            },
+                            {
+                              category: "Facilities",
+                              rating: surveyData.generalObservationStats?.facilities || 0,
+                            },
+                            {
+                              category: "Security",
+                              rating: surveyData.generalObservationStats?.security || 0,
+                            },
+                            {
+                              category: "Overall",
+                              rating: surveyData.generalObservationStats?.overall || 0,
+                            },
+                          ]}
+                          margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
+                        >
+                          <CartesianGrid vertical={false} />
+                          <XAxis 
+                            dataKey="category"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                          />
+                          <YAxis 
+                            domain={[0, 5]}
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                          />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Bar
+                            dataKey="rating"
+                            fill="var(--color-rating)"
+                            radius={[4, 4, 0, 0]}
+                          />
+                        </BarChart>
+                      </ChartContainer>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8">
+                  <Separator className="my-8" />
+
+                  <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                    <Users size={18} />
+                    Recommendation Rate by User Type & Rating Details
+                  </h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-medium mb-3">
+                        Recommendation Rate by User Type
+                      </h4>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>User Type</TableHead>
+                            <TableHead className="text-right">
+                              Recommend Rate
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Count
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
                           <TableBody>
                             {satisfactionByDemographic.byUserType.map(
                               (item, index) => (
@@ -1345,24 +1372,13 @@ export function OverviewTab({
                             )}
                           </TableBody>
                         </Table>
-                      </div>
                     </div>
 
-                    <div>
-                      <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-                        <Sparkles size={18} />
-                        General Observation Ratings
-                      </h3>
-                      {/* Chart temporarily disabled - TODO: Convert to Recharts */}
-                      <div className="h-80 w-full flex items-center justify-center bg-muted/30 rounded-lg">
-                        <p className="text-muted-foreground">Chart visualization coming soon</p>
-                      </div>
-
-                      <div className="mt-6">
-                        <h4 className="text-sm font-medium mb-3">
-                          Rating Details
-                        </h4>
-                        <div className="space-y-3">
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-medium mb-3">
+                        Rating Details
+                      </h4>
+                      <div className="space-y-3">
                           {[
                             {
                               id: "cleanliness",
@@ -1405,100 +1421,101 @@ export function OverviewTab({
                           })}
                         </div>
                       </div>
-
-                      <div className="mt-6 space-y-4">
-                        <h4 className="text-sm font-medium">Key Insights</h4>
-                        <ul className="space-y-2 text-sm">
-                          {surveyData.generalObservationStats ? (
-                            <>
-                              <li className="flex items-start">
-                                <span className="bg-[#22c5bf]/10 p-1 rounded mr-2">
-                                  <Star className="h-4 w-4 text-[#22c5bf]" />
-                                </span>
-                                <span>
-                                  {(() => {
-                                    const categories = [
-                                      {
-                                        id: "cleanliness",
-                                        label: "Cleanliness/serenity",
-                                      },
-                                      { id: "facilities", label: "Facilities" },
-                                      { id: "security", label: "Security" },
-                                      {
-                                        id: "overall",
-                                        label: "Overall impression",
-                                      },
-                                    ];
-                                    const stats =
-                                      surveyData.generalObservationStats || {};
-                                    const topCategory = categories.reduce(
-                                      (max, curr) => {
-                                        if (!stats[curr.id] || !stats[max.id])
-                                          return max;
-                                        return stats[curr.id] > stats[max.id]
-                                          ? curr
-                                          : max;
-                                      },
-                                      categories[0]
-                                    );
-                                    return `${
-                                      topCategory.label
-                                    } is our highest-rated area with ${
-                                      stats[topCategory.id]?.toFixed(1) || "0.0"
-                                    }/5.0 score.`;
-                                  })()}
-                                </span>
-                              </li>
-                              <li className="flex items-start">
-                                <span className="bg-[#f6a050]/10 p-1 rounded mr-2">
-                                  <AlertTriangle className="h-4 w-4 text-[#f6a050]" />
-                                </span>
-                                <span>
-                                  {(() => {
-                                    const categories = [
-                                      {
-                                        id: "cleanliness",
-                                        label: "Cleanliness/serenity",
-                                      },
-                                      { id: "facilities", label: "Facilities" },
-                                      { id: "security", label: "Security" },
-                                      {
-                                        id: "overall",
-                                        label: "Overall impression",
-                                      },
-                                    ];
-                                    const stats =
-                                      surveyData.generalObservationStats || {};
-                                    const lowestCategory = categories.reduce(
-                                      (min, curr) => {
-                                        if (!stats[curr.id] || !stats[min.id])
-                                          return min;
-                                        return stats[curr.id] < stats[min.id]
-                                          ? curr
-                                          : min;
-                                      },
-                                      categories[0]
-                                    );
-                                    return `${
-                                      lowestCategory.label
-                                    } may need attention with ${
-                                      stats[lowestCategory.id]?.toFixed(1) ||
-                                      "0.0"
-                                    }/5.0 score.`;
-                                  })()}
-                                </span>
-                              </li>
-                            </>
-                          ) : (
-                            <li className="text-muted-foreground">
-                              No general observation data available
-                            </li>
-                          )}
-                        </ul>
-                      </div>
                     </div>
                   </div>
-                </div>
+
+                  <div className="mt-6 space-y-4">
+                    <h4 className="text-sm font-medium">Key Insights</h4>
+                    <ul className="space-y-2 text-sm">
+                      {surveyData.generalObservationStats ? (
+                        <>
+                          <li className="flex items-start">
+                            <span className="bg-[#22c5bf]/10 p-1 rounded mr-2">
+                              <Star className="h-4 w-4 text-[#22c5bf]" />
+                            </span>
+                            <span>
+                              {(() => {
+                                const categories = [
+                                  {
+                                    id: "cleanliness",
+                                    label: "Cleanliness/serenity",
+                                  },
+                                  { id: "facilities", label: "Facilities" },
+                                  { id: "security", label: "Security" },
+                                  {
+                                    id: "overall",
+                                    label: "Overall impression",
+                                  },
+                                ];
+                                const stats =
+                                  surveyData.generalObservationStats || {};
+                                const topCategory = categories.reduce(
+                                  (max, curr) => {
+                                    if (!stats[curr.id] || !stats[max.id])
+                                      return max;
+                                    return stats[curr.id] > stats[max.id]
+                                      ? curr
+                                      : max;
+                                  },
+                                  categories[0]
+                                );
+                                return `${
+                                  topCategory.label
+                                } is our highest-rated area with ${
+                                  stats[topCategory.id]?.toFixed(1) || "0.0"
+                                }/5.0 score.`;
+                              })()}
+                            </span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="bg-[#f6a050]/10 p-1 rounded mr-2">
+                              <AlertTriangle className="h-4 w-4 text-[#f6a050]" />
+                            </span>
+                            <span>
+                              {(() => {
+                                const categories = [
+                                  {
+                                    id: "cleanliness",
+                                    label: "Cleanliness/serenity",
+                                  },
+                                  { id: "facilities", label: "Facilities" },
+                                  { id: "security", label: "Security" },
+                                  {
+                                    id: "overall",
+                                    label: "Overall impression",
+                                  },
+                                ];
+                                const stats =
+                                  surveyData.generalObservationStats || {};
+                                const lowestCategory = categories.reduce(
+                                  (min, curr) => {
+                                    if (!stats[curr.id] || !stats[min.id])
+                                      return min;
+                                    return stats[curr.id] < stats[min.id]
+                                      ? curr
+                                      : min;
+                                  },
+                                  categories[0]
+                                );
+                                return `${
+                                  lowestCategory.label
+                                } may need attention with ${
+                                  stats[lowestCategory.id]?.toFixed(1) ||
+                                  "0.0"
+                                }/5.0 score.`;
+                              })()}
+                            </span>
+                          </li>
+                        </>
+                      ) : (
+                        <li className="text-muted-foreground">
+                          No general observation data available
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                
+                
               </CardContent>
             </Card>
           )}

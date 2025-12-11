@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NPSCard } from "@/components/ui/nps-card";
+import { NPSFeedbackCard } from "@/components/ui/nps-feedback-card";
 
 import { WardDetails } from "./ward-details";
 
@@ -83,6 +84,18 @@ export interface ExtendedWard extends Omit<Ward, "ratings"> {
   ratings: ExtendedWardRatings;
 }
 
+interface NPSFeedback {
+  submissionId: string;
+  submittedAt: string;
+  locationName: string;
+  npsRating: number;
+  npsFeedback: string;
+  visitPurpose: string;
+  patientType: string;
+  userType: string;
+  category: 'promoter' | 'passive' | 'detractor';
+}
+
 interface WardsTabProps {
   isLoading: boolean;
   wards: Ward[];
@@ -100,6 +113,7 @@ interface WardsTabProps {
     detractors: number;
     total: number;
   } | null;
+  npsFeedback?: NPSFeedback[];
 }
 
 // Convert numeric value to rating text
@@ -141,6 +155,7 @@ export function WardsTab({
   pagination,
   onLoadMore,
   npsData,
+  npsFeedback = [],
 }: WardsTabProps) {
   const [selectedWard, setSelectedWard] = useState<ExtendedWard | null>(null);
   const [wardConcerns, setWardConcerns] = useState<WardConcern[]>([]);
@@ -825,6 +840,17 @@ export function WardsTab({
           </Table>
         </CardContent>
       </Card>
+
+      {/* NPS Feedback Section */}
+      {npsFeedback && npsFeedback.length > 0 && (
+        <NPSFeedbackCard
+          feedback={npsFeedback}
+          title="Ward NPS Feedback"
+          description="Customer feedback based on Net Promoter Score ratings"
+          showLocationFilter={true}
+          initialLimit={5}
+        />
+      )}
 
       <Card>
         <CardHeader>

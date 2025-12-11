@@ -42,6 +42,8 @@ import {
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { NPSCard } from "@/components/ui/nps-card";
+import { NPSFeedbackCard } from "@/components/ui/nps-feedback-card";
+import { fetchNPSFeedback } from "@/app/actions/department-actions";
 import {
   ChartContainer,
   ChartTooltip,
@@ -87,6 +89,18 @@ const CACHE_KEY_CANTEEN = "canteenTabData";
 const CACHE_KEY_CONCERNS = "canteenConcernsData";
 const CACHE_TIME = 5 * 60 * 1000; // 5 minutes in milliseconds
 
+interface NPSFeedback {
+  submissionId: string;
+  submittedAt: string;
+  locationName: string;
+  npsRating: number;
+  npsFeedback: string;
+  visitPurpose: string;
+  patientType: string;
+  userType: string;
+  category: 'promoter' | 'passive' | 'detractor';
+}
+
 interface CanteenTabProps {
   isLoading: boolean;
   departments: any[];
@@ -116,6 +130,7 @@ export function CanteenTab({ isLoading, departments, dateRange, npsData }: Cante
   const [submissionCount, setSubmissionCount] = useState<number>(0);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [npsFeedback, setNpsFeedback] = useState<NPSFeedback[]>([]);
 
   // Fetch canteen data when component mounts or dateRange changes
   useEffect(() => {
@@ -185,6 +200,19 @@ export function CanteenTab({ isLoading, departments, dateRange, npsData }: Cante
       loadCanteenData();
     }
   }, [departments, dateRange]);
+
+  // Fetch NPS feedback
+  useEffect(() => {
+    async function loadNPSFeedback() {
+      try {
+        const feedback = await fetchNPSFeedback('canteen', dateRange);
+        setNpsFeedback(feedback);
+      } catch (error) {
+        console.error('Error fetching NPS feedback:', error);
+      }
+    }
+    loadNPSFeedback();
+  }, [dateRange]);
 
   // Fetch canteen concerns with caching
   useEffect(() => {
@@ -590,6 +618,17 @@ export function CanteenTab({ isLoading, departments, dateRange, npsData }: Cante
                 </div>
               </CardContent>
             </Card>
+
+            {/* NPS Feedback Section */}
+            {npsFeedback && npsFeedback.length > 0 && (
+              <NPSFeedbackCard
+                feedback={npsFeedback}
+                title="Canteen NPS Feedback"
+                description="Customer feedback based on Net Promoter Score ratings"
+                showLocationFilter={false}
+                initialLimit={5}
+              />
+            )}
 
             <Card>
               <CardHeader>

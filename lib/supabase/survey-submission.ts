@@ -45,6 +45,7 @@ function mapRatingCategory(category: string): string {
     discharge: "discharge",
     wouldRecommend: "wouldRecommend",
     npsRating: "npsRating",
+    npsFeedback: "npsFeedback",
   };
 
   return mappings[category] || category;

@@ -41,6 +41,7 @@ import {
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { NPSCard } from "@/components/ui/nps-card";
+import { NPSFeedbackCard } from "@/components/ui/nps-feedback-card";
 
 import {
   BarChart,
@@ -105,6 +106,18 @@ interface Department {
   };
 }
 
+interface NPSFeedback {
+  submissionId: string;
+  submittedAt: string;
+  locationName: string;
+  npsRating: number;
+  npsFeedback: string;
+  visitPurpose: string;
+  patientType: string;
+  userType: string;
+  category: 'promoter' | 'passive' | 'detractor';
+}
+
 interface DepartmentsTabProps {
   isLoading: boolean;
   departments: Department[];
@@ -115,6 +128,7 @@ interface DepartmentsTabProps {
     detractors: number;
     total: number;
   } | null;
+  npsFeedback?: NPSFeedback[];
 }
 
 // Convert rating text to numeric value
@@ -153,6 +167,7 @@ export function DepartmentsTab({
   isLoading,
   departments,
   npsData,
+  npsFeedback = [],
 }: DepartmentsTabProps) {
   const [selectedDepartment, setSelectedDepartment] =
     useState<Department | null>(null);
@@ -798,6 +813,16 @@ export function DepartmentsTab({
           </Table>
         </CardContent>
       </Card>
+
+      {/* NPS Feedback Section */}
+      {npsFeedback && npsFeedback.length > 0 && (
+        <NPSFeedbackCard
+          feedback={npsFeedback}
+          title="Department NPS Feedback"
+          description="Customer feedback based on Net Promoter Score ratings"
+          showLocationFilter={true}
+        />
+      )}
 
       <Card>
         <CardHeader>

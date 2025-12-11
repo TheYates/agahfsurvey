@@ -140,6 +140,7 @@ export type Database = {
           foodQuality: string | null;
           wouldRecommend: boolean | null;
           npsRating: number | null;
+          npsFeedback: string | null;
           createdAt: string;
         };
         Insert: {
@@ -159,6 +160,7 @@ export type Database = {
           foodQuality?: string | null;
           wouldRecommend?: boolean | null;
           npsRating?: number | null;
+          npsFeedback?: string | null;
           createdAt?: string;
         };
         Update: {
@@ -178,6 +180,7 @@ export type Database = {
           foodQuality?: string | null;
           wouldRecommend?: boolean | null;
           npsRating?: number | null;
+          npsFeedback?: string | null;
           createdAt?: string;
         };
       };

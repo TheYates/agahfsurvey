@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { surveyCache, CacheKeys, CacheTTL } from "@/lib/cache/survey-cache";
+import { fetchNPSFeedback } from "./department-actions";
 
 // Create Supabase client
 const supabase = createClient();
@@ -643,12 +644,17 @@ export async function fetchWardTabData(
 
     const concernsPromise = fetchWardConcerns();
 
+    const npsFeedbackPromise = fetchNPSFeedback('ward', dateRange);
+
     // Wait for all promises to resolve with detailed timing for each
-    const [wardsData, concerns] = await Promise.all([
+    const [wardsData, concerns, npsFeedback] = await Promise.all([
       wardsPromise.then((result) => {
         return result;
       }),
       concernsPromise.then((result) => {
+        return result;
+      }),
+      npsFeedbackPromise.then((result) => {
         return result;
       }),
     ]);
@@ -662,6 +668,7 @@ export async function fetchWardTabData(
       wards: wardsData.wards,
       concerns, // All feedback (concerns and recommendations) is in this array
       recommendations: [], // Empty array for backward compatibility
+      npsFeedback,
       pagination: {
         total: wardsData.total,
         limit,

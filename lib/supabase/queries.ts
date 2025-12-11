@@ -261,6 +261,7 @@ export async function createSurveyQuery(
       foodQuality?: string | null;
       wouldRecommend?: boolean | null;
       npsRating?: number | null;
+      npsFeedback?: string | null;
     }>;
     concerns: Array<{
       locationId: number;
@@ -313,6 +314,7 @@ export async function createSurveyQuery(
     foodQuality: rating.foodQuality,
     wouldRecommend: rating.wouldRecommend,
     npsRating: rating.npsRating,
+    npsFeedback: rating.npsFeedback,
   }));
 
   if (ratingsToInsert.length > 0) {

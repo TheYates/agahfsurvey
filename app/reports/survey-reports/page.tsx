@@ -233,9 +233,11 @@ export default function SurveyReportsPage() {
 
   // Add state for departments
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentNpsFeedback, setDepartmentNpsFeedback] = useState<any[]>([]);
 
   // Add state for wards
   const [wards, setWards] = useState<Ward[]>([]);
+  const [wardNpsFeedback, setWardNpsFeedback] = useState<any[]>([]);
 
   // Add state for ward pagination
   const [wardPagination, setWardPagination] = useState<{
@@ -282,9 +284,9 @@ export default function SurveyReportsPage() {
       const departmentPromise = fetchDepartmentTabData(dateRangeFilter);
       const wardPromise = fetchWardTabData(5, 0, dateRangeFilter);
       const npsPromise = getNPS();
-      const departmentNpsPromise = getNPSByLocationType("Department");
-      const wardNpsPromise = getNPSByLocationType("Ward");
-      const canteenNpsPromise = getNPSByLocationType("Canteen");
+      const departmentNpsPromise = getNPSByLocationType("department");
+      const wardNpsPromise = getNPSByLocationType("ward");
+      const canteenNpsPromise = getNPSByLocationType("canteen");
       const medicalsNpsPromise = getNPSByLocationType("occupational_health");
 
       // Wait for all promises to resolve
@@ -353,7 +355,9 @@ export default function SurveyReportsPage() {
 
       setData(enhancedData);
       setDepartments(departmentData.departments);
+      setDepartmentNpsFeedback(departmentData.npsFeedback || []);
       setWards(wardData.wards);
+      setWardNpsFeedback(wardData.npsFeedback || []);
 
       // Update ward pagination state
       const wardPaginationData = {
@@ -808,6 +812,7 @@ export default function SurveyReportsPage() {
                 isLoading={isLoading}
                 departments={departments}
                 npsData={departmentNpsData}
+                npsFeedback={departmentNpsFeedback}
               />,
               <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -855,6 +860,7 @@ export default function SurveyReportsPage() {
                 pagination={wardPagination}
                 onLoadMore={loadMoreWards}
                 npsData={wardNpsData}
+                npsFeedback={wardNpsFeedback}
               />,
               <WardsTab isLoading={true} wards={[]} npsData={null} />
             )}
@@ -943,6 +949,7 @@ export default function SurveyReportsPage() {
                   from: format(dateRange.from!, "yyyy-MM-dd"),
                   to: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : format(dateRange.from!, "yyyy-MM-dd")
                 } : null}
+                npsData={medicalsNpsData}
               />,
               <div className="space-y-6">
                 <Card>

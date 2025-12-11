@@ -210,6 +210,26 @@ export default function DepartmentRating({
               </div>
             )}
 
+            {surveyData.departmentRatings[location]?.npsRating !== undefined &&
+              surveyData.departmentRatings[location]?.npsRating !== null && (
+                <div className="space-y-2 pt-4">
+                  <Label htmlFor={`${location}-nps-feedback`} className="text-base">
+                    {surveyData.departmentRatings[location]?.npsRating >= 9
+                      ? "What did you enjoy most about your experience?"
+                      : surveyData.departmentRatings[location]?.npsRating >= 7
+                      ? "What would make you rate us higher?"
+                      : "How can we make things right for you?"}
+                  </Label>
+                  <Textarea
+                    id={`${location}-nps-feedback`}
+                    value={surveyData.departmentRatings[location]?.npsFeedback || ""}
+                    onChange={(e) => handleRatingChange("npsFeedback", e.target.value)}
+                    rows={4}
+                    className="resize-none"
+                  />
+                </div>
+              )}
+
             <div className="space-y-2">
               <Label htmlFor={`${location}-concerns`} className="text-base">
                 Any Concerns or Recommendations Regarding This Unit?

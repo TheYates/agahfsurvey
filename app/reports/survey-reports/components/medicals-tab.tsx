@@ -43,6 +43,8 @@ import {
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { NPSCard } from "@/components/ui/nps-card";
+import { NPSFeedbackCard } from "@/components/ui/nps-feedback-card";
+import { fetchNPSFeedback } from "@/app/actions/department-actions";
 import {
   ChartContainer,
   ChartTooltip,
@@ -68,6 +70,18 @@ import {
   type DepartmentConcern,
 } from "@/app/actions/medicals-actions";
 import { Skeleton } from "@/components/ui/skeleton";
+
+interface NPSFeedback {
+  submissionId: string;
+  submittedAt: string;
+  locationName: string;
+  npsRating: number;
+  npsFeedback: string;
+  visitPurpose: string;
+  patientType: string;
+  userType: string;
+  category: 'promoter' | 'passive' | 'detractor';
+}
 
 interface OccupationalHealthTabProps {
   isLoading: boolean;
@@ -103,6 +117,7 @@ export function MedicalsTab({ isLoading, dateRange, npsData }: OccupationalHealt
   const [ohData, setOhData] = useState<OccupationalHealthData | null>(null);
   const [ohConcerns, setOhConcerns] = useState<DepartmentConcern[]>([]);
   const [isLoadingConcerns, setIsLoadingConcerns] = useState(false);
+  const [npsFeedback, setNpsFeedback] = useState<NPSFeedback[]>([]);
 
   // Default user types data if none is provided
   const defaultUserTypes = [
@@ -128,6 +143,19 @@ export function MedicalsTab({ isLoading, dateRange, npsData }: OccupationalHealt
       value: existingUserTypes.get(defaultType.name) || 0,
     }));
   }, [ohData?.userTypeDistribution]);
+
+  // Fetch NPS feedback
+  useEffect(() => {
+    async function loadNPSFeedback() {
+      try {
+        const feedback = await fetchNPSFeedback('occupational_health', dateRange);
+        setNpsFeedback(feedback);
+      } catch (error) {
+        console.error('Error fetching NPS feedback:', error);
+      }
+    }
+    loadNPSFeedback();
+  }, [dateRange]);
 
   // Fetch occupational health data directly from the dedicated endpoint
   useEffect(() => {
@@ -689,7 +717,7 @@ export function MedicalsTab({ isLoading, dateRange, npsData }: OccupationalHealt
                 </CardContent>
               </Card>
 
-              <NPSCard npsData={npsData} title="Occupational Health NPS" />
+              <NPSCard npsData={npsData} title="Medicals NPS" />
             </div>
 
             <Card>
@@ -837,66 +865,62 @@ export function MedicalsTab({ isLoading, dateRange, npsData }: OccupationalHealt
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-6">
                   <div>
                     <h3 className="font-medium text-base mb-3 flex items-center justify-between">
                       <span>User Type Distribution</span>
                     </h3>
-                    <div className="h-[250px]">
-                      <Pie
-                        data={{
-                          labels: userTypeData.map((item) => item.name),
-                          datasets: [
-                            {
-                              label: "User Types",
-                              data: userTypeData.map((item) => item.value),
-                              backgroundColor: userTypeData.map(
-                                (_, index) => COLORS[index % COLORS.length]
-                              ),
-                              borderColor: userTypeData.map(
-                                (_, index) => COLORS[index % COLORS.length]
-                              ),
-                              borderWidth: 1,
-                            },
-                          ],
-                        }}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              position: "right",
-                              labels: {
-                                boxWidth: 15,
-                              },
-                            },
-                            tooltip: {
-                              callbacks: {
-                                label: function (context) {
-                                  const label = context.label || "";
-                                  const value = (context.raw as number) || 0;
-                                  const total = context.dataset.data.reduce(
-                                    (a, b) => a + b,
-                                    0
-                                  );
-                                  const percentage =
-                                    total > 0
-                                      ? Math.round((value / total) * 100)
-                                      : 0;
-                                  return `${label}: ${value} users (${percentage}%)`;
-                                },
-                              },
-                            },
-                          },
-                        }}
-                      />
-                    </div>
+                    <ChartContainer
+                      config={{
+                        value: {
+                          label: "Count",
+                        },
+                      }}
+                      className="h-[400px] w-full"
+                    >
+                      <PieChart>
+                        <ChartTooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="bg-background border rounded-lg p-2 shadow-lg">
+                                  <p className="font-semibold text-sm">{payload[0].name}</p>
+                                  <p className="text-sm">Count: {payload[0].value}</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Pie
+                          data={userTypeData.map((item, index) => ({
+                            name: item.name,
+                            value: item.value,
+                            fill: `hsl(var(--chart-${(index % 5) + 1}))`,
+                          }))}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={130}
+                          label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                        >
+                          {userTypeData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={`hsl(var(--chart-${(index % 5) + 1}))`}
+                            />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ChartContainer>
                   </div>
 
-                  <div>
-                    <h3 className="font-medium text-base mb-3">
-                      User Type Breakdown
-                    </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="font-medium text-base mb-3">
+                        User Type Breakdown
+                      </h3>
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -935,16 +959,28 @@ export function MedicalsTab({ isLoading, dateRange, npsData }: OccupationalHealt
                       </TableBody>
                     </Table>
 
-                    <div className="mt-4 p-3 bg-muted/30 rounded-md">
-                      <p className="text-sm text-muted-foreground">
-                        {ohData.userTypeInsight ||
-                          "Understanding the distribution of user types helps in tailoring occupational health services to specific workforce needs."}
-                      </p>
+                      <div className="mt-4 p-3 bg-muted/30 rounded-md">
+                        <p className="text-sm text-muted-foreground">
+                          {ohData.userTypeInsight ||
+                            "Understanding the distribution of user types helps in tailoring occupational health services to specific workforce needs."}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* NPS Feedback Section */}
+            {npsFeedback && npsFeedback.length > 0 && (
+              <NPSFeedbackCard
+                feedback={npsFeedback}
+                title="Medicals NPS Feedback"
+                description="Customer feedback based on Net Promoter Score ratings"
+                showLocationFilter={false}
+                initialLimit={5}
+              />
+            )}
 
             <Card>
               <CardHeader>

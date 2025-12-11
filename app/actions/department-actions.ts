@@ -41,6 +41,18 @@ export interface Recommendation {
   userType: string;
 }
 
+export interface NPSFeedback {
+  submissionId: string;
+  submittedAt: string;
+  locationName: string;
+  npsRating: number;
+  npsFeedback: string;
+  visitPurpose: string;
+  patientType: string;
+  userType: string;
+  category: 'promoter' | 'passive' | 'detractor';
+}
+
 // Removed unused interface - now using direct ratings approach
 
 // Add these interfaces with your other interfaces
@@ -468,6 +480,94 @@ export async function fetchDepartmentConcerns(): Promise<DepartmentConcern[]> {
         userType: "Contractor Employee",
       },
     ];
+  }
+}
+
+/**
+ * Fetch NPS Feedback by location type
+ */
+export async function fetchNPSFeedback(
+  locationType: 'department' | 'ward' | 'canteen' | 'occupational_health' = 'department',
+  dateRange?: { from: string; to: string } | null
+): Promise<NPSFeedback[]> {
+  try {
+    let query = supabase
+      .from("Rating")
+      .select(
+        `
+        id,
+        npsRating,
+        npsFeedback,
+        locationId,
+        submissionId,
+        Location:locationId (
+          id,
+          name,
+          locationType
+        ),
+        SurveySubmission:submissionId (
+          id,
+          submittedAt,
+          visitPurpose,
+          patientType,
+          userType
+        )
+      `
+      )
+      .not("npsFeedback", "is", null)
+      .not("npsRating", "is", null)
+      .order("id", { ascending: false })
+      .limit(200);
+
+    // Filter by date range if provided
+    if (dateRange) {
+      query = query
+        .gte("SurveySubmission.submittedAt", dateRange.from)
+        .lte("SurveySubmission.submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // Filter by location type and transform data
+    const result: NPSFeedback[] = data
+      .filter((item: any) => {
+        return item.Location?.locationType === locationType;
+      })
+      .map((item: any) => {
+        const npsRating = item.npsRating;
+        let category: 'promoter' | 'passive' | 'detractor';
+        
+        if (npsRating >= 9) {
+          category = 'promoter';
+        } else if (npsRating >= 7) {
+          category = 'passive';
+        } else {
+          category = 'detractor';
+        }
+
+        return {
+          submissionId: item.submissionId || "unknown",
+          submittedAt: item.SurveySubmission?.submittedAt || new Date().toISOString(),
+          locationName: item.Location?.name || "Unknown Location",
+          npsRating: npsRating,
+          npsFeedback: item.npsFeedback || "",
+          visitPurpose: item.SurveySubmission?.visitPurpose || "Not specified",
+          patientType: item.SurveySubmission?.patientType || "Not specified",
+          userType: item.SurveySubmission?.userType || "Not specified",
+          category: category,
+        };
+      });
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching NPS feedback:", error);
+    return [];
   }
 }
 
@@ -1028,6 +1128,8 @@ export async function fetchDepartmentTabData(
 
     const patientTypePromise = fetchPatientTypeData();
 
+    const npsFeedbackPromise = fetchNPSFeedback('department', dateRange);
+
     // Wait for all promises to resolve
     const [
       departments,
@@ -1035,12 +1137,14 @@ export async function fetchDepartmentTabData(
       recommendations,
       visitTimeData,
       patientTypeData,
+      npsFeedback,
     ] = await Promise.all([
       departmentsPromise,
       concernsPromise,
       recommendationsPromise,
       visitTimePromise,
       patientTypePromise,
+      npsFeedbackPromise,
     ]);
 
     return {
@@ -1049,6 +1153,7 @@ export async function fetchDepartmentTabData(
       recommendations,
       visitTimeData,
       patientTypeData,
+      npsFeedback,
     };
   } catch (error) {
     console.error("Error fetching department tab data:", error);

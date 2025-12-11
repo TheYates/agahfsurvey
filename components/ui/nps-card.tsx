@@ -44,38 +44,51 @@ export function NPSCard({ npsData, title = "Net Promoter Score", className }: NP
         <Star className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold mb-2">
-          <span
-            className={cn(
-              (npsData?.score || 0) >= 50
-                ? "text-[#22c5bf]"
-                : (npsData?.score || 0) >= 0
-                ? "text-[#f6a050]"
-                : "text-[#e84e3c]"
-            )}
-          >
-            {npsData?.score || 0}
-          </span>
-        </div>
-        <div className="space-y-1 text-xs text-muted-foreground">
-          <div className="flex justify-between">
-            <span className="flex items-center gap-1">
-              <ThumbsUp className="h-3 w-3 text-[#22c5bf]" />
-              Promoters
-            </span>
-            <span className="font-medium">{npsData?.promoters || 0}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Passives</span>
-            <span className="font-medium">{npsData?.passives || 0}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="flex items-center gap-1">
-              <ThumbsDown className="h-3 w-3 text-[#e84e3c]" />
-              Detractors
-            </span>
-            <span className="font-medium">{npsData?.detractors || 0}</span>
-          </div>
+        <div className="text-2xl font-bold">{npsData?.score || 0}</div>
+        <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1 cursor-help">
+                  <ThumbsUp className="h-3 w-3 text-[#22c5bf]" />
+                  <span className="font-medium">{npsData?.promoters || 0}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Promoters (9-10)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1 cursor-help">
+                  <div className="h-3 w-3 flex items-center justify-center">
+                    <div className="h-0.5 w-2 bg-[#f6a050]" />
+                  </div>
+                  <span className="font-medium">{npsData?.passives || 0}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Passives (7-8)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1 cursor-help">
+                  <ThumbsDown className="h-3 w-3 text-[#e84e3c]" />
+                  <span className="font-medium">{npsData?.detractors || 0}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Detractors (0-6)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </CardContent>
     </Card>

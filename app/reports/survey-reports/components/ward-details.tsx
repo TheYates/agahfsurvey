@@ -393,70 +393,52 @@ export function WardDetails({
 
               <div>
                 <h4 className="text-sm font-medium mb-3">Rating Comparison</h4>
-                <div className="h-80">
-                  <Bar
-                    data={{
-                      labels: ratingCategories
-                        .filter(
-                          (category) =>
-                            category.id !== "reception" &&
-                            category.id !== "professionalism"
-                        )
-                        .map((category) => category.label),
-                      datasets: [
-                        {
-                          label: "Rating",
-                          data: ratingCategories
-                            .filter(
-                              (category) =>
-                                category.id !== "reception" &&
-                                category.id !== "professionalism"
-                            )
-                            .map((category) => {
-                              const value =
-                                (selectedWard.ratings as any)[category.id] || 0;
-                              return value;
-                            }),
-                          backgroundColor: "#4caf50",
-                          borderRadius: 4,
-                        },
-                      ],
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
-                          display: true,
-                          position: "top" as const,
-                        },
-                        tooltip: {
-                          callbacks: {
-                            label: (context) => {
-                              return `Rating: ${context.parsed.y.toFixed(1)}`;
-                            },
-                          },
-                        },
-                      },
-                      scales: {
-                        y: {
-                          beginAtZero: true,
-                          max: 5,
-                          ticks: {
-                            stepSize: 1,
-                          },
-                        },
-                        x: {
-                          ticks: {
-                            autoSkip: false,
-                            maxRotation: 45,
-                            minRotation: 45,
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </div>
+                <ChartContainer
+                  config={{
+                    rating: {
+                      label: "Rating",
+                      color: "hsl(var(--chart-1))",
+                    },
+                  }}
+                  className="h-80 w-full"
+                >
+                  <BarChart
+                    data={ratingCategories
+                      .filter(
+                        (category) =>
+                          category.id !== "reception" &&
+                          category.id !== "professionalism"
+                      )
+                      .map((category) => ({
+                        category: category.label,
+                        rating: (selectedWard.ratings as any)[category.id] || 0,
+                      }))}
+                    margin={{ top: 20, right: 30, left: 0, bottom: 60 }}
+                  >
+                    <CartesianGrid vertical={false} />
+                    <XAxis
+                      dataKey="category"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      angle={-45}
+                      textAnchor="end"
+                      height={100}
+                    />
+                    <YAxis
+                      domain={[0, 5]}
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar
+                      dataKey="rating"
+                      fill="var(--color-rating)"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ChartContainer>
               </div>
 
               <div>
