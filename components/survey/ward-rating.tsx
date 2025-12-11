@@ -40,7 +40,7 @@ export default function WardRating({
   const ratingOptions = ["Excellent", "Very Good", "Good", "Fair", "Poor"];
 
   // Replace the handleRatingChange function with this fixed version
-  const handleRatingChange = (category: string, value: string) => {
+  const handleRatingChange = (category: string, value: string | number) => {
     // Create a new object for the current location's ratings
     const updatedRatings = {
       ...surveyData.departmentRatings,
@@ -54,13 +54,6 @@ export default function WardRating({
     updateSurveyData("departmentRatings", updatedRatings);
   };
 
-  const handleConcernsChange = (value: string) => {
-    updateSurveyData("departmentConcerns", {
-      ...surveyData.departmentConcerns,
-      [location]: value,
-    });
-  };
-
   // Replace the isComplete function with this fixed version
   const isComplete = () => {
     // We'll still log the completion status but won't require all fields
@@ -70,7 +63,8 @@ export default function WardRating({
     // Also check if recommendation is filled
     const hasRecommendation = !!ratings.wouldRecommend;
     // Check if NPS rating is filled (required after recommendation)
-    const hasNpsRating = ratings.npsRating !== undefined && ratings.npsRating !== null;
+    const hasNpsRating =
+      ratings.npsRating !== undefined && ratings.npsRating !== null;
 
     // Return true only if all ratings, recommendation, and NPS are complete
     return complete && hasRecommendation && hasNpsRating;
@@ -116,7 +110,7 @@ export default function WardRating({
                             <RadioGroup
                               key={`${location}-${category.id}`}
                               value={currentRatings[category.id] || ""}
-                              onValueChange={(value) =>
+                              onValueChange={(value: string) =>
                                 handleRatingChange(category.id, value)
                               }
                               className="flex justify-center"
@@ -145,7 +139,7 @@ export default function WardRating({
                 value={
                   surveyData.departmentRatings[location]?.wouldRecommend || ""
                 }
-                onValueChange={(value) =>
+                onValueChange={(value: string) =>
                   handleRatingChange("wouldRecommend", value)
                 }
                 className="flex gap-6"
@@ -186,18 +180,17 @@ export default function WardRating({
                 </p>
                 <RadioGroup
                   value={
-                    surveyData.departmentRatings[location]?.npsRating?.toString() || ""
+                    surveyData.departmentRatings[
+                      location
+                    ]?.npsRating?.toString() || ""
                   }
-                  onValueChange={(value) =>
+                  onValueChange={(value: string) =>
                     handleRatingChange("npsRating", parseInt(value))
                   }
-                  className="flex flex-wrap gap-2"
+                  className="grid grid-cols-11 gap-1 w-full"
                 >
                   {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                    <div
-                      key={num}
-                      className="flex items-center justify-center"
-                    >
+                    <div key={num} className="flex items-center justify-center">
                       <RadioGroupItem
                         value={num.toString()}
                         id={`${location}-nps-${num}`}
@@ -205,7 +198,7 @@ export default function WardRating({
                       />
                       <Label
                         htmlFor={`${location}-nps-${num}`}
-                        className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border-2 border-muted bg-popover hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground transition-colors"
+                        className="flex h-10 w-full cursor-pointer items-center justify-center rounded-md border-2 border-muted bg-popover hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground transition-colors"
                       >
                         {num}
                       </Label>
@@ -218,35 +211,29 @@ export default function WardRating({
             {surveyData.departmentRatings[location]?.npsRating !== undefined &&
               surveyData.departmentRatings[location]?.npsRating !== null && (
                 <div className="space-y-2 pt-4">
-                  <Label htmlFor={`${location}-nps-feedback`} className="text-base">
+                  <Label
+                    htmlFor={`${location}-nps-feedback`}
+                    className="text-base"
+                  >
                     {surveyData.departmentRatings[location]?.npsRating >= 9
-                      ? "What did you enjoy most about your experience?"
+                      ? `What did you enjoy most about your experience at the ${location}?`
                       : surveyData.departmentRatings[location]?.npsRating >= 7
-                      ? "What would make you rate us higher?"
-                      : "How can we make things right for you?"}
+                      ? `What would make you rate us higher at the ${location}?`
+                      : `How can we make things right for you at the ${location}?`}
                   </Label>
                   <Textarea
                     id={`${location}-nps-feedback`}
-                    value={surveyData.departmentRatings[location]?.npsFeedback || ""}
-                    onChange={(e) => handleRatingChange("npsFeedback", e.target.value)}
+                    value={
+                      surveyData.departmentRatings[location]?.npsFeedback || ""
+                    }
+                    onChange={(e) =>
+                      handleRatingChange("npsFeedback", e.target.value)
+                    }
                     rows={4}
                     className="resize-none"
                   />
                 </div>
               )}
-
-            <div className="space-y-2">
-              <Label htmlFor={`${location}-concerns`} className="text-base">
-                Any Concerns or Recommendations Regarding This Unit?
-              </Label>
-              <Textarea
-                id={`${location}-concerns`}
-                value={surveyData.departmentConcerns[location] || ""}
-                onChange={(e) => handleConcernsChange(e.target.value)}
-                rows={4}
-                className="resize-none"
-              />
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -254,15 +241,6 @@ export default function WardRating({
       <div className="flex justify-between pt-4">
         <Button variant="outline" onClick={onBack}>
           Back
-        </Button>
-        <Button
-          onClick={() => {
-            // Simply proceed to the next step without validation
-            onNext();
-          }}
-          disabled={!isComplete()}
-        >
-          Next
         </Button>
       </div>
     </div>

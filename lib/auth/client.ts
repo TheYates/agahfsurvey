@@ -1,33 +1,20 @@
 "use client";
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/database.types";
+import { createClient } from "@/lib/supabase/client";
 
-// Use globalThis to persist singleton across HMR in development
-const globalForAuth = globalThis as unknown as {
-  authClient: SupabaseClient<Database> | undefined
-}
-
-// Create a single instance of the Supabase client for client-side auth
+// Use the shared Supabase client instance
 const getAuthClient = () => {
-  if (!globalForAuth.authClient) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!url || !key) {
-      throw new Error("Missing Supabase environment variables");
-    }
-
-    globalForAuth.authClient = createClient<Database>(url, key);
-  }
-
-  return globalForAuth.authClient;
+  return createClient();
 };
 
 // Auth utility functions for client-side use
 export const authClient = {
   // Sign up with email and password
-  signUp: async (email: string, password: string, metadata?: Record<string, any>) => {
+  signUp: async (
+    email: string,
+    password: string,
+    metadata?: Record<string, any>
+  ) => {
     const supabase = getAuthClient();
     return await supabase.auth.signUp({
       email,
@@ -80,7 +67,10 @@ export const authClient = {
   },
 
   // Update user metadata
-  updateUser: async (attributes: { email?: string; data?: Record<string, any> }) => {
+  updateUser: async (attributes: {
+    email?: string;
+    data?: Record<string, any>;
+  }) => {
     const supabase = getAuthClient();
     return await supabase.auth.updateUser(attributes);
   },

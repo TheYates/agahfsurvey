@@ -195,14 +195,19 @@ export default function ReportsPage() {
         const tableSubmissions = surveyData.slice(0, 5);
         setSubmissions(tableSubmissions);
 
-        // Calculate responses this week
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        // Calculate responses this week (week starts on Monday)
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        // Calculate days since Monday (if Sunday, go back 6 days; if Monday, 0 days; etc.)
+        const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - daysSinceMonday);
+        startOfWeek.setHours(0, 0, 0, 0); // Set to start of the day
 
         // Filter only on dates, not on other criteria
         const responsesThisWeek = surveyData.filter((survey: SurveyData) => {
           const surveyDate = new Date(survey.created_at);
-          return surveyDate >= oneWeekAgo;
+          return surveyDate >= startOfWeek;
         }).length;
 
         setWeeklyResponses(responsesThisWeek);

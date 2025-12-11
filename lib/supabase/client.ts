@@ -1,10 +1,13 @@
-import { createClient as createSupabaseClient, SupabaseClient } from "@supabase/supabase-js"
-import type { Database } from "@/lib/supabase/database.types"
+import {
+  createClient as createSupabaseClient,
+  SupabaseClient,
+} from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/database.types";
 
 // Use globalThis to persist singleton across HMR in development
 const globalForSupabase = globalThis as unknown as {
-  supabaseClient: SupabaseClient<Database> | undefined
-}
+  supabaseClient: SupabaseClient<Database> | undefined;
+};
 
 // Create a single instance of the Supabase client to be reused
 export const createClient = () => {
@@ -16,8 +19,18 @@ export const createClient = () => {
       throw new Error("Missing Supabase environment variables");
     }
 
-    globalForSupabase.supabaseClient = createSupabaseClient<Database>(url, key);
+    globalForSupabase.supabaseClient = createSupabaseClient<Database>(
+      url,
+      key,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: false, // Prevents re-triggering auth on URL changes
+        },
+      }
+    );
   }
 
   return globalForSupabase.supabaseClient;
-}
+};
