@@ -50,7 +50,7 @@ export interface NPSFeedbackItem {
   visitPurpose: string;
   patientType: string;
   userType: string;
-  category: 'promoter' | 'passive' | 'detractor';
+  category: "promoter" | "passive" | "detractor";
 }
 
 interface NPSFeedbackCardProps {
@@ -68,18 +68,24 @@ export function NPSFeedbackCard({
   showLocationFilter = true,
   initialLimit = 5,
 }: NPSFeedbackCardProps) {
-  const [activeCategory, setActiveCategory] = useState<'all' | 'promoter' | 'passive' | 'detractor'>('all');
+  const [activeCategory, setActiveCategory] = useState<
+    "all" | "promoter" | "passive" | "detractor"
+  >("all");
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [showAllDialog, setShowAllDialog] = useState(false);
 
   // Get unique locations
-  const locations = Array.from(new Set(feedback.map(f => f.locationName))).sort();
+  const locations = Array.from(
+    new Set(feedback.map((f) => f.locationName))
+  ).sort();
 
   // Filter feedback
-  const filteredFeedback = feedback.filter(item => {
-    const categoryMatch = activeCategory === 'all' || item.category === activeCategory;
-    const locationMatch = selectedLocation === 'all' || item.locationName === selectedLocation;
+  const filteredFeedback = feedback.filter((item) => {
+    const categoryMatch =
+      activeCategory === "all" || item.category === activeCategory;
+    const locationMatch =
+      selectedLocation === "all" || item.locationName === selectedLocation;
     return categoryMatch && locationMatch;
   });
 
@@ -89,9 +95,9 @@ export function NPSFeedbackCard({
 
   // Count by category
   const counts = {
-    promoter: feedback.filter(f => f.category === 'promoter').length,
-    passive: feedback.filter(f => f.category === 'passive').length,
-    detractor: feedback.filter(f => f.category === 'detractor').length,
+    promoter: feedback.filter((f) => f.category === "promoter").length,
+    passive: feedback.filter((f) => f.category === "passive").length,
+    detractor: feedback.filter((f) => f.category === "detractor").length,
   };
 
   const toggleExpand = (id: string) => {
@@ -106,11 +112,11 @@ export function NPSFeedbackCard({
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'promoter':
+      case "promoter":
         return <ThumbsUp className="h-4 w-4" />;
-      case 'passive':
+      case "passive":
         return <Minus className="h-4 w-4" />;
-      case 'detractor':
+      case "detractor":
         return <ThumbsDown className="h-4 w-4" />;
       default:
         return null;
@@ -119,25 +125,25 @@ export function NPSFeedbackCard({
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'promoter':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'passive':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'detractor':
-        return 'bg-red-100 text-red-800 border-red-200';
+      case "promoter":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "passive":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "detractor":
+        return "bg-red-100 text-red-800 border-red-200";
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
   const getCategoryLabel = (category: string) => {
     switch (category) {
-      case 'promoter':
-        return 'Promoter (9-10)';
-      case 'passive':
-        return 'Passive (7-8)';
-      case 'detractor':
-        return 'Detractor (0-6)';
+      case "promoter":
+        return "Promoter (9-10)";
+      case "passive":
+        return "Passive (7-8)";
+      case "detractor":
+        return "Detractor (0-6)";
       default:
         return category;
     }
@@ -145,15 +151,17 @@ export function NPSFeedbackCard({
 
   const renderFeedbackList = (items: NPSFeedbackItem[]) => (
     <div className="space-y-4">
-      {items.map((item) => {
-        const isExpanded = expandedItems.has(item.submissionId);
-        const feedbackPreview = item.npsFeedback.length > 150
-          ? item.npsFeedback.substring(0, 150) + '...'
-          : item.npsFeedback;
+      {items.map((item, index) => {
+        const uniqueKey = `${item.submissionId}-${item.locationName}-${index}`;
+        const isExpanded = expandedItems.has(uniqueKey);
+        const feedbackPreview =
+          item.npsFeedback.length > 150
+            ? item.npsFeedback.substring(0, 150) + "..."
+            : item.npsFeedback;
 
         return (
           <div
-            key={item.submissionId}
+            key={uniqueKey}
             className="border rounded-lg p-4 hover:bg-accent/50 transition-colors"
           >
             <div className="flex items-start justify-between gap-3 mb-2">
@@ -177,7 +185,7 @@ export function NPSFeedbackCard({
               </div>
               <div className="text-xs text-muted-foreground flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                {format(new Date(item.submittedAt), 'MMM d, yyyy')}
+                {format(new Date(item.submittedAt), "MMM d, yyyy")}
               </div>
             </div>
 
@@ -191,7 +199,7 @@ export function NPSFeedbackCard({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => toggleExpand(item.submissionId)}
+                  onClick={() => toggleExpand(uniqueKey)}
                   className="mt-2 h-auto p-0 text-primary hover:bg-transparent"
                 >
                   {isExpanded ? (
@@ -237,13 +245,16 @@ export function NPSFeedbackCard({
             <CardDescription className="mt-1">{description}</CardDescription>
           </div>
           {showLocationFilter && locations.length > 1 && (
-            <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+            <Select
+              value={selectedLocation}
+              onValueChange={setSelectedLocation}
+            >
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Filter by location" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Locations</SelectItem>
-                {locations.map(location => (
+                {locations.map((location) => (
                   <SelectItem key={location} value={location}>
                     {location}
                   </SelectItem>
@@ -254,11 +265,13 @@ export function NPSFeedbackCard({
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as any)} className="w-full">
+        <Tabs
+          value={activeCategory}
+          onValueChange={(v) => setActiveCategory(v as any)}
+          className="w-full"
+        >
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all">
-              All ({feedback.length})
-            </TabsTrigger>
+            <TabsTrigger value="all">All ({feedback.length})</TabsTrigger>
             <TabsTrigger value="promoter" className="gap-1">
               <ThumbsUp className="h-3 w-3" />
               Promoters ({counts.promoter})
@@ -282,10 +295,13 @@ export function NPSFeedbackCard({
             ) : (
               <>
                 {renderFeedbackList(displayedFeedback)}
-                
+
                 {hasMore && (
                   <div className="mt-4 text-center">
-                    <Dialog open={showAllDialog} onOpenChange={setShowAllDialog}>
+                    <Dialog
+                      open={showAllDialog}
+                      onOpenChange={setShowAllDialog}
+                    >
                       <DialogTrigger asChild>
                         <Button variant="outline" className="gap-2">
                           <ExternalLink className="h-4 w-4" />

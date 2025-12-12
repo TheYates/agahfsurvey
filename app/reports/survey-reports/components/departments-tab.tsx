@@ -624,7 +624,7 @@ export function DepartmentsTab({
               <div className="text-lg font-bold">{topDepartment.name}</div>
               <div className="flex items-center">
                 <span className="text-sm">
-                  {topDepartment.satisfaction.toFixed(1)}/5.0
+                  {topDepartment.satisfaction.toFixed(2)}/5.0
                 </span>
                 <span className="text-xs ml-2 text-muted-foreground">
                   ({topDepartment.visitCount} responses)
@@ -661,7 +661,7 @@ export function DepartmentsTab({
               </div>
               <div className="flex items-center">
                 <span className="text-sm">
-                  {needsAttentionDepartment.satisfaction.toFixed(1)}/5.0
+                  {needsAttentionDepartment.satisfaction.toFixed(2)}/5.0
                 </span>
                 <span className="text-xs ml-2 text-muted-foreground">
                   ({needsAttentionDepartment.visitCount} responses)
@@ -729,16 +729,25 @@ export function DepartmentsTab({
                 {departmentsOnly
                   .sort((a, b) => b.satisfaction - a.satisfaction)
                   .map((dept, index) => {
-                    // Find highest and lowest rated categories
-                    const ratings = Object.entries(dept.ratings);
-                    const topRated = ratings.reduce(
-                      (max, curr) => (curr[1] > max[1] ? curr : max),
-                      ratings[0]
-                    );
-                    const lowestRated = ratings.reduce(
-                      (min, curr) => (curr[1] < min[1] ? curr : min),
-                      ratings[0]
-                    );
+                    // Find highest and lowest rated categories (exclude categories with no data)
+                    const ratings = Object.entries(dept.ratings).filter(
+                      ([, value]) => value > 0
+                    ); // Only include categories with actual ratings
+
+                    const topRated =
+                      ratings.length > 0
+                        ? ratings.reduce(
+                            (max, curr) => (curr[1] > max[1] ? curr : max),
+                            ratings[0]
+                          )
+                        : ["N/A", 0];
+                    const lowestRated =
+                      ratings.length > 0
+                        ? ratings.reduce(
+                            (min, curr) => (curr[1] < min[1] ? curr : min),
+                            ratings[0]
+                          )
+                        : ["N/A", 0];
 
                     // Get label for category
                     const getLabel = (id: string) => {
@@ -775,7 +784,7 @@ export function DepartmentsTab({
                         <TableCell>
                           <div className="flex items-center">
                             <span className="font-medium mr-2">
-                              {dept.satisfaction.toFixed(1)}
+                              {dept.satisfaction.toFixed(2)}
                             </span>
                             <Progress
                               value={dept.satisfaction * 20}
