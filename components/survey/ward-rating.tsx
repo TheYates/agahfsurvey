@@ -242,6 +242,15 @@ export default function WardRating({
         <Button variant="outline" onClick={onBack}>
           Back
         </Button>
+        <Button
+          onClick={() => {
+            // Simply proceed to the next step without validation
+            onNext();
+          }}
+          disabled={!isComplete()}
+        >
+          Next
+        </Button>
       </div>
     </div>
   );
