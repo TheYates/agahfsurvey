@@ -127,15 +127,31 @@ export async function submitSurveyToSupabase(formData: SurveyFormData) {
       ratings: Object.entries(formData.departmentRatings).map(
         ([locationName, ratings]) => {
           // Convert rating categories to the proper database columns
-          const transformedRatings: Record<string, string | boolean | number> = {};
+          const transformedRatings: Record<
+            string,
+            string | boolean | number | null
+          > = {};
           Object.entries(ratings).forEach(([category, value]) => {
             const mappedCategory = mapRatingCategory(category);
             // Convert "Yes"/"No" to boolean for wouldRecommend field
             if (mappedCategory === "wouldRecommend") {
               transformedRatings[mappedCategory] = value === "Yes";
             } else if (mappedCategory === "npsRating") {
-              // Convert npsRating to number
-              transformedRatings[mappedCategory] = typeof value === "number" ? value : parseInt(value);
+              // Convert npsRating to number, with proper validation
+              let npsValue: number | null = null;
+              if (typeof value === "number" && !isNaN(value)) {
+                npsValue = value;
+              } else if (typeof value === "string" && value.trim() !== "") {
+                const parsed = parseInt(value, 10);
+                if (!isNaN(parsed)) {
+                  npsValue = parsed;
+                }
+              }
+              transformedRatings[mappedCategory] = npsValue;
+              // Log for debugging production issues
+              console.log(
+                `[NPS Debug] Location: ${locationName}, Raw value: ${value}, Type: ${typeof value}, Converted: ${npsValue}`
+              );
             } else {
               transformedRatings[mappedCategory] = value;
             }

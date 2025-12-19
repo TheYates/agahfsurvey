@@ -37,6 +37,13 @@ export default function DepartmentRating({
   const ratingOptions = ["Excellent", "Very Good", "Good", "Fair", "Poor"];
 
   const handleRatingChange = (category: string, value: string | number) => {
+    // Log NPS rating changes for debugging
+    if (category === "npsRating") {
+      console.log(
+        `[NPS Component] Setting npsRating for ${location}: value=${value}, type=${typeof value}`
+      );
+    }
+
     // Create a new object for the current location's ratings
     const updatedRatings = {
       ...surveyData.departmentRatings,

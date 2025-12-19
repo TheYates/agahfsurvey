@@ -41,6 +41,13 @@ export default function WardRating({
 
   // Replace the handleRatingChange function with this fixed version
   const handleRatingChange = (category: string, value: string | number) => {
+    // Log NPS rating changes for debugging
+    if (category === "npsRating") {
+      console.log(
+        `[NPS Component] Setting npsRating for ${location}: value=${value}, type=${typeof value}`
+      );
+    }
+
     // Create a new object for the current location's ratings
     const updatedRatings = {
       ...surveyData.departmentRatings,
