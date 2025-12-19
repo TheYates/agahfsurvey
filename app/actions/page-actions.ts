@@ -342,7 +342,8 @@ export async function getSubmissionById(
         doctorProfessionalism,
         discharge,
         wouldRecommend,
-        npsRating
+        npsRating,
+        npsFeedback
       ),
       GeneralObservation (
         cleanliness,
@@ -419,13 +420,21 @@ export async function getSubmissionById(
           // Add canteen-specific fields
           foodQuality: locationRating.foodQuality || "",
           // Add location-specific recommendation
-          wouldRecommend: locationRating.wouldRecommend !== null && locationRating.wouldRecommend !== undefined
-            ? (locationRating.wouldRecommend ? "Yes" : "No")
-            : "",
+          wouldRecommend:
+            locationRating.wouldRecommend !== null &&
+            locationRating.wouldRecommend !== undefined
+              ? locationRating.wouldRecommend
+                ? "Yes"
+                : "No"
+              : "",
           // Add NPS rating
-          npsRating: locationRating.npsRating !== null && locationRating.npsRating !== undefined
-            ? locationRating.npsRating
-            : undefined,
+          npsRating:
+            locationRating.npsRating !== null &&
+            locationRating.npsRating !== undefined
+              ? locationRating.npsRating
+              : undefined,
+          // Add NPS feedback
+          npsFeedback: locationRating.npsFeedback || "",
           comment: "",
         });
       } else {
@@ -439,6 +448,8 @@ export async function getSubmissionById(
           promptnessFeedback: "",
           overall: "",
           wouldRecommend: "",
+          npsRating: undefined,
+          npsFeedback: "",
           comment: "",
         });
       }
@@ -476,9 +487,19 @@ export async function getSubmissionById(
         // Add canteen-specific fields
         foodQuality: rating.foodQuality || "",
         // Add location-specific recommendation
-        wouldRecommend: rating.wouldRecommend !== null && rating.wouldRecommend !== undefined
-          ? (rating.wouldRecommend ? "Yes" : "No")
-          : "",
+        wouldRecommend:
+          rating.wouldRecommend !== null && rating.wouldRecommend !== undefined
+            ? rating.wouldRecommend
+              ? "Yes"
+              : "No"
+            : "",
+        // Add NPS rating
+        npsRating:
+          rating.npsRating !== null && rating.npsRating !== undefined
+            ? rating.npsRating
+            : undefined,
+        // Add NPS feedback
+        npsFeedback: rating.npsFeedback || "",
         comment: "",
       });
     });
@@ -493,6 +514,8 @@ export async function getSubmissionById(
       promptnessFeedback: "",
       overall: "",
       wouldRecommend: "",
+      npsRating: undefined,
+      npsFeedback: "",
       comment: "",
     });
   }

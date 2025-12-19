@@ -210,32 +210,37 @@ export default function DepartmentRating({
               </div>
             )}
 
-            {surveyData.departmentRatings[location]?.npsRating !== undefined &&
-              surveyData.departmentRatings[location]?.npsRating !== null && (
-                <div className="space-y-2 pt-4">
-                  <Label
-                    htmlFor={`${location}-nps-feedback`}
-                    className="text-base"
-                  >
-                    {surveyData.departmentRatings[location]?.npsRating >= 9
+            {(surveyData.departmentRatings[location]?.npsRating !== undefined &&
+              surveyData.departmentRatings[location]?.npsRating !== null) ||
+            surveyData.departmentRatings[location]?.npsFeedback ? (
+              <div className="space-y-2 pt-4">
+                <Label
+                  htmlFor={`${location}-nps-feedback`}
+                  className="text-base"
+                >
+                  {surveyData.departmentRatings[location]?.npsRating !==
+                    undefined &&
+                  surveyData.departmentRatings[location]?.npsRating !== null
+                    ? surveyData.departmentRatings[location]?.npsRating >= 9
                       ? `What did you enjoy most about your experience at the ${location}?`
                       : surveyData.departmentRatings[location]?.npsRating >= 7
                       ? `What would make you rate us higher at the ${location}?`
-                      : `How can we make things right for you at the ${location}?`}
-                  </Label>
-                  <Textarea
-                    id={`${location}-nps-feedback`}
-                    value={
-                      surveyData.departmentRatings[location]?.npsFeedback || ""
-                    }
-                    onChange={(e) =>
-                      handleRatingChange("npsFeedback", e.target.value)
-                    }
-                    rows={4}
-                    className="resize-none"
-                  />
-                </div>
-              )}
+                      : `How can we make things right for you at the ${location}?`
+                    : `Additional feedback for ${location}`}
+                </Label>
+                <Textarea
+                  id={`${location}-nps-feedback`}
+                  value={
+                    surveyData.departmentRatings[location]?.npsFeedback || ""
+                  }
+                  onChange={(e) =>
+                    handleRatingChange("npsFeedback", e.target.value)
+                  }
+                  rows={4}
+                  className="resize-none"
+                />
+              </div>
+            ) : null}
           </div>
         </CardContent>
       </Card>

@@ -66,7 +66,13 @@ const hideButtonsStyle = `
 `;
 
 // Simple component to display only selected locations
-function LocationsList({ locations, title }: { locations: string[]; title?: string }) {
+function LocationsList({
+  locations,
+  title,
+}: {
+  locations: string[];
+  title?: string;
+}) {
   // Group locations by type
   const clinicsAndDepartments = [
     "Audiology Unit",
@@ -108,7 +114,11 @@ function LocationsList({ locations, title }: { locations: string[]; title?: stri
   const selectedOthers = locations.filter((loc) => otherServices.includes(loc));
 
   // If no locations to show, return null
-  if (selectedClinics.length === 0 && selectedWards.length === 0 && selectedOthers.length === 0) {
+  if (
+    selectedClinics.length === 0 &&
+    selectedWards.length === 0 &&
+    selectedOthers.length === 0
+  ) {
     return null;
   }
 
@@ -117,7 +127,8 @@ function LocationsList({ locations, title }: { locations: string[]; title?: stri
       <Card className="border-none shadow-none">
         <CardHeader className="px-0 pt-0">
           <CardTitle className="text-xl font-bold">
-            {title || "Where did you visit?"} <span className="text-red-500">*</span>
+            {title || "Where did you visit?"}{" "}
+            <span className="text-red-500">*</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="px-0 pb-0">
@@ -320,15 +331,15 @@ function UserInformationSection({
             </div>
 
             <div className="space-y-4">
-              <Label className="text-base font-medium">
-                Patient Type:
-              </Label>
+              <Label className="text-base font-medium">Patient Type:</Label>
               <div className="bg-muted/30 p-4 rounded-md border border-primary/30">
                 <div className="flex items-center space-x-2">
                   <div className="h-4 w-4 rounded-full bg-primary border-primary flex items-center justify-center">
                     <div className="h-1.5 w-1.5 rounded-full bg-primary-foreground"></div>
                   </div>
-                  <Label className="font-semibold text-base">{submission.patientType}</Label>
+                  <Label className="font-semibold text-base">
+                    {submission.patientType}
+                  </Label>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2 ml-6">
                   Automatically determined based on visit history
@@ -524,6 +535,12 @@ export default function SubmissionDetailModal({
           const departmentRatings: Record<string, Record<string, string>> = {};
 
           detailedSubmission.ratings.forEach((rating) => {
+            // Debug: log the raw rating data
+            console.log(
+              "[Modal Debug] Raw rating data:",
+              JSON.stringify(rating, null, 2)
+            );
+
             if (rating.locationName) {
               const ratingObj: Record<string, string> = {};
 
@@ -556,16 +573,37 @@ export default function SubmissionDetailModal({
               if (ratingAny.discharge)
                 ratingObj.discharge = ratingAny.discharge;
               // Add location-specific recommendation
-              if (ratingAny.wouldRecommend !== undefined && ratingAny.wouldRecommend !== "")
+              if (
+                ratingAny.wouldRecommend !== undefined &&
+                ratingAny.wouldRecommend !== ""
+              )
                 ratingObj.wouldRecommend = ratingAny.wouldRecommend;
               // Add NPS rating
-              if (ratingAny.npsRating !== undefined && ratingAny.npsRating !== null)
+              if (
+                ratingAny.npsRating !== undefined &&
+                ratingAny.npsRating !== null
+              )
                 ratingObj.npsRating = ratingAny.npsRating;
+              // Add NPS feedback
+              if (
+                ratingAny.npsFeedback !== undefined &&
+                ratingAny.npsFeedback !== ""
+              )
+                ratingObj.npsFeedback = ratingAny.npsFeedback;
+
+              // Debug: log what we're setting
+              console.log(
+                `[Modal Debug] Setting departmentRatings["${rating.locationName}"] with npsRating=${ratingObj.npsRating}, npsFeedback=${ratingObj.npsFeedback}`
+              );
 
               departmentRatings[rating.locationName] = ratingObj;
             }
           });
 
+          console.log(
+            "[Modal Debug] Final departmentRatings:",
+            JSON.stringify(departmentRatings, null, 2)
+          );
           transformedData.departmentRatings = departmentRatings;
 
           setSubmission(transformedData);
@@ -664,9 +702,12 @@ export default function SubmissionDetailModal({
     if (wards.includes(location)) return "ward";
     if (departments.includes(location)) return "department";
     if (location === "Canteen Services") return "canteen";
-    if (location === "Occupational Health" ||
-        location === "Occupational Health Unit (Medicals)" ||
-        location.toLowerCase().includes("occupational health")) return "occupational";
+    if (
+      location === "Occupational Health" ||
+      location === "Occupational Health Unit (Medicals)" ||
+      location.toLowerCase().includes("occupational health")
+    )
+      return "occupational";
     return "department";
   };
 
@@ -696,22 +737,25 @@ export default function SubmissionDetailModal({
     (loc) => getLocationType(loc) === "ward"
   );
   const hasCanteen = submission.locations.includes("Canteen Services");
-  const hasOccupational = submission.locations.some(loc =>
-    loc === "Occupational Health" ||
-    loc === "Occupational Health Unit (Medicals)" ||
-    loc.toLowerCase().includes("occupational health")
+  const hasOccupational = submission.locations.some(
+    (loc) =>
+      loc === "Occupational Health" ||
+      loc === "Occupational Health Unit (Medicals)" ||
+      loc.toLowerCase().includes("occupational health")
   );
 
   // Check if visit purpose is Medical Surveillance (Occupational Health)
-  const isMedicalSurveillance = submission.visitPurpose?.toLowerCase().includes("occupational health") ||
-                                 submission.visitPurpose?.toLowerCase().includes("medicals");
+  const isMedicalSurveillance =
+    submission.visitPurpose?.toLowerCase().includes("occupational health") ||
+    submission.visitPurpose?.toLowerCase().includes("medicals");
 
   // Get other locations (excluding Occupational Health if it's the main purpose)
   const otherLocations = isMedicalSurveillance
-    ? submission.locations.filter(loc =>
-        loc !== "Occupational Health" &&
-        loc !== "Occupational Health Unit (Medicals)" &&
-        !loc.toLowerCase().includes("occupational health")
+    ? submission.locations.filter(
+        (loc) =>
+          loc !== "Occupational Health" &&
+          loc !== "Occupational Health Unit (Medicals)" &&
+          !loc.toLowerCase().includes("occupational health")
       )
     : submission.locations;
 
