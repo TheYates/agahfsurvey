@@ -6,11 +6,14 @@ export async function middleware(req: NextRequest) {
 
   // Check if the request is for a report page
   if (req.nextUrl.pathname.startsWith("/reports/")) {
-    // Add cache-control headers to improve performance
+    // Prevent caching of reports to ensure users see fresh data
+    // Use no-cache to force revalidation with server on each request
     res.headers.set(
       "Cache-Control",
-      "public, max-age=60, stale-while-revalidate=300"
+      "no-cache, no-store, must-revalidate, max-age=0"
     );
+    res.headers.set("Pragma", "no-cache");
+    res.headers.set("Expires", "0");
   }
 
   // Note: Auth checks are now handled in the route components themselves

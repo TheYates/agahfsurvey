@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agahf-survey-v2';
+const CACHE_NAME = 'agahf-survey-v3';
 const urlsToCache = [
   '/',
   '/submit',
@@ -46,25 +46,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For survey/submit pages, use network first strategy
-  if (event.request.url.includes('/submit') || event.request.url.includes('/survey')) {
+  // For API routes and data endpoints, always use network first with no caching
+  if (event.request.url.includes('/api/') || 
+      event.request.url.includes('/reports') ||
+      event.request.url.includes('/submit') || 
+      event.request.url.includes('/survey')) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          // Clone the response before caching
-          const responseToCache = response.clone();
-
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
+          // Don't cache API responses or report pages to prevent stale data
           return response;
         })
         .catch(() => {
-          // If network fails, try to serve from cache
+          // If network fails, try to serve from cache as fallback
           return caches.match(event.request).then((response) => {
             if (response) {
-              return response;
+              // Add header to indicate this is cached/stale data
+              const newHeaders = new Headers(response.headers);
+              newHeaders.set('X-Served-From-Cache', 'true');
+              return new Response(response.body, {
+                status: response.status,
+                statusText: response.statusText,
+                headers: newHeaders
+              });
             }
             // Return a custom offline page or message
             return new Response('Offline - Please check your connection', {
@@ -78,7 +82,7 @@ self.addEventListener('fetch', (event) => {
         })
     );
   } else {
-    // For other requests, use cache first strategy
+    // For static assets (images, CSS, JS), use cache first strategy
     event.respondWith(
       caches.match(event.request).then((response) => {
         if (response) {
@@ -86,7 +90,7 @@ self.addEventListener('fetch', (event) => {
         }
 
         return fetch(event.request).then((response) => {
-          // Don't cache if not a valid response
+          // Only cache static assets (images, fonts, etc.)
           if (!response || response.status !== 200 || response.type !== 'basic') {
             return response;
           }

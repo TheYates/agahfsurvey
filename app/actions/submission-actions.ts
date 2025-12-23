@@ -2,6 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import { surveyCache } from "@/lib/cache/survey-cache";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -133,7 +134,9 @@ export async function deleteSubmission(
       relatedCounts.ratings + relatedCounts.locations + relatedCounts.concerns + relatedCounts.observations
     } related records`);
 
-    // Revalidate the submissions page to reflect changes
+    // Clear cache and revalidate the submissions page to reflect changes
+    surveyCache.clear();
+    revalidatePath("/reports", "layout");
     revalidatePath("/reports/submissions");
 
     return {

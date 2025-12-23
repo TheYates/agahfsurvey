@@ -2,6 +2,8 @@
 
 import { createServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/database.types";
+import { revalidatePath } from "next/cache";
+import { surveyCache } from "@/lib/cache/survey-cache";
 
 // Types for locations
 export interface Location {
@@ -162,6 +164,11 @@ export async function createLocation(
       return { data: null, error: error.message };
     }
 
+    // Clear all caches when location is created
+    surveyCache.clear();
+    revalidatePath("/reports", "layout");
+    revalidatePath("/submit");
+
     return { data, error: null };
   } catch (error) {
     console.error("Error in createLocation:", error);
@@ -194,6 +201,11 @@ export async function updateLocation(
       return { data: null, error: error.message };
     }
 
+    // Clear all caches when location is updated
+    surveyCache.clear();
+    revalidatePath("/reports", "layout");
+    revalidatePath("/submit");
+
     return { data, error: null };
   } catch (error) {
     console.error(`Error in updateLocation ${id}:`, error);
@@ -214,6 +226,11 @@ export async function deleteLocation(id: number): Promise<{
       console.error(`Error deleting location ${id}:`, error);
       return { success: false, error: error.message };
     }
+
+    // Clear all caches when location is deleted
+    surveyCache.clear();
+    revalidatePath("/reports", "layout");
+    revalidatePath("/submit");
 
     return { success: true, error: null };
   } catch (error) {

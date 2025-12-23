@@ -2,6 +2,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
+import { surveyCache } from "@/lib/cache/survey-cache";
 
 // Create a Supabase client for server actions
 const supabase = createClient(
@@ -113,8 +114,10 @@ export async function submitSurvey(data: SurveyFormData) {
 
     await supabase.from("general_observations").insert(observationsData);
 
-    // Revalidate the reports page to reflect new data
-    revalidatePath("/reports");
+    // Clear cache and revalidate the reports page to reflect new data
+    surveyCache.clear();
+    revalidatePath("/reports", "layout");
+    revalidatePath("/submit");
 
     return { success: true, submissionId };
   } catch (error) {

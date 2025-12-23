@@ -204,12 +204,13 @@ export const CacheKeys = {
 };
 
 // Cache TTL constants (in milliseconds)
+// Reduced TTLs to prevent stale data issues
 export const CacheTTL = {
-  SHORT: 2 * 60 * 1000, // 2 minutes
-  MEDIUM: 5 * 60 * 1000, // 5 minutes
-  LONG: 15 * 60 * 1000, // 15 minutes
-  VERY_LONG: 60 * 60 * 1000, // 1 hour
-  DAILY: 24 * 60 * 60 * 1000, // 24 hours
+  SHORT: 30 * 1000, // 30 seconds
+  MEDIUM: 60 * 1000, // 1 minute
+  LONG: 2 * 60 * 1000, // 2 minutes
+  VERY_LONG: 5 * 60 * 1000, // 5 minutes
+  DAILY: 15 * 60 * 1000, // 15 minutes (reduced from 24 hours)
 };
 
 // Auto cleanup every 10 minutes
