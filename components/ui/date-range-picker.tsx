@@ -71,7 +71,7 @@ export function DateRangePicker({
             selected={date}
             onSelect={handleSelect}
             numberOfMonths={1}
-            captionLayout="dropdown"
+            captionLayout="dropdown-buttons"
             fromYear={2020}
             toYear={new Date().getFullYear()}
             disabled={(date) => date > new Date() || date < new Date("2000-01-01")}
