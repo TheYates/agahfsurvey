@@ -490,10 +490,10 @@ export default function ReportsPage() {
                         <li>
                           Detractors (0-6): Customers who gave ratings of 0-6
                         </li>
-                        <li>NPS = (% Promoters) - (% Detractors)</li>
+                        <li>NPS = ((% Promoters) - (% Detractors) + 100) / 2</li>
                       </ol>
                       <div className="text-xs text-muted-foreground mt-2">
-                        Score ranges from -100 to +100. Higher scores indicate
+                        Score ranges from 0% to 100%. Higher scores indicate
                         better customer loyalty.
                       </div>
                     </div>
@@ -503,7 +503,7 @@ export default function ReportsPage() {
               <CardDescription>Customer loyalty metric</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{npsData.score}</div>
+              <div className="text-2xl font-bold">{npsData.score}%</div>
               <p className="text-xs text-muted-foreground">
                 {npsData.promoters} promoters, {npsData.passives} passives,{" "}
                 {npsData.detractors} detractors

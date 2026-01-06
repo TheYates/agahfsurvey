@@ -537,9 +537,11 @@ export async function getNPS(): Promise<{
     const promoterPercentage = (promoters / total) * 100;
     const detractorPercentage = (detractors / total) * 100;
     const npsScore = promoterPercentage - detractorPercentage;
+    // Convert from -100 to +100 range to 0% to 100% range
+    const npsPercentage = (npsScore + 100) / 2;
 
     return {
-      score: Math.round(npsScore),
+      score: Math.round(npsPercentage),
       promoters,
       passives,
       detractors,
@@ -595,9 +597,11 @@ export async function getNPSByLocation(locationId: number | string): Promise<{
     const promoterPercentage = (promoters / total) * 100;
     const detractorPercentage = (detractors / total) * 100;
     const npsScore = promoterPercentage - detractorPercentage;
+    // Convert from -100 to +100 range to 0% to 100% range
+    const npsPercentage = (npsScore + 100) / 2;
 
     return {
-      score: Math.round(npsScore),
+      score: Math.round(npsPercentage),
       promoters,
       passives,
       detractors,
@@ -656,9 +660,11 @@ export async function getNPSByLocationType(locationType: string): Promise<{
     const promoterPercentage = (promoters / total) * 100;
     const detractorPercentage = (detractors / total) * 100;
     const npsScore = promoterPercentage - detractorPercentage;
+    // Convert from -100 to +100 range to 0% to 100% range
+    const npsPercentage = (npsScore + 100) / 2;
 
     return {
-      score: Math.round(npsScore),
+      score: Math.round(npsPercentage),
       promoters,
       passives,
       detractors,

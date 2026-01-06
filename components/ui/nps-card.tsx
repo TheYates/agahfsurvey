@@ -36,9 +36,9 @@ export function NPSCard({
             </TooltipTrigger>
             <TooltipContent side="right" className="max-w-xs">
               <p>
-                NPS measures customer loyalty. Score = % Promoters (9-10) - %
-                Detractors (0-6). Range: -100 to +100. Above 0 is good, above 50
-                is excellent.
+                NPS measures customer loyalty. Score = (% Promoters (9-10) - %
+                Detractors (0-6) + 100) / 2. Range: 0% to 100%. Above 50%
+                is good, above 75% is excellent.
               </p>
             </TooltipContent>
           </Tooltip>
@@ -46,7 +46,7 @@ export function NPSCard({
         <Star className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{npsData?.score || 0}</div>
+        <div className="text-2xl font-bold">{npsData?.score || 0}%</div>
         <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
           <div className="flex flex-col items-center gap-0.5">
             <div className="flex items-center gap-1">
