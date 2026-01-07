@@ -16,7 +16,8 @@ interface LocationResponse {
 
 interface SubmissionLocationResponse {
   locationId: string;
-  Location: LocationResponse;
+  isPrimary?: boolean;
+  Location: LocationResponse | LocationResponse[];
 }
 
 interface RatingResponse {
@@ -388,6 +389,98 @@ export async function getRecommendationRate(): Promise<number> {
     return (recommendCount / data.length) * 100;
   } catch (error) {
     console.error("Error in getRecommendationRate:", error);
+    return 0;
+  }
+}
+
+// Get out-patient recommendation rate (departments, occupational health, canteen only)
+export async function getOutpatientRecommendationRate(): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from("SurveySubmission")
+      .select(`
+        wouldRecommend,
+        SubmissionLocation (
+          Location (
+            name
+          )
+        )
+      `)
+      .not("wouldRecommend", "is", null);
+
+    if (error) {
+      console.error("Error fetching out-patient recommendation rate:", error);
+      return 0;
+    }
+
+    if (!data || data.length === 0) return 0;
+
+    const outPatientSubmissions = data.filter((submission) => {
+      const locations = submission.SubmissionLocation || [];
+      return locations.some((sl: any) => {
+        if (!sl.Location) return false;
+        const locObj = Array.isArray(sl.Location) ? sl.Location[0] : sl.Location;
+        const locationName = locObj?.name;
+        if (!locationName) return false;
+        const nameLower = locationName.toLowerCase();
+        return (
+          nameLower.includes("department") ||
+          nameLower.includes("occupational health") ||
+          nameLower.includes("canteen")
+        );
+      });
+    });
+
+    if (outPatientSubmissions.length === 0) return 0;
+
+    const recommendCount = outPatientSubmissions.filter((item) => item.wouldRecommend).length;
+    return (recommendCount / outPatientSubmissions.length) * 100;
+  } catch (error) {
+    console.error("Error in getOutpatientRecommendationRate:", error);
+    return 0;
+  }
+}
+
+// Get in-patient recommendation rate (wards only)
+export async function getInpatientRecommendationRate(): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from("SurveySubmission")
+      .select(`
+        wouldRecommend,
+        SubmissionLocation (
+          Location (
+            name
+          )
+        )
+      `)
+      .not("wouldRecommend", "is", null);
+
+    if (error) {
+      console.error("Error fetching in-patient recommendation rate:", error);
+      return 0;
+    }
+
+    if (!data || data.length === 0) return 0;
+
+    const inPatientSubmissions = data.filter((submission) => {
+      const locations = submission.SubmissionLocation || [];
+      return locations.some((sl: any) => {
+        if (!sl.Location) return false;
+        const locObj = Array.isArray(sl.Location) ? sl.Location[0] : sl.Location;
+        const locationName = locObj?.name;
+        if (!locationName) return false;
+        const nameLower = locationName.toLowerCase();
+        return nameLower.includes("ward");
+      });
+    });
+
+    if (inPatientSubmissions.length === 0) return 0;
+
+    const recommendCount = inPatientSubmissions.filter((item) => item.wouldRecommend).length;
+    return (recommendCount / inPatientSubmissions.length) * 100;
+  } catch (error) {
+    console.error("Error in getInpatientRecommendationRate:", error);
     return 0;
   }
 }

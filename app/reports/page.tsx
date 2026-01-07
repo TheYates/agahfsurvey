@@ -64,6 +64,8 @@ import {
   fetchOverallSatisfactionDistribution,
   getTotalSubmissionCount,
   getRecommendationRate,
+  getOutpatientRecommendationRate,
+  getInpatientRecommendationRate,
   getAverageSatisfaction,
   getSatisfactionByLocation,
   getNPS,
@@ -108,6 +110,8 @@ export default function ReportsPage() {
     { name: string; count: number }[]
   >([]);
   const [recommendationRate, setRecommendationRate] = useState(0);
+  const [outpatientRecommendationRate, setOutpatientRecommendationRate] = useState(0);
+  const [inpatientRecommendationRate, setInpatientRecommendationRate] = useState(0);
   const [averageSatisfaction, setAverageSatisfaction] = useState("");
   const [totalResponses, setTotalResponses] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -160,6 +164,8 @@ export default function ReportsPage() {
         departmentRatings,
         satisfactionDistribution,
         recommendationRateData,
+        outpatientRecommendationRateData,
+        inpatientRecommendationRateData,
         averageSatisfactionData,
         satisfactionByLocationData,
         nps,
@@ -170,6 +176,8 @@ export default function ReportsPage() {
         getDepartmentRatings(),
         fetchOverallSatisfactionDistribution(),
         getRecommendationRate(),
+        getOutpatientRecommendationRate(),
+        getInpatientRecommendationRate(),
         getAverageSatisfaction(),
         getSatisfactionByLocation(),
         getNPS(),
@@ -178,6 +186,8 @@ export default function ReportsPage() {
       // Set the TOTAL number of responses without filtering
       setTotalResponses(totalCount);
       setRecommendationRate(recommendationRateData);
+      setOutpatientRecommendationRate(outpatientRecommendationRateData);
+      setInpatientRecommendationRate(inpatientRecommendationRateData);
       setAverageSatisfaction(averageSatisfactionData);
       setNpsData(nps);
       // Apply location name shortening to satisfaction by location data
@@ -363,7 +373,7 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">
@@ -382,7 +392,7 @@ export default function ReportsPage() {
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium">
-                  Recommendation Rate
+                  Out-Patient Recommendation Rate
                 </CardTitle>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -395,8 +405,7 @@ export default function ReportsPage() {
                       <h4 className="font-semibold">How it's calculated:</h4>
                       <ol className="text-sm space-y-1 list-decimal list-inside">
                         <li>
-                          Fetches all survey submissions with recommendation
-                          data
+                          Fetches submissions from departments, occupational health, and canteen
                         </li>
                         <li>
                           Counts how many respondents said "Yes" to recommending
@@ -406,21 +415,64 @@ export default function ReportsPage() {
                         </li>
                       </ol>
                       <div className="text-xs text-muted-foreground mt-2">
-                        Example: If 85 out of 100 respondents would recommend,
-                        the rate is 85%
+                        Out-patient includes: departments, occupational health unit, and canteen
                       </div>
                     </div>
                   </PopoverContent>
                 </Popover>
               </div>
-              <CardDescription>Patients who would recommend</CardDescription>
+              <CardDescription>Out-patient services</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {recommendationRate.toFixed(1)}%
+                {outpatientRecommendationRate.toFixed(1)}%
               </div>
               <p className="text-xs text-muted-foreground">
-                Percentage of patients who would recommend
+                Out-patient recommendation rate
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium">
+                  In-Patient Recommendation Rate
+                </CardTitle>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="space-y-2">
+                      <h4 className="font-semibold">How it's calculated:</h4>
+                      <ol className="text-sm space-y-1 list-decimal list-inside">
+                        <li>
+                          Fetches submissions from wards
+                        </li>
+                        <li>
+                          Counts how many respondents said "Yes" to recommending
+                        </li>
+                        <li>
+                          Divides by total submissions and multiplies by 100
+                        </li>
+                      </ol>
+                      <div className="text-xs text-muted-foreground mt-2">
+                        In-patient includes: all ward services
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <CardDescription>In-patient services</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {inpatientRecommendationRate.toFixed(1)}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                In-patient recommendation rate
               </p>
             </CardContent>
           </Card>
