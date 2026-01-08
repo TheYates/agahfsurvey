@@ -36,6 +36,7 @@ import {
 import { getSubmissionById } from "@/app/actions/page-actions";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Import survey components
 import IntroPage from "@/components/survey/intro-page";
@@ -535,12 +536,6 @@ export default function SubmissionDetailModal({
           const departmentRatings: Record<string, Record<string, string>> = {};
 
           detailedSubmission.ratings.forEach((rating) => {
-            // Debug: log the raw rating data
-            console.log(
-              "[Modal Debug] Raw rating data:",
-              JSON.stringify(rating, null, 2)
-            );
-
             if (rating.locationName) {
               const ratingObj: Record<string, string> = {};
 
@@ -714,16 +709,60 @@ export default function SubmissionDetailModal({
   if (loading || !submission) {
     return (
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Loading Submission</DialogTitle>
-            <DialogDescription>
-              Please wait while we retrieve the submission details.
-            </DialogDescription>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
           </DialogHeader>
-          <div className="flex items-center justify-center h-64">
-            <div className="text-lg">Loading submission details...</div>
-          </div>
+          <ScrollArea className="max-h-[calc(90vh-120px)]">
+            <div className="space-y-8 pr-4" style={{ padding: "20px" }}>
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <Skeleton className="h-px w-full" />
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-64" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-10 w-32" />
+                  <Skeleton className="h-10 w-40" />
+                </div>
+              </div>
+              <Skeleton className="h-px w-full" />
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-56" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                </div>
+              </div>
+              <Skeleton className="h-px w-full" />
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-72" />
+                <div className="grid grid-cols-5 gap-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-20 w-full" />
+                  ))}
+                </div>
+              </div>
+              <Skeleton className="h-px w-full" />
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-64" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+              <Skeleton className="h-px w-full" />
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-56" />
+                <div className="grid grid-cols-2 gap-3">
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     );

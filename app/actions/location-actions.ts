@@ -82,12 +82,12 @@ export async function fixLocationSequence(): Promise<{
     const supabase = await createServerClient();
 
     // Run SQL to fix the sequence
-    const { error } = await supabase.rpc('fix_location_sequence', {});
+    const { error } = await supabase.rpc("fix_location_sequence", {});
 
     if (error) {
       // If the RPC doesn't exist, try direct SQL
-      const { error: sqlError } = await supabase.rpc('exec_sql', {
-        sql: `SELECT setval(pg_get_serial_sequence('public."Location"', 'id'), COALESCE((SELECT MAX(id) FROM public."Location"), 0) + 1, false);`
+      const { error: sqlError } = await supabase.rpc("exec_sql", {
+        sql: `SELECT setval(pg_get_serial_sequence('public."Location"', 'id'), COALESCE((SELECT MAX(id) FROM public."Location"), 0) + 1, false);`,
       });
 
       if (sqlError) {
@@ -104,9 +104,7 @@ export async function fixLocationSequence(): Promise<{
 }
 
 // Create a new location
-export async function createLocation(
-  location: LocationCreate
-): Promise<{
+export async function createLocation(location: LocationCreate): Promise<{
   data: Location | null;
   error: string | null;
 }> {
@@ -128,7 +126,7 @@ export async function createLocation(
       .single();
 
     // If we get a duplicate key error, fix the sequence and retry
-    if (error && error.code === '23505') {
+    if (error && error.code === "23505") {
       console.log("Duplicate key detected, fixing sequence...");
 
       // Get the max ID and manually increment
