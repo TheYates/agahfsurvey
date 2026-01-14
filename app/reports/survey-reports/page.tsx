@@ -61,7 +61,7 @@ import {
   ImprovementArea,
   UserTypeDistribution,
 } from "@/app/actions/overview-actions";
-import { getNPS, getNPSByLocationType } from "@/app/actions/report-actions";
+import { getNPS, getNPSByLocationType, getOutpatientRecommendationRate, getInpatientRecommendationRate } from "@/app/actions/report-actions";
 import { OverviewTab } from "./components/overview-tab";
 import { DepartmentsTab } from "./components/departments-tab";
 import { WardsTab } from "./components/wards-tab";
@@ -182,6 +182,8 @@ export default function SurveyReportsPage() {
   const [wardNpsData, setWardNpsData] = useState<any>(null);
   const [canteenNpsData, setCanteenNpsData] = useState<any>(null);
   const [medicalsNpsData, setMedicalsNpsData] = useState<any>(null);
+  const [outpatientRecommendationRate, setOutpatientRecommendationRate] = useState(0);
+  const [inpatientRecommendationRate, setInpatientRecommendationRate] = useState(0);
   const [overviewData, setOverviewData] = useState<any>({
     surveyData: {
       totalResponses: 0,
@@ -256,7 +258,7 @@ export default function SurveyReportsPage() {
   const fetchData = async (selectedDateRange: DateRange | undefined) => {
     try {
       setIsLoading(true);
-      
+
 
       // Calculate date range filter from DateRange object
       let dateRangeFilter = null;
@@ -288,26 +290,32 @@ export default function SurveyReportsPage() {
       const wardNpsPromise = getNPSByLocationType("ward");
       const canteenNpsPromise = getNPSByLocationType("canteen");
       const medicalsNpsPromise = getNPSByLocationType("occupational_health");
+      const outpatientRecommendationRatePromise = getOutpatientRecommendationRate(dateRangeFilter);
+      const inpatientRecommendationRatePromise = getInpatientRecommendationRate(dateRangeFilter);
 
       // Wait for all promises to resolve
       const [
-        fetchedOverviewData, 
-        departmentData, 
-        wardData, 
-        npsResult, 
+        fetchedOverviewData,
+        departmentData,
+        wardData,
+        npsResult,
         deptNps,
         wardNps,
         canteenNps,
-        medicalsNps
+        medicalsNps,
+        outpatientRecRate,
+        inpatientRecRate
       ] = await Promise.all([
-        overviewPromise, 
-        departmentPromise, 
-        wardPromise, 
+        overviewPromise,
+        departmentPromise,
+        wardPromise,
         npsPromise,
         departmentNpsPromise,
         wardNpsPromise,
         canteenNpsPromise,
-        medicalsNpsPromise
+        medicalsNpsPromise,
+        outpatientRecommendationRatePromise,
+        inpatientRecommendationRatePromise
       ]);
 
       // Store the fetched data in the overviewData state
@@ -317,28 +325,30 @@ export default function SurveyReportsPage() {
       setWardNpsData(wardNps);
       setCanteenNpsData(canteenNps);
       setMedicalsNpsData(medicalsNps);
+      setOutpatientRecommendationRate(outpatientRecRate);
+      setInpatientRecommendationRate(inpatientRecRate);
 
       // For backward compatibility, create a surveyData array with safe access
       const surveyData =
         fetchedOverviewData && fetchedOverviewData.surveyData
           ? {
-              totalResponses:
-                fetchedOverviewData.surveyData.totalResponses || 0,
-              recommendRate: fetchedOverviewData.surveyData.recommendRate || 0,
-              avgSatisfaction:
-                fetchedOverviewData.surveyData.avgSatisfaction || 0,
-              mostCommonPurpose:
-                fetchedOverviewData.surveyData.mostCommonPurpose || "",
-              purposeDistribution:
-                fetchedOverviewData.surveyData.purposeDistribution || [],
-            }
+            totalResponses:
+              fetchedOverviewData.surveyData.totalResponses || 0,
+            recommendRate: fetchedOverviewData.surveyData.recommendRate || 0,
+            avgSatisfaction:
+              fetchedOverviewData.surveyData.avgSatisfaction || 0,
+            mostCommonPurpose:
+              fetchedOverviewData.surveyData.mostCommonPurpose || "",
+            purposeDistribution:
+              fetchedOverviewData.surveyData.purposeDistribution || [],
+          }
           : {
-              totalResponses: 0,
-              recommendRate: 0,
-              avgSatisfaction: 0,
-              mostCommonPurpose: "",
-              purposeDistribution: [],
-            };
+            totalResponses: 0,
+            recommendRate: 0,
+            avgSatisfaction: 0,
+            mostCommonPurpose: "",
+            purposeDistribution: [],
+          };
 
       // Set data state with the overview data
       const enhancedData = {
@@ -446,7 +456,7 @@ export default function SurveyReportsPage() {
   }, [dateRange]);
 
   // Add debug logging for visitTimeData
-  useEffect(() => {}, [visitTimeData]);
+  useEffect(() => { }, [visitTimeData]);
 
   // Track the active tab
   const handleTabChange = (value: string) => {
@@ -755,6 +765,8 @@ export default function SurveyReportsPage() {
                 }
                 npsData={npsData}
                 locations={locations}
+                outpatientRecommendationRate={outpatientRecommendationRate}
+                inpatientRecommendationRate={inpatientRecommendationRate}
               />,
               <div className="space-y-6">
                 <Card>

@@ -204,6 +204,8 @@ interface OverviewTabProps {
     visitCount: number;
     recommendRate: number;
   }>;
+  outpatientRecommendationRate?: number;
+  inpatientRecommendationRate?: number;
 }
 
 export function OverviewTab({
@@ -218,12 +220,14 @@ export function OverviewTab({
   userTypeData,
   npsData,
   locations,
+  outpatientRecommendationRate,
+  inpatientRecommendationRate,
 }: OverviewTabProps) {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          {[1, 2, 3, 4, 5].map((i) => (
             <Card key={i}>
               <CardHeader className="pb-2">
                 <Skeleton className="h-4 w-28" />
@@ -272,9 +276,9 @@ export function OverviewTab({
   const mostCommonVisitTime =
     visitTimeAnalysis && visitTimeAnalysis.length > 0
       ? visitTimeAnalysis.reduce(
-          (max, current) => (current.count > max.count ? current : max),
-          visitTimeAnalysis[0]
-        )
+        (max, current) => (current.count > max.count ? current : max),
+        visitTimeAnalysis[0]
+      )
       : { visitTime: "N/A", count: 0, recommendRate: 0 };
 
   // Unused variables removed to clean up the code
@@ -282,7 +286,7 @@ export function OverviewTab({
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           {/* Total Responses Card */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -314,11 +318,11 @@ export function OverviewTab({
             </CardContent>
           </Card>
 
-          {/* Recommendation Rate Card */}
+          {/* Out-Patient Recommendation Rate Card */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-1">
-                Recommendation Rate
+                Out-Patient Recommendation Rate
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="cursor-help">
@@ -327,14 +331,17 @@ export function OverviewTab({
                   </TooltipTrigger>
                   <TooltipContent side="right" className="max-w-xs">
                     <p>
-                      Percentage of respondents who answered "Yes" to whether
-                      they would recommend the facility to others. Calculated
-                      as: (Total "Yes" responses Ã· Total responses) Ã— 100.
+                      Fetches submissions from departments, occupational health, and canteen.
+                      Counts how many respondents said "Yes" to recommending.
+                      Divides by total submissions and multiplies by 100.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Out-patient includes: departments, occupational health unit, and canteen
                     </p>
                   </TooltipContent>
                 </Tooltip>
               </CardTitle>
-              {surveyData.recommendRate >= 75 ? (
+              {(outpatientRecommendationRate || 0) >= 75 ? (
                 <ThumbsUp className="h-4 w-4 text-[#22c5bf]" />
               ) : (
                 <ThumbsDown className="h-4 w-4 text-[#e84e3c]" />
@@ -342,10 +349,49 @@ export function OverviewTab({
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {surveyData.recommendRate || 0}%
+                {(outpatientRecommendationRate || 0).toFixed(1)}%
               </div>
               <p className="text-xs text-muted-foreground">
-                Would recommend our facility to others
+                Out-patient recommendation rate
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* In-Patient Recommendation Rate Card */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1">
+                In-Patient Recommendation Rate
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-help">
+                      <Info size={14} className="text-muted-foreground" />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <p>
+                      Fetches submissions from wards.
+                      Counts how many respondents said "Yes" to recommending.
+                      Divides by total submissions and multiplies by 100.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      In-patient includes: all ward services
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </CardTitle>
+              {(inpatientRecommendationRate || 0) >= 75 ? (
+                <ThumbsUp className="h-4 w-4 text-[#22c5bf]" />
+              ) : (
+                <ThumbsDown className="h-4 w-4 text-[#e84e3c]" />
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {(inpatientRecommendationRate || 0).toFixed(1)}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                In-patient recommendation rate
               </p>
             </CardContent>
           </Card>
@@ -436,19 +482,19 @@ export function OverviewTab({
                 {mostCommonVisitTime.visitTime === "first-time"
                   ? "First time visiting"
                   : mostCommonVisitTime.visitTime === "less-than-month"
-                  ? "< 1 month ago"
-                  : mostCommonVisitTime.visitTime === "one-two-months"
-                  ? "1-2 months ago"
-                  : mostCommonVisitTime.visitTime === "three-six-months"
-                  ? "3-6 months ago"
-                  : mostCommonVisitTime.visitTime === "more-than-six-months"
-                  ? "> 6 months ago"
-                  : mostCommonVisitTime.visitTime}
+                    ? "< 1 month ago"
+                    : mostCommonVisitTime.visitTime === "one-two-months"
+                      ? "1-2 months ago"
+                      : mostCommonVisitTime.visitTime === "three-six-months"
+                        ? "3-6 months ago"
+                        : mostCommonVisitTime.visitTime === "more-than-six-months"
+                          ? "> 6 months ago"
+                          : mostCommonVisitTime.visitTime}
               </div>
-              <p className="text-xs text-muted-foreground">
+              {/* <p className="text-xs text-muted-foreground">
                 {mostCommonVisitTime.count} visits (
                 {mostCommonVisitTime.recommendRate || 0}% recommended)
-              </p>
+              </p> */}
             </CardContent>
           </Card>
         </div>
@@ -526,8 +572,8 @@ export function OverviewTab({
                               {typeof visitPurposeData.generalPractice
                                 .satisfaction === "number"
                                 ? visitPurposeData.generalPractice.satisfaction.toFixed(
-                                    1
-                                  )
+                                  1
+                                )
                                 : visitPurposeData.generalPractice.satisfaction}
                               /5.0
                             </span>
@@ -537,7 +583,7 @@ export function OverviewTab({
                               typeof visitPurposeData.generalPractice
                                 .satisfaction === "number"
                                 ? visitPurposeData.generalPractice
-                                    .satisfaction * 20
+                                  .satisfaction * 20
                                 : 0
                             }
                             className="h-2"
@@ -575,10 +621,10 @@ export function OverviewTab({
                               {typeof visitPurposeData.generalPractice
                                 .recommendRate === "number"
                                 ? visitPurposeData.generalPractice.recommendRate.toFixed(
-                                    1
-                                  )
+                                  1
+                                )
                                 : visitPurposeData.generalPractice
-                                    .recommendRate}
+                                  .recommendRate}
                               %
                             </span>
                           </div>
@@ -602,10 +648,10 @@ export function OverviewTab({
                               {typeof visitPurposeData.generalPractice
                                 .topDepartment.score === "number"
                                 ? visitPurposeData.generalPractice.topDepartment.score.toFixed(
-                                    1
-                                  )
+                                  1
+                                )
                                 : visitPurposeData.generalPractice.topDepartment
-                                    .score}
+                                  .score}
                               /5.0)
                             </span>
                           </span>
@@ -623,10 +669,10 @@ export function OverviewTab({
                               {typeof visitPurposeData.generalPractice
                                 .bottomDepartment.score === "number"
                                 ? visitPurposeData.generalPractice.bottomDepartment.score.toFixed(
-                                    1
-                                  )
+                                  1
+                                )
                                 : visitPurposeData.generalPractice
-                                    .bottomDepartment.score}
+                                  .bottomDepartment.score}
                               /5.0)
                             </span>
                           </span>
@@ -654,12 +700,11 @@ export function OverviewTab({
                                   <div
                                     className="bg-[#22c5bf] h-full rounded-full"
                                     style={{
-                                      width: `${
-                                        (loc.count /
-                                          visitPurposeData.generalPractice
-                                            .commonLocations[0].count) *
+                                      width: `${(loc.count /
+                                        visitPurposeData.generalPractice
+                                          .commonLocations[0].count) *
                                         100
-                                      }%`,
+                                        }%`,
                                     }}
                                   ></div>
                                 </div>
@@ -714,10 +759,10 @@ export function OverviewTab({
                               {typeof visitPurposeData.occupationalHealth
                                 .satisfaction === "number"
                                 ? visitPurposeData.occupationalHealth.satisfaction.toFixed(
-                                    1
-                                  )
+                                  1
+                                )
                                 : visitPurposeData.occupationalHealth
-                                    .satisfaction}
+                                  .satisfaction}
                               /5.0
                             </span>
                           </div>
@@ -726,7 +771,7 @@ export function OverviewTab({
                               typeof visitPurposeData.occupationalHealth
                                 .satisfaction === "number"
                                 ? visitPurposeData.occupationalHealth
-                                    .satisfaction * 20
+                                  .satisfaction * 20
                                 : 0
                             }
                             className="h-2"
@@ -764,10 +809,10 @@ export function OverviewTab({
                               {typeof visitPurposeData.occupationalHealth
                                 .recommendRate === "number"
                                 ? visitPurposeData.occupationalHealth.recommendRate.toFixed(
-                                    1
-                                  )
+                                  1
+                                )
                                 : visitPurposeData.occupationalHealth
-                                    .recommendRate}
+                                  .recommendRate}
                               %
                             </span>
                           </div>
@@ -793,10 +838,10 @@ export function OverviewTab({
                                 {typeof visitPurposeData.occupationalHealth
                                   .topDepartment.score === "number"
                                   ? visitPurposeData.occupationalHealth.topDepartment.score.toFixed(
-                                      1
-                                    )
+                                    1
+                                  )
                                   : visitPurposeData.occupationalHealth
-                                      .topDepartment.score}
+                                    .topDepartment.score}
                                 /5.0)
                               </span>
                             </span>
@@ -829,10 +874,10 @@ export function OverviewTab({
                                 {typeof visitPurposeData.occupationalHealth
                                   .bottomDepartment.score === "number"
                                   ? visitPurposeData.occupationalHealth.bottomDepartment.score.toFixed(
-                                      1
-                                    )
+                                    1
+                                  )
                                   : visitPurposeData.occupationalHealth
-                                      .bottomDepartment.score}
+                                    .bottomDepartment.score}
                                 /5.0)
                               </span>
                             </span>
@@ -894,9 +939,8 @@ export function OverviewTab({
                                       <div
                                         className="bg-[#22c5bf] h-full rounded-full"
                                         style={{
-                                          width: `${
-                                            (loc.count / maxCount) * 100
-                                          }%`,
+                                          width: `${(loc.count / maxCount) * 100
+                                            }%`,
                                         }}
                                       ></div>
                                     </div>
@@ -909,10 +953,10 @@ export function OverviewTab({
                           (loc: { name: string }) =>
                             loc.name !== "Occupational Health Unit (Medicals)"
                         ).length === 0 && (
-                          <div className="text-sm text-muted-foreground">
-                            No other locations visited
-                          </div>
-                        )}
+                            <div className="text-sm text-muted-foreground">
+                              No other locations visited
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -1226,9 +1270,9 @@ export function OverviewTab({
                                 surveyData.generalObservationStats
                                   ?.facilities || 0,
                                 surveyData.generalObservationStats?.security ||
-                                  0,
+                                0,
                                 surveyData.generalObservationStats?.overall ||
-                                  0,
+                                0,
                               ],
                               backgroundColor: "#22c5bf",
                               borderRadius: 4,
@@ -1298,7 +1342,7 @@ export function OverviewTab({
                                       <span className="text-xs text-[#22c5bf]">
                                         {Math.round(
                                           (item.count * item.recommendRate) /
-                                            100
+                                          100
                                         )}
                                       </span>
                                       <Progress
@@ -1314,7 +1358,7 @@ export function OverviewTab({
                                         {Math.round(
                                           (item.count *
                                             (100 - item.recommendRate)) /
-                                            100
+                                          100
                                         )}
                                       </span>
                                     </div>
@@ -1367,8 +1411,8 @@ export function OverviewTab({
                                   rating >= 4
                                     ? "bg-[#22c5bf]/30"
                                     : rating >= 3
-                                    ? "bg-[#f6a050]/30"
-                                    : "bg-[#e84e3c]/30"
+                                      ? "bg-[#f6a050]/30"
+                                      : "bg-[#e84e3c]/30"
                                 )}
                               />
                             </div>
@@ -1411,11 +1455,9 @@ export function OverviewTab({
                                       },
                                       categories[0]
                                     );
-                                    return `${
-                                      topCategory.label
-                                    } is our highest-rated area with ${
-                                      stats[topCategory.id]?.toFixed(1) || "0.0"
-                                    }/5.0 score.`;
+                                    return `${topCategory.label
+                                      } is our highest-rated area with ${stats[topCategory.id]?.toFixed(1) || "0.0"
+                                      }/5.0 score.`;
                                   })()}
                                 </span>
                               </li>
@@ -1449,12 +1491,10 @@ export function OverviewTab({
                                       },
                                       categories[0]
                                     );
-                                    return `${
-                                      lowestCategory.label
-                                    } may need attention with ${
-                                      stats[lowestCategory.id]?.toFixed(1) ||
+                                    return `${lowestCategory.label
+                                      } may need attention with ${stats[lowestCategory.id]?.toFixed(1) ||
                                       "0.0"
-                                    }/5.0 score.`;
+                                      }/5.0 score.`;
                                   })()}
                                 </span>
                               </li>
@@ -1520,14 +1560,14 @@ export function OverviewTab({
                               {item.id === "first-time"
                                 ? "First time visiting"
                                 : item.id === "less-than-month"
-                                ? "< 1 month ago"
-                                : item.id === "one-two-months"
-                                ? "1-2 months ago"
-                                : item.id === "three-six-months"
-                                ? "3-6 months ago"
-                                : item.id === "more-than-six-months"
-                                ? "> 6 months ago"
-                                : item.name}
+                                  ? "< 1 month ago"
+                                  : item.id === "one-two-months"
+                                    ? "1-2 months ago"
+                                    : item.id === "three-six-months"
+                                      ? "3-6 months ago"
+                                      : item.id === "more-than-six-months"
+                                        ? "> 6 months ago"
+                                        : item.name}
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-2">
@@ -1548,8 +1588,8 @@ export function OverviewTab({
                                     item.satisfaction >= 4
                                       ? "text-[#22c5bf]"
                                       : item.satisfaction >= 3
-                                      ? "text-[#f6a050]"
-                                      : "text-[#e84e3c]"
+                                        ? "text-[#f6a050]"
+                                        : "text-[#e84e3c]"
                                   )}
                                 >
                                   {!isNaN(item.satisfaction)
@@ -1574,8 +1614,8 @@ export function OverviewTab({
                                     item.recommendRate >= 75
                                       ? "text-[#22c5bf]"
                                       : item.recommendRate >= 50
-                                      ? "text-[#f6a050]"
-                                      : "text-[#e84e3c]"
+                                        ? "text-[#f6a050]"
+                                        : "text-[#e84e3c]"
                                   )}
                                 >
                                   {item.recommendRate}%

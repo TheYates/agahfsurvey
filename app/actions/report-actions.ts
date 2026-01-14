@@ -88,17 +88,17 @@ export async function getSurveyData(): Promise<SurveyData[]> {
         : 0,
     locations_visited:
       Array.isArray(item.SubmissionLocation) &&
-      item.SubmissionLocation.length > 0
+        item.SubmissionLocation.length > 0
         ? item.SubmissionLocation.map((sl) => {
-            if (sl && sl.Location) {
-              // Check if Location is an array and get the first element if so
-              const location = Array.isArray(sl.Location)
-                ? sl.Location[0]
-                : sl.Location;
-              return location?.name || "Unknown";
-            }
-            return "Unknown";
-          })
+          if (sl && sl.Location) {
+            // Check if Location is an array and get the first element if so
+            const location = Array.isArray(sl.Location)
+              ? sl.Location[0]
+              : sl.Location;
+            return location?.name || "Unknown";
+          }
+          return "Unknown";
+        })
         : ["No location data"],
     wouldRecommend: item.wouldRecommend || false,
     patientType: item.patientType,
@@ -394,12 +394,13 @@ export async function getRecommendationRate(): Promise<number> {
 }
 
 // Get out-patient recommendation rate (departments, occupational health, canteen only)
-export async function getOutpatientRecommendationRate(): Promise<number> {
+export async function getOutpatientRecommendationRate(dateRange?: { from: string; to: string } | null): Promise<number> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("SurveySubmission")
       .select(`
         wouldRecommend,
+        submittedAt,
         SubmissionLocation (
           Location (
             name
@@ -407,6 +408,13 @@ export async function getOutpatientRecommendationRate(): Promise<number> {
         )
       `)
       .not("wouldRecommend", "is", null);
+
+    // Apply date filters if provided
+    if (dateRange) {
+      query = query.gte("submittedAt", dateRange.from).lte("submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching out-patient recommendation rate:", error);
@@ -442,12 +450,13 @@ export async function getOutpatientRecommendationRate(): Promise<number> {
 }
 
 // Get in-patient recommendation rate (wards only)
-export async function getInpatientRecommendationRate(): Promise<number> {
+export async function getInpatientRecommendationRate(dateRange?: { from: string; to: string } | null): Promise<number> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("SurveySubmission")
       .select(`
         wouldRecommend,
+        submittedAt,
         SubmissionLocation (
           Location (
             name
@@ -455,6 +464,13 @@ export async function getInpatientRecommendationRate(): Promise<number> {
         )
       `)
       .not("wouldRecommend", "is", null);
+
+    // Apply date filters if provided
+    if (dateRange) {
+      query = query.gte("submittedAt", dateRange.from).lte("submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching in-patient recommendation rate:", error);
