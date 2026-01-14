@@ -605,7 +605,7 @@ export default function ReportsPage() {
             href="/reports/survey-reports"
             className="col-span-1 md:col-span-1 group"
           >
-            <Card className="h-full transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 hover:border-primary cursor-pointer relative overflow-hidden">
+            <Card className="h-full transition-all duration-300 hover:scale-105 hover:shadow-xl border-2 border-green-900 hover:border-primary cursor-pointer relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150" />
               <CardHeader className="relative">
                 <CardTitle className="flex items-center justify-between">
@@ -761,14 +761,14 @@ export default function ReportsPage() {
                             item.name === "1"
                               ? "Poor"
                               : item.name === "2"
-                              ? "Fair"
-                              : item.name === "3"
-                              ? "Good"
-                              : item.name === "4"
-                              ? "Very Good"
-                              : item.name === "5"
-                              ? "Excellent"
-                              : item.name,
+                                ? "Fair"
+                                : item.name === "3"
+                                  ? "Good"
+                                  : item.name === "4"
+                                    ? "Very Good"
+                                    : item.name === "5"
+                                      ? "Excellent"
+                                      : item.name,
                           value: item.value,
                         }))}
                     />
@@ -914,14 +914,14 @@ export default function ReportsPage() {
                         </TableCell>
                         <TableCell className="align-middle">
                           {survey.locations_visited &&
-                          survey.locations_visited.length > 0 ? (
+                            survey.locations_visited.length > 0 ? (
                             <div className="flex items-center gap-2">
                               <span className="text-sm">
                                 {survey.locations_visited.length <= 2
                                   ? survey.locations_visited.join(", ")
                                   : `${survey.locations_visited
-                                      .slice(0, 2)
-                                      .join(", ")}...`}
+                                    .slice(0, 2)
+                                    .join(", ")}...`}
                               </span>
                               {survey.locations_visited.length > 2 && (
                                 <Link href="/reports/submissions">

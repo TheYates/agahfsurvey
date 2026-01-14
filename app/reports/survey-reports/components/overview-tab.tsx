@@ -419,38 +419,37 @@ export function OverviewTab({
               <Star className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{npsData?.score || 0}%</div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
-                <div className="flex flex-col items-center gap-0.5">
-                  <div className="flex items-center gap-1">
-                    <ThumbsUp className="h-3 w-3 text-[#22c5bf]" />
-                    <span className="font-medium">
-                      {npsData?.promoters || 0}
-                    </span>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <ThumbsUp className="h-4 w-4 text-[#22c5bf]" />
+                  <div className="text-xl font-bold text-[#22c5bf]">
+                    {npsData?.promoters || 0}
                   </div>
-                  <span className="text-[10px] text-[#22c5bf]">Promoters</span>
+                  <span className="text-[10px] text-[#22c5bf]">
+                    {npsData?.total ? Math.round((npsData.promoters / npsData.total) * 100) : 0}% Promoters
+                  </span>
                 </div>
 
-                <div className="flex flex-col items-center gap-0.5">
-                  <div className="flex items-center gap-1">
-                    <div className="h-3 w-3 flex items-center justify-center">
-                      <div className="h-0.5 w-2 bg-[#f6a050]" />
-                    </div>
-                    <span className="font-medium">
-                      {npsData?.passives || 0}
-                    </span>
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <div className="h-4 w-4 flex items-center justify-center">
+                    <div className="h-0.5 w-3 bg-[#f6a050]" />
                   </div>
-                  <span className="text-[10px] text-[#f6a050]">Passives</span>
+                  <div className="text-xl font-bold text-[#f6a050]">
+                    {npsData?.passives || 0}
+                  </div>
+                  <span className="text-[10px] text-[#f6a050]">
+                    {npsData?.total ? Math.round((npsData.passives / npsData.total) * 100) : 0}% Passives
+                  </span>
                 </div>
 
-                <div className="flex flex-col items-center gap-0.5">
-                  <div className="flex items-center gap-1">
-                    <ThumbsDown className="h-3 w-3 text-[#e84e3c]" />
-                    <span className="font-medium">
-                      {npsData?.detractors || 0}
-                    </span>
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <ThumbsDown className="h-4 w-4 text-[#e84e3c]" />
+                  <div className="text-xl font-bold text-[#e84e3c]">
+                    {npsData?.detractors || 0}
                   </div>
-                  <span className="text-[10px] text-[#e84e3c]">Detractors</span>
+                  <span className="text-[10px] text-[#e84e3c]">
+                    {npsData?.total ? Math.round((npsData.detractors / npsData.total) * 100) : 0}% Detractors
+                  </span>
                 </div>
               </div>
             </CardContent>

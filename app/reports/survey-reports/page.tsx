@@ -263,11 +263,17 @@ export default function SurveyReportsPage() {
       // Calculate date range filter from DateRange object
       let dateRangeFilter = null;
       if (selectedDateRange?.from) {
+        // Set start date to beginning of day (00:00:00.000)
+        const fromDate = new Date(selectedDateRange.from);
+        fromDate.setHours(0, 0, 0, 0);
+
+        // Set end date to end of day (23:59:59.999)
+        const toDate = selectedDateRange.to ? new Date(selectedDateRange.to) : new Date(selectedDateRange.from);
+        toDate.setHours(23, 59, 59, 999);
+
         dateRangeFilter = {
-          from: format(selectedDateRange.from, "yyyy-MM-dd"),
-          to: selectedDateRange.to
-            ? format(selectedDateRange.to, "yyyy-MM-dd")
-            : format(selectedDateRange.from, "yyyy-MM-dd"),
+          from: fromDate.toISOString(),
+          to: toDate.toISOString(),
         };
       }
 
@@ -533,11 +539,17 @@ export default function SurveyReportsPage() {
       // Calculate date range filter from DateRange object
       let dateRangeFilter = null;
       if (dateRange?.from) {
+        // Set start date to beginning of day (00:00:00.000)
+        const fromDate = new Date(dateRange.from);
+        fromDate.setHours(0, 0, 0, 0);
+
+        // Set end date to end of day (23:59:59.999)
+        const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+        toDate.setHours(23, 59, 59, 999);
+
         dateRangeFilter = {
-          from: format(dateRange.from, "yyyy-MM-dd"),
-          to: dateRange.to
-            ? format(dateRange.to, "yyyy-MM-dd")
-            : format(dateRange.from, "yyyy-MM-dd"),
+          from: fromDate.toISOString(),
+          to: toDate.toISOString(),
         };
       }
 
