@@ -604,7 +604,7 @@ function convertRatingToNumber(rating: string): number {
 }
 
 // Get Net Promoter Score (NPS)
-export async function getNPS(): Promise<{
+export async function getNPS(dateRange?: { from: string; to: string } | null): Promise<{
   score: number;
   promoters: number;
   passives: number;
@@ -612,10 +612,17 @@ export async function getNPS(): Promise<{
   total: number;
 }> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("Rating")
-      .select("npsRating")
+      .select("npsRating, SurveySubmission!inner(submittedAt)")
       .not("npsRating", "is", null);
+
+    // Apply date filters if provided
+    if (dateRange) {
+      query = query.gte("SurveySubmission.submittedAt", dateRange.from).lte("SurveySubmission.submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching NPS data:", error);
@@ -723,7 +730,7 @@ export async function getNPSByLocation(locationId: number | string): Promise<{
 }
 
 // Get Net Promoter Score (NPS) for multiple locations by type
-export async function getNPSByLocationType(locationType: string): Promise<{
+export async function getNPSByLocationType(locationType: string, dateRange?: { from: string; to: string } | null): Promise<{
   score: number;
   promoters: number;
   passives: number;
@@ -731,14 +738,22 @@ export async function getNPSByLocationType(locationType: string): Promise<{
   total: number;
 }> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("Rating")
       .select(`
         npsRating,
-        Location!inner(locationType)
+        Location!inner(locationType),
+        SurveySubmission!inner(submittedAt)
       `)
       .eq("Location.locationType", locationType)
       .not("npsRating", "is", null);
+
+    // Apply date filters if provided
+    if (dateRange) {
+      query = query.gte("SurveySubmission.submittedAt", dateRange.from).lte("SurveySubmission.submittedAt", dateRange.to);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching NPS data for location type:", error);

@@ -291,11 +291,11 @@ export default function SurveyReportsPage() {
       const overviewPromise = fetchOverviewTabData(dateRangeFilter);
       const departmentPromise = fetchDepartmentTabData(dateRangeFilter);
       const wardPromise = fetchWardTabData(5, 0, dateRangeFilter);
-      const npsPromise = getNPS();
-      const departmentNpsPromise = getNPSByLocationType("department");
-      const wardNpsPromise = getNPSByLocationType("ward");
-      const canteenNpsPromise = getNPSByLocationType("canteen");
-      const medicalsNpsPromise = getNPSByLocationType("occupational_health");
+      const npsPromise = getNPS(dateRangeFilter);
+      const departmentNpsPromise = getNPSByLocationType("department", dateRangeFilter);
+      const wardNpsPromise = getNPSByLocationType("ward", dateRangeFilter);
+      const canteenNpsPromise = getNPSByLocationType("canteen", dateRangeFilter);
+      const medicalsNpsPromise = getNPSByLocationType("occupational_health", dateRangeFilter);
       const outpatientRecommendationRatePromise = getOutpatientRecommendationRate(dateRangeFilter);
       const inpatientRecommendationRatePromise = getInpatientRecommendationRate(dateRangeFilter);
 
@@ -898,8 +898,16 @@ export default function SurveyReportsPage() {
                 isLoading={isLoading}
                 departments={departments}
                 dateRange={dateRange ? {
-                  from: format(dateRange.from!, "yyyy-MM-dd"),
-                  to: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : format(dateRange.from!, "yyyy-MM-dd")
+                  from: (() => {
+                    const fromDate = new Date(dateRange.from!);
+                    fromDate.setHours(0, 0, 0, 0);
+                    return fromDate.toISOString();
+                  })(),
+                  to: (() => {
+                    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from!);
+                    toDate.setHours(23, 59, 59, 999);
+                    return toDate.toISOString();
+                  })()
                 } : null}
                 npsData={canteenNpsData}
               />,
@@ -970,8 +978,16 @@ export default function SurveyReportsPage() {
               <MedicalsTab
                 isLoading={isLoading}
                 dateRange={dateRange ? {
-                  from: format(dateRange.from!, "yyyy-MM-dd"),
-                  to: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : format(dateRange.from!, "yyyy-MM-dd")
+                  from: (() => {
+                    const fromDate = new Date(dateRange.from!);
+                    fromDate.setHours(0, 0, 0, 0);
+                    return fromDate.toISOString();
+                  })(),
+                  to: (() => {
+                    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from!);
+                    toDate.setHours(23, 59, 59, 999);
+                    return toDate.toISOString();
+                  })()
                 } : null}
                 npsData={medicalsNpsData}
               />,
@@ -1052,8 +1068,16 @@ export default function SurveyReportsPage() {
                 isLoading={isLoading}
                 surveyData={data.surveyData}
                 dateRange={dateRange ? {
-                  from: format(dateRange.from!, "yyyy-MM-dd"),
-                  to: dateRange.to ? format(dateRange.to, "yyyy-MM-dd") : format(dateRange.from!, "yyyy-MM-dd")
+                  from: (() => {
+                    const fromDate = new Date(dateRange.from!);
+                    fromDate.setHours(0, 0, 0, 0);
+                    return fromDate.toISOString();
+                  })(),
+                  to: (() => {
+                    const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from!);
+                    toDate.setHours(23, 59, 59, 999);
+                    return toDate.toISOString();
+                  })()
                 } : null}
               />,
               <div className="space-y-6">
