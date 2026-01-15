@@ -50,6 +50,8 @@ import {
   FileText,
   Info,
   ArrowRight,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import {
   SurveyData,
@@ -555,11 +557,39 @@ export default function ReportsPage() {
               <CardDescription>Customer loyalty metric</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{npsData.score}%</div>
-              <p className="text-xs text-muted-foreground">
-                {npsData.promoters} promoters, {npsData.passives} passives,{" "}
-                {npsData.detractors} detractors
-              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <ThumbsUp className="h-4 w-4 text-[#22c5bf]" />
+                  <div className="text-xl font-bold text-[#22c5bf]">
+                    {npsData.promoters || 0}
+                  </div>
+                  <span className="text-[10px] text-[#22c5bf]">
+                    Promoters {npsData.total ? Math.round((npsData.promoters / npsData.total) * 100) : 0}%
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <div className="h-4 w-4 flex items-center justify-center">
+                    <div className="h-0.5 w-3 bg-[#f6a050]" />
+                  </div>
+                  <div className="text-xl font-bold text-[#f6a050]">
+                    {npsData.passives || 0}
+                  </div>
+                  <span className="text-[10px] text-[#f6a050]">
+                    Passives {npsData.total ? Math.round((npsData.passives / npsData.total) * 100) : 0}%
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center gap-1 text-center">
+                  <ThumbsDown className="h-4 w-4 text-[#e84e3c]" />
+                  <div className="text-xl font-bold text-[#e84e3c]">
+                    {npsData.detractors || 0}
+                  </div>
+                  <span className="text-[10px] text-[#e84e3c]">
+                    Detractors {npsData.total ? Math.round((npsData.detractors / npsData.total) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

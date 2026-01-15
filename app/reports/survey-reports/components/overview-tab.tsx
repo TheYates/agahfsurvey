@@ -426,7 +426,7 @@ export function OverviewTab({
                     {npsData?.promoters || 0}
                   </div>
                   <span className="text-[10px] text-[#22c5bf]">
-                    {npsData?.total ? Math.round((npsData.promoters / npsData.total) * 100) : 0}% Promoters
+                    Promoters {npsData?.total ? Math.round((npsData.promoters / npsData.total) * 100) : 0}%
                   </span>
                 </div>
 
@@ -438,7 +438,7 @@ export function OverviewTab({
                     {npsData?.passives || 0}
                   </div>
                   <span className="text-[10px] text-[#f6a050]">
-                    {npsData?.total ? Math.round((npsData.passives / npsData.total) * 100) : 0}% Passives
+                    Passives {npsData?.total ? Math.round((npsData.passives / npsData.total) * 100) : 0}%
                   </span>
                 </div>
 
@@ -448,7 +448,7 @@ export function OverviewTab({
                     {npsData?.detractors || 0}
                   </div>
                   <span className="text-[10px] text-[#e84e3c]">
-                    {npsData?.total ? Math.round((npsData.detractors / npsData.total) * 100) : 0}% Detractors
+                    Detractors {npsData?.total ? Math.round((npsData.detractors / npsData.total) * 100) : 0}%
                   </span>
                 </div>
               </div>
