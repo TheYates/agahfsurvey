@@ -70,7 +70,7 @@ export function DateRangePicker({
             defaultMonth={date?.from}
             selected={date}
             onSelect={handleSelect}
-            numberOfMonths={2}
+            numberOfMonths={1}
             captionLayout="dropdown-buttons"
             fromYear={2020}
             toYear={new Date().getFullYear()}
