@@ -153,32 +153,56 @@ export async function fetchDepartments(
     // Optimized: Get ratings directly with location filter - much faster
     const locationIds = locations.map((loc) => loc.id);
 
-    let ratingsQuery = supabase
-      .from("Rating")
-      .select(`
-        locationId,
-        reception,
-        professionalism,
-        understanding,
-        promptnessCare,
-        promptnessFeedback,
-        overall,
-        wouldRecommend,
-        SurveySubmission!inner(submittedAt)
-      `)
-      .in("locationId", locationIds);
+    // Fetch all ratings using pagination to overcome Supabase's 1000 row limit
+    const BATCH_SIZE = 1000;
+    let allRatings: any[] = [];
+    let hasMore = true;
+    let offset = 0;
 
-    // Add date range filter if provided
-    if (dateRange) {
-      ratingsQuery = ratingsQuery
-        .gte("SurveySubmission.submittedAt", dateRange.from)
-        .lte("SurveySubmission.submittedAt", dateRange.to);
+    while (hasMore) {
+      let ratingsQuery = supabase
+        .from("Rating")
+        .select(`
+          locationId,
+          reception,
+          professionalism,
+          understanding,
+          promptnessCare,
+          promptnessFeedback,
+          overall,
+          wouldRecommend,
+          SurveySubmission!inner(submittedAt)
+        `)
+        .in("locationId", locationIds)
+        .range(offset, offset + BATCH_SIZE - 1);
+
+      // Add date range filter if provided
+      if (dateRange) {
+        ratingsQuery = ratingsQuery
+          .gte("SurveySubmission.submittedAt", dateRange.from)
+          .lte("SurveySubmission.submittedAt", dateRange.to);
+      }
+
+      const { data: batchRatings, error: ratingsError } = await ratingsQuery;
+
+      if (ratingsError) {
+        console.error(`Error fetching ratings batch:`, ratingsError);
+        break;
+      }
+
+      if (batchRatings && batchRatings.length > 0) {
+        allRatings = [...allRatings, ...batchRatings];
+        offset += BATCH_SIZE;
+        // If we got less than BATCH_SIZE, we've reached the end
+        hasMore = batchRatings.length === BATCH_SIZE;
+      } else {
+        hasMore = false;
+      }
     }
 
-    const { data: allRatings, error: ratingsError } = await ratingsQuery;
+    console.log(`Fetched ${allRatings.length} total department ratings`);
 
-    if (ratingsError) {
-      console.error(`Error fetching ratings:`, ratingsError);
+    if (allRatings.length === 0) {
       return [];
     }
 

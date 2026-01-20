@@ -163,41 +163,57 @@ export async function fetchWards(
     console.time("fetchWards:ratings");
     const locationIds = locations.map((loc) => loc.id);
 
-    let ratingsQuery = supabase
-      .from("Rating")
-      .select(`
-        locationId,
-        reception,
-        professionalism,
-        understanding,
-        promptnessCare,
-        promptnessFeedback,
-        overall,
-        admission,
-        nurseProfessionalism,
-        doctorProfessionalism,
-        foodQuality,
-        discharge,
-        wouldRecommend,
-        SurveySubmission!inner(submittedAt)
-      `)
-      .in("locationId", locationIds);
+    // Fetch all ratings using pagination to overcome Supabase's 1000 row limit
+    const BATCH_SIZE = 1000;
+    let allRatings: any[] = [];
+    let hasMore = true;
+    let offset = 0;
 
-    // Add date range filter if provided
-    if (dateRange) {
-      ratingsQuery = ratingsQuery
-        .gte("SurveySubmission.submittedAt", dateRange.from)
-        .lte("SurveySubmission.submittedAt", dateRange.to);
+    while (hasMore) {
+      let ratingsQuery = supabase
+        .from("Rating")
+        .select(`
+          locationId,
+          reception,
+          professionalism,
+          understanding,
+          promptnessCare,
+          promptnessFeedback,
+          overall,
+          admission,
+          nurseProfessionalism,
+          doctorProfessionalism,
+          foodQuality,
+          discharge,
+          wouldRecommend,
+          SurveySubmission!inner(submittedAt)
+        `)
+        .in("locationId", locationIds)
+        .range(offset, offset + BATCH_SIZE - 1);
+
+      // Add date range filter if provided
+      if (dateRange) {
+        ratingsQuery = ratingsQuery
+          .gte("SurveySubmission.submittedAt", dateRange.from)
+          .lte("SurveySubmission.submittedAt", dateRange.to);
+      }
+
+      const { data: batchRatings, error: ratingsError } = await ratingsQuery;
+
+      if (ratingsError) {
+        console.error(`Error fetching ratings batch:`, ratingsError);
+        break;
+      }
+
+      if (batchRatings && batchRatings.length > 0) {
+        allRatings = [...allRatings, ...batchRatings];
+        offset += BATCH_SIZE;
+        hasMore = batchRatings.length === BATCH_SIZE;
+      } else {
+        hasMore = false;
+      }
     }
-
-    const { data: allRatings, error: ratingsError } = await ratingsQuery;
     console.timeEnd("fetchWards:ratings");
-
-    if (ratingsError) {
-      console.error(`Error fetching ratings:`, ratingsError);
-      console.timeEnd("fetchWards");
-      return { wards: [], total: count || 0 };
-    }
 
     // Group ratings by locationId for faster processing
     console.time("fetchWards:process");
@@ -491,7 +507,7 @@ export async function fetchWardConcerns(): Promise<WardConcern[]> {
     CacheKeys.wardConcerns(),
     async () => {
       try {
-        console.time("fetchWardConcerns");
+        // console.time("fetchWardConcerns");
 
     // Get all ward locations first to use their IDs
     console.time("fetchWardConcerns:locations");

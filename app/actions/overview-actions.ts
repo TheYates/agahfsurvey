@@ -218,7 +218,7 @@ export async function getSurveyOverviewData(
       wouldRecommend,
       visitPurpose
     `);
-    let ratingsQuery = supabase.from("Rating").select("overall, SurveySubmission!inner(submittedAt)");
+    let ratingsQuery = supabase.from("Rating").select("overall, SurveySubmission!inner(submittedAt)").limit(10000);
 
     // Apply date filters if provided
     if (dateRange) {
