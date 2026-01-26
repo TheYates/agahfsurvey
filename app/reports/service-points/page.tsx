@@ -5,6 +5,20 @@ import { useRouter } from "next/navigation";
 import { useSupabaseAuth } from "@/contexts/supabase-auth-context";
 import Image from "next/image";
 import Link from "next/link";
+import { Bar, Line, Pie } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from "chart.js";
 import {
   Card,
   CardContent,
@@ -12,27 +26,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-// Charts temporarily disabled
-// import {
-//   ChartContainer,
-//   ChartTooltip,
-//   ChartTooltipContent,
-// } from "@/components/ui/chart";
-// import {
-//   BarChart,
-//   Bar,
-//   PieChart,
-//   Pie,
-//   LineChart,
-//   Line,
-//   XAxis,
-//   YAxis,
-//   CartesianGrid,
-//   ResponsiveContainer,
-//   Cell,
-// } from "recharts";
 import {
   Table,
   TableBody,
@@ -472,7 +481,7 @@ export default function ServicePointReportsPage() {
                           },
                           tooltip: {
                             callbacks: {
-                              label: (context) => {
+                              label: (context: any) => {
                                 const dataset = context.dataset;
                                 const index = context.dataIndex;
                                 const value = dataset.data[index] as number;
