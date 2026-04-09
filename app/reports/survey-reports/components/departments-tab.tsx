@@ -38,6 +38,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { NPSCard } from "@/components/ui/nps-card";
@@ -707,7 +715,58 @@ export function DepartmentsTab({
 
         <Card>
           <CardHeader>
-            <CardTitle>Department Ratings</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>Department Ratings</CardTitle>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button className="cursor-help text-muted-foreground hover:text-foreground">
+                    <Info size={16} />
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>How Ratings Are Calculated</DialogTitle>
+                    <DialogDescription className="mt-2">
+                      <div className="space-y-4 text-sm">
+                        <div>
+                          <h4 className="font-medium mb-1">Satisfaction Score</h4>
+                          <p className="text-muted-foreground">
+                            Calculated as a weighted average (Bayesian average) to prevent departments with few responses from skewing results:
+                          </p>
+                          <code className="block mt-2 p-2 bg-muted rounded text-xs">
+                            Score = (v/(v+m)) × R + (m/(v+m)) × C
+                          </code>
+                          <ul className="mt-2 text-xs text-muted-foreground list-disc list-inside">
+                            <li>v = number of responses for this department</li>
+                            <li>m = minimum threshold (5 responses)</li>
+                            <li>R = raw satisfaction score (average of all category ratings)</li>
+                            <li>C = global average satisfaction across all departments</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <h4 className="font-medium mb-1">Rating Categories</h4>
+                          <p className="text-muted-foreground">
+                            Each category (Reception, Professionalism, Understanding, etc.) is converted from text to numbers (Excellent=5, Very Good=4, Good=3, Fair=2, Poor=1) and averaged.
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="font-medium mb-1">Recommend Rate</h4>
+                          <p className="text-muted-foreground">
+                            Percentage of respondents who selected "Would Recommend" for this department.
+                          </p>
+                        </div>
+                        <div>
+                          <h4 className="font-medium mb-1">Top/Lowest Rating</h4>
+                          <p className="text-muted-foreground">
+                            The highest and lowest rated categories for each department based on the average score.
+                          </p>
+                        </div>
+                      </div>
+                    </DialogDescription>
+                  </DialogHeader>
+                </DialogContent>
+              </Dialog>
+            </div>
             <CardDescription>
               Click on a department to view detailed performance
             </CardDescription>
