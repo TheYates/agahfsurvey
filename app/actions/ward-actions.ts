@@ -421,12 +421,15 @@ export async function fetchWards(
       console.timeEnd("fetchWards:process:averages");
 
       // Calculate overall satisfaction as the average of all ratings (RAW score)
+      // Includes recommend rate as an additional category (converted from percentage to 1-5 scale)
       // Don't round yet - keep full precision for weighted average calculation
+      const recommendScore = recommendRate / 20; // Convert 0-100% to 1-5 scale
       const ratingValues = Object.values(avgRatings).filter((val) => val > 0);
+      const allValues = [...ratingValues, recommendScore];
       const rawSatisfaction =
-        ratingValues.length > 0
-          ? ratingValues.reduce((sum, val) => sum + val, 0) /
-            ratingValues.length
+        allValues.length > 0
+          ? allValues.reduce((sum, val) => sum + val, 0) /
+            allValues.length
           : 0;
 
       // Add mock capacity and occupancy for ward data

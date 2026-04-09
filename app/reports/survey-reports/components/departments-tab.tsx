@@ -731,7 +731,7 @@ export function DepartmentsTab({
                         <div>
                           <h4 className="font-medium mb-1">Satisfaction Score</h4>
                           <p className="text-muted-foreground">
-                            Calculated as a weighted average (Bayesian average) to prevent departments with few responses from skewing results:
+                            Calculated as a weighted average (Bayesian average) from 7 categories to prevent departments with few responses from skewing results:
                           </p>
                           <code className="block mt-2 p-2 bg-muted rounded text-xs">
                             Score = (v/(v+m)) × R + (m/(v+m)) × C
@@ -739,20 +739,14 @@ export function DepartmentsTab({
                           <ul className="mt-2 text-xs text-muted-foreground list-disc list-inside">
                             <li>v = number of responses for this department</li>
                             <li>m = minimum threshold (5 responses)</li>
-                            <li>R = raw satisfaction score (average of all category ratings)</li>
+                            <li>R = raw satisfaction score (average of 7 category ratings)</li>
                             <li>C = global average satisfaction across all departments</li>
                           </ul>
                         </div>
                         <div>
-                          <h4 className="font-medium mb-1">Rating Categories</h4>
+                          <h4 className="font-medium mb-1">Rating Categories (7 total)</h4>
                           <p className="text-muted-foreground">
-                            Each category (Reception, Professionalism, Understanding, etc.) is converted from text to numbers (Excellent=5, Very Good=4, Good=3, Fair=2, Poor=1) and averaged.
-                          </p>
-                        </div>
-                        <div>
-                          <h4 className="font-medium mb-1">Recommend Rate</h4>
-                          <p className="text-muted-foreground">
-                            Percentage of respondents who selected "Would Recommend" for this department.
+                            Each category (Reception, Professionalism, Understanding, Promptness of Care, Promptness of Feedback, Overall, Recommend Rate) is converted from text/percentage to numbers (Excellent=5, Very Good=4, Good=3, Fair=2, Poor=1, Recommend Rate = %/20) and averaged.
                           </p>
                         </div>
                         <div>
