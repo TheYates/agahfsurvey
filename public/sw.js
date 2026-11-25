@@ -21,7 +21,7 @@
  * cached on first successful navigation automatically.
  */
 
-const VERSION = "v4";
+const VERSION = "v5";
 const SHELL_CACHE = `agahf-shell-${VERSION}`;
 const PAGES_CACHE = `agahf-pages-${VERSION}`;
 const STATIC_CACHE = `agahf-static-${VERSION}`;
@@ -39,7 +39,7 @@ self.addEventListener("install", (event) => {
     caches.open(SHELL_CACHE).then((cache) =>
       Promise.allSettled(
         PRECACHE_URLS.map((url) =>
-          fetch(url, { credentials: "same-origin" }).then((response) => {
+          fetch(url, { credentials: "same-origin", cache: "reload" }).then((response) => {
             if (!response || response.status !== 200) {
               throw new Error(`Precache failed for ${url}: ${response && response.status}`);
             }
@@ -160,22 +160,37 @@ const handleNavigation = async (event) => {
   }
 };
 
+// Static/hashed assets: stale-while-revalidate so an installed PWA picks
+// up new JS/CSS without staying stuck on an old bundle forever.
 const handleStaticAsset = async (event) => {
   const cached = await caches.match(event.request);
-  if (cached) return cached;
+
+  const networkUpdate = fetch(event.request)
+    .then((response) => {
+      if (
+        response &&
+        response.status === 200 &&
+        response.type === "basic" &&
+        isSameOrigin(new URL(event.request.url))
+      ) {
+        const copy = response.clone();
+        caches.open(STATIC_CACHE).then((cache) => cache.put(event.request, copy).catch(() => {}));
+      }
+      return response;
+    })
+    .catch(() => null);
+
+  // Serve cached copy instantly (critical for offline cold start),
+  // revalidating in the background for next launch.
+  if (cached) {
+    event.waitUntil(networkUpdate);
+    return cached;
+  }
 
   try {
-    const response = await fetch(event.request);
-    if (
-      response &&
-      response.status === 200 &&
-      response.type === "basic" &&
-      isSameOrigin(new URL(event.request.url))
-    ) {
-      const cache = await caches.open(STATIC_CACHE);
-      cache.put(event.request, response.clone()).catch(() => {});
-    }
-    return response;
+    const response = await networkUpdate;
+    if (response) return response;
+    return offlineFallback();
   } catch (error) {
     return offlineFallback();
   }
