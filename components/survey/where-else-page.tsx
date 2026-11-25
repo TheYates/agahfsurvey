@@ -25,7 +25,7 @@ export default function WhereElsePage({
   onNext,
   onBack,
 }: WhereElsePageProps) {
-  const { locationGroups, loading, error } = useLocations();
+  const { locationGroups, loading, error, retry } = useLocations();
 
   const handleLocationChange = (location: string, checked: boolean) => {
     const updatedLocations = checked
@@ -35,9 +35,6 @@ export default function WhereElsePage({
     updateSurveyData("otherLocations", updatedLocations);
   };
 
-  // Prepare location groups for display
-  // If survey is for Occupational Health, exclude occupational health locations
-  // since they're already rating the occupational health location in-place
   const shouldExcludeOccupationalHealth =
     surveyData.visitPurpose === "Medicals (Occupational Health)";
 
@@ -59,18 +56,16 @@ export default function WhereElsePage({
     },
   ];
 
-  if (error) {
+  const hasAnyLocations = displayGroups.some((g) => g.locations.length > 0);
+
+  if (!loading && error && !hasAnyLocations) {
     return (
       <div className="space-y-6">
         <Card className="border-none shadow-none">
           <CardContent className="px-0 pb-0">
             <div className="text-center py-8">
               <p className="text-red-500">Error loading locations: {error}</p>
-              <Button
-                variant="outline"
-                onClick={() => window.location.reload()}
-                className="mt-4"
-              >
+              <Button variant="outline" onClick={() => retry()} className="mt-4">
                 Retry
               </Button>
             </div>
@@ -89,6 +84,14 @@ export default function WhereElsePage({
           </CardTitle>
         </CardHeader>
         <CardContent className="px-0 pb-0">
+          {error && hasAnyLocations ? (
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <span>Live list unavailable — showing default list. {error}</span>
+              <Button variant="outline" size="sm" onClick={() => retry()}>
+                Retry
+              </Button>
+            </div>
+          ) : null}
           {loading ? (
             <div className="space-y-6">
               {[1, 2, 3].map((i) => (
@@ -145,7 +148,7 @@ export default function WhereElsePage({
             </div>
           )}
           <p className="text-sm italic mt-4">
-            If you did not visit any other place, click 'Next' to continue.
+            If you did not visit any other place, click &apos;Next&apos; to continue.
           </p>
         </CardContent>
       </Card>

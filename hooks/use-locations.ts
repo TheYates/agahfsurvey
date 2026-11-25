@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { surveyCache, CacheKeys, CacheTTL } from "@/lib/cache/survey-cache";
 
@@ -11,8 +11,47 @@ type LocationGroups = {
   occupational_health: string[];
 };
 
+const FALLBACK_GROUPS: LocationGroups = {
+  department: [
+    "Audiology Unit",
+    "Dental Clinic",
+    "Dressing Room",
+    "Emergency Unit",
+    "Eye Clinic",
+    "Eric Asubonteng Clinic (Bruno Est.)",
+    "Injection Room",
+    "Laboratory",
+    "Out-Patient Department (OPD)",
+    "Out-Patient Department (OPD) Records",
+    "Out-Patient Department (OPD) Triage",
+    "Pharmacy",
+    "Physiotherapy",
+    "RCH",
+    "Ultrasound Unit",
+    "X-Ray Unit",
+  ],
+  ward: [
+    "Female's Ward",
+    "Intensive Care Unit (ICU)",
+    "Kids Ward",
+    "Lying-In Ward",
+    "Male's Ward",
+    "Maternity Ward",
+    "Neonatal Intensive Care Unit (NICU)",
+  ],
+  canteen: ["Canteen Services"],
+  occupational_health: ["Occupational Health Unit (Medicals)"],
+};
+
+function getErrorMessage(err: unknown): string {
+  if (err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string") {
+    return (err as { message: string }).message;
+  }
+  if (typeof err === "string") return err;
+  return "Unknown error";
+}
+
 export function useLocations() {
-  // Get supabase client inside the hook to ensure it's created after hydration
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
   const [locationGroups, setLocationGroups] = useState<LocationGroups>({
@@ -23,115 +62,90 @@ export function useLocations() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [usingFallback, setUsingFallback] = useState(false);
+
+  const fetchLocations = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cachedData = surveyCache.get<LocationGroups>(
+        CacheKeys.surveyLocations()
+      );
+      if (cachedData) {
+        setLocationGroups(cachedData);
+        setUsingFallback(false);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("Location")
+        .select("name, locationType")
+        .in("locationType", [
+          "department",
+          "ward",
+          "canteen",
+          "occupational_health",
+        ])
+        .order("name");
+
+      if (error) throw error;
+
+      const locations = data || [];
+
+      if (locations.length === 0) {
+        console.warn("No locations found in database. Using fallback data.");
+        setLocationGroups(FALLBACK_GROUPS);
+        setUsingFallback(true);
+        setError("No locations found in database — showing default list.");
+        return;
+      }
+
+      const groups: LocationGroups = {
+        department: [],
+        ward: [],
+        canteen: [],
+        occupational_health: [],
+      };
+
+      locations.forEach((loc) => {
+        const type = loc.locationType as keyof LocationGroups;
+        if (groups[type]) {
+          groups[type].push(loc.name);
+        }
+      });
+
+      surveyCache.set(CacheKeys.surveyLocations(), groups, CacheTTL.LONG);
+
+      setLocationGroups(groups);
+      setUsingFallback(false);
+    } catch (err) {
+      console.error("Location fetch error:", err);
+      // Fall back to hardcoded list so the survey (step 2 for General Practice)
+      // is never blocked by a network/RLS/Supabase outage.
+      setLocationGroups(FALLBACK_GROUPS);
+      setUsingFallback(true);
+      setError(`Failed to load locations (${getErrorMessage(err)}) — showing default list.`);
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
-    async function fetchLocations() {
-      try {
-        // Use cache for locations data
-        const cachedData = surveyCache.get<LocationGroups>(
-          CacheKeys.surveyLocations()
-        );
-        if (cachedData) {
-          setLocationGroups(cachedData);
-          setLoading(false);
-          return;
-        }
-
-        console.time("fetchSurveyLocations");
-
-        // Optimized query - only select needed fields and filter by location types
-        const { data, error } = await supabase
-          .from("Location")
-          .select("name, locationType")
-          .in("locationType", [
-            "department",
-            "ward",
-            "canteen",
-            "occupational_health",
-          ])
-          .order("name");
-
-        if (error) throw error;
-
-        const locations = data || [];
-
-        // If no locations found, provide fallback data
-        if (locations.length === 0) {
-          console.warn("No locations found in database. Using fallback data.");
-          const fallbackGroups: LocationGroups = {
-            department: [
-              "Audiology Unit",
-              "Dental Clinic",
-              "Dressing Room",
-              "Emergency Unit",
-              "Eye Clinic",
-              "Eric Asubonteng Clinic (Bruno Est.)",
-              "Injection Room",
-              "Laboratory",
-              "Out-Patient Department (OPD)",
-              "Out-Patient Department (OPD) Records",
-              "Out-Patient Department (OPD) Triage",
-              "Pharmacy",
-              "Physiotherapy",
-              "RCH",
-              "Ultrasound Unit",
-              "X-Ray Unit",
-            ],
-            ward: [
-              "Female's Ward",
-              "Intensive Care Unit (ICU)",
-              "Kids Ward",
-              "Lying-In Ward",
-              "Male's Ward",
-              "Maternity Ward",
-              "Neonatal Intensive Care Unit (NICU)",
-            ],
-            canteen: ["Canteen Services"],
-            occupational_health: ["Occupational Health Unit (Medicals)"],
-          };
-
-          setLocationGroups(fallbackGroups);
-          console.timeEnd("fetchSurveyLocations");
-          return;
-        }
-
-        // Group locations efficiently
-        const groups: LocationGroups = {
-          department: [],
-          ward: [],
-          canteen: [],
-          occupational_health: [],
-        };
-
-        locations.forEach((loc) => {
-          const type = loc.locationType as keyof LocationGroups;
-          if (groups[type]) {
-            // No filters needed - include all locations as they are in the database
-            groups[type].push(loc.name);
-          }
-        });
-
-        // Cache the processed data for 15 minutes
-        surveyCache.set(CacheKeys.surveyLocations(), groups, CacheTTL.LONG);
-
-        setLocationGroups(groups);
-        console.timeEnd("fetchSurveyLocations");
-      } catch (err) {
-        setError("Failed to load locations");
-        console.error("Location fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchLocations();
-  }, []);
+  }, [fetchLocations]);
+
+  const retry = useCallback(() => {
+    surveyCache.delete(CacheKeys.surveyLocations());
+    return fetchLocations();
+  }, [fetchLocations]);
 
   return {
     locationGroups,
     loading,
     error,
-    // Legacy support - flatten for backward compatibility
+    usingFallback,
+    retry,
     departmentLocations: locationGroups.department,
     wardLocations: locationGroups.ward,
     canteenLocations: locationGroups.canteen,
