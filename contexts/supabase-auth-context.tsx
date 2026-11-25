@@ -165,6 +165,17 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     try {
       const result = await authClient.signOut();
       if (result.error) console.error("Sign out error:", result.error);
+      // Explicit sign-out only: purge cached private pages from the service
+      // worker so a signed-out user can never see a cached report.
+      // The offline survey queue is intentionally NOT cleared.
+      try {
+        const { clearPrivateCaches } = await import(
+          "@/lib/offline/register-sw"
+        );
+        await clearPrivateCaches();
+      } catch (error) {
+        console.error("Failed to purge private caches on sign-out:", error);
+      }
       return result;
     } catch (error) {
       console.error("Sign out exception:", error);

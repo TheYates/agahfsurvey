@@ -10,6 +10,8 @@ const supabase = createClient<Database>(
 );
 
 export type SurveyFormData = {
+  /** Optional idempotency key from the client; used as the survey row id. */
+  clientSubmissionId?: string;
   visitTime: string;
   visitPurpose: string;
   locations: string[];
@@ -55,6 +57,14 @@ function mapRatingCategory(category: string): string {
  * Submits survey data to Supabase
  */
 export async function submitSurveyToSupabase(formData: SurveyFormData) {
+  // Idempotency key computed before any I/O so the catch block can also
+  // reference it when a retry collides with an already-stored row.
+  const submissionId =
+    typeof formData.clientSubmissionId === "string" &&
+    formData.clientSubmissionId.length > 0
+      ? formData.clientSubmissionId
+      : uuidv4();
+
   try {
     // Get all locations (from both standard and other locations)
     let allLocationNames = [
@@ -91,8 +101,8 @@ export async function submitSurveyToSupabase(formData: SurveyFormData) {
     // 1. Ensure all locations exist in the database
     const locationMap = await ensureLocationsExist(allLocationNames);
 
-    // 2. Create survey submission
-    const submissionId = uuidv4();
+    // 2. Use the idempotency key as the row id so that an offline retry of
+    // the same survey hits a primary-key conflict instead of duplicating.
     const now = new Date().toISOString();
 
     // Convert "Yes"/"No" to boolean for wouldRecommend
@@ -182,8 +192,15 @@ export async function submitSurveyToSupabase(formData: SurveyFormData) {
     // Submit the data using our createSurveyQuery function
     const result = await createSurveyQuery(supabase, surveyData);
 
-    return { success: true, data: result };
+    return { success: true, data: result, id: submissionId };
   } catch (error) {
+    // A primary-key conflict on the client-supplied id means this exact
+    // survey was already stored (e.g. a retry whose first attempt actually
+    // succeeded). Treat it as success so the queue can move on.
+    if ((error as { code?: string })?.code === "23505") {
+      console.log("Duplicate submission deduplicated:", submissionId);
+      return { success: true, data: null, id: submissionId, deduplicated: true };
+    }
     console.error("Error submitting survey:", error);
     return { success: false, error };
   }

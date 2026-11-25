@@ -6,14 +6,21 @@ const DB_NAME = 'agahf-survey-offline';
 const DB_VERSION = 1;
 const STORE_NAME = 'pending-submissions';
 
+export const MAX_SYNC_ATTEMPTS = 5;
+
+export type SubmissionStatus = "pending" | "needs-attention";
+
 export interface OfflineSubmission {
   id: string;
+  /** Stable idempotency key, sent as the survey row id so retries dedupe. */
+  clientSubmissionId: string;
   timestamp: number;
   surveyData: any;
   synced: boolean;
   syncAttempts: number;
   lastSyncAttempt?: number;
   error?: string;
+  status: SubmissionStatus;
 }
 
 /**
@@ -47,18 +54,31 @@ export const openDB = (): Promise<IDBDatabase> => {
 /**
  * Save submission to offline storage
  */
+export const generateClientSubmissionId = (): string => {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+  return `offline-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+};
+
 export const saveOfflineSubmission = async (
-  surveyData: any
+  surveyData: any,
+  clientSubmissionId?: string
 ): Promise<string> => {
   const db = await openDB();
   const id = `offline-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   const submission: OfflineSubmission = {
     id,
+    clientSubmissionId: clientSubmissionId ?? generateClientSubmissionId(),
     timestamp: Date.now(),
     surveyData,
     synced: false,
     syncAttempts: 0,
+    status: "pending",
   };
 
   return new Promise((resolve, reject) => {
@@ -173,6 +193,51 @@ export const markAsSynced = async (id: string): Promise<void> => {
 };
 
 /**
+ * Get submissions that exhausted auto-retries and need manual attention
+ */
+export const getFailedSubmissions = async (): Promise<OfflineSubmission[]> => {
+  const all = await getAllSubmissions();
+  return all.filter(
+    (sub) => !sub.synced && (sub.status === "needs-attention" || sub.syncAttempts >= MAX_SYNC_ATTEMPTS)
+  );
+};
+
+/**
+ * Reset a failed submission back to pending so it retries
+ */
+export const retrySubmission = async (id: string): Promise<void> => {
+  const db = await openDB();
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], "readwrite");
+    const store = transaction.objectStore(STORE_NAME);
+    const getRequest = store.get(id);
+
+    getRequest.onsuccess = () => {
+      const submission = getRequest.result;
+      if (submission) {
+        submission.status = "pending";
+        submission.error = undefined;
+        const updateRequest = store.put(submission);
+        updateRequest.onsuccess = () => resolve();
+        updateRequest.onerror = () =>
+          reject(new Error("Failed to reset submission for retry"));
+      } else {
+        reject(new Error("Submission not found"));
+      }
+    };
+
+    getRequest.onerror = () => {
+      reject(new Error("Failed to get submission"));
+    };
+
+    transaction.oncomplete = () => {
+      db.close();
+    };
+  });
+};
+
+/**
  * Update sync attempt
  */
 export const updateSyncAttempt = async (
@@ -193,6 +258,9 @@ export const updateSyncAttempt = async (
         submission.lastSyncAttempt = Date.now();
         if (error) {
           submission.error = error;
+        }
+        if (submission.syncAttempts >= MAX_SYNC_ATTEMPTS) {
+          submission.status = "needs-attention";
         }
 
         const updateRequest = store.put(submission);

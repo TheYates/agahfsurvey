@@ -1,20 +1,61 @@
 {
   "name": "AGA Health Foundation Survey",
   "short_name": "AGAHF Survey",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
   "description": "Patient satisfaction survey for AGA Health Foundation",
-  "start_url": "/survey",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#ffffff",
   "theme_color": "#0ea5e9",
-  "orientation": "portrait",
   "icons": [
     {
-      "src": "/agahflogo white.svg",
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/agahflogo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
-  "categories": ["health", "medical"],
-  "screenshots": []
+  "screenshots": [
+    {
+      "src": "/screenshots/survey-narrow.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Take the patient satisfaction survey"
+    },
+    {
+      "src": "/screenshots/home-wide.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Start the patient satisfaction survey"
+    }
+  ],
+  "categories": ["health", "medical"]
 }

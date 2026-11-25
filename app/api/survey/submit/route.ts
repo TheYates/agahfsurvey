@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         id: result.id,
+        deduplicated: (result as { deduplicated?: boolean }).deduplicated === true,
         message: "Survey submitted successfully",
       });
     } else {

@@ -5,18 +5,27 @@ import { useToast } from "@/components/ui/use-toast";
 import {
   saveOfflineSubmission,
   getPendingSubmissions,
+  getFailedSubmissions,
+  retrySubmission,
   markAsSynced,
   updateSyncAttempt,
   cleanupOldSubmissions,
+  generateClientSubmissionId,
   OfflineSubmission,
 } from "./db";
+
+const LAST_ONLINE_KEY = "agahf:last-online-at";
 
 interface OfflineContextType {
   isOnline: boolean;
   pendingCount: number;
+  failedCount: number;
   isSyncing: boolean;
+  /** Last time the app confirmed it was online (for the stale banner). */
+  lastOnlineAt: number | null;
   saveSubmission: (surveyData: any) => Promise<string>;
   syncPendingSubmissions: () => Promise<void>;
+  retryFailedSubmissions: () => Promise<void>;
   getPending: () => Promise<OfflineSubmission[]>;
 }
 
@@ -38,7 +47,9 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
   const { toast } = useToast();
   const [isOnline, setIsOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
+  const [failedCount, setFailedCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [lastOnlineAt, setLastOnlineAt] = useState<number | null>(null);
 
   // Check if we're in browser environment
   const isBrowser = typeof window !== 'undefined';
@@ -50,12 +61,26 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
     if (!isBrowser) return;
 
     try {
-      const pending = await getPendingSubmissions();
+      const [pending, failed] = await Promise.all([
+        getPendingSubmissions(),
+        getFailedSubmissions(),
+      ]);
       setPendingCount(pending.length);
+      setFailedCount(failed.length);
     } catch (error) {
       console.error("Failed to update pending count:", error);
     }
   }, [isBrowser]);
+
+  const recordOnline = useCallback(() => {
+    const now = Date.now();
+    setLastOnlineAt(now);
+    try {
+      localStorage.setItem(LAST_ONLINE_KEY, String(now));
+    } catch {
+      // storage unavailable: keep in-memory value only
+    }
+  }, []);
 
   /**
    * Handle online/offline status changes
@@ -65,6 +90,7 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
 
     const handleOnline = () => {
       setIsOnline(true);
+      recordOnline();
       toast({
         title: "Back online",
         description: "Connection restored. Syncing pending submissions...",
@@ -84,6 +110,15 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
 
     // Set initial state
     setIsOnline(navigator.onLine);
+    try {
+      const stored = localStorage.getItem(LAST_ONLINE_KEY);
+      if (stored) setLastOnlineAt(Number(stored));
+    } catch {
+      // ignore
+    }
+    if (navigator.onLine) {
+      recordOnline();
+    }
 
     // Listen for online/offline events
     window.addEventListener("online", handleOnline);
@@ -117,9 +152,14 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
       throw new Error("Cannot save submission: not in browser environment");
     }
 
+    // One stable key per survey attempt — reused across every retry so the
+    // server can dedupe (idempotency). Never regenerate after this point.
+    const clientSubmissionId = generateClientSubmissionId();
+    const payload = { ...surveyData, clientSubmissionId };
+
     if (!isOnline) {
       // Save to IndexedDB when offline
-      const id = await saveOfflineSubmission(surveyData);
+      const id = await saveOfflineSubmission(payload, clientSubmissionId);
       await updatePendingCount();
 
       toast({
@@ -136,7 +176,7 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(surveyData),
+          body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
@@ -152,10 +192,10 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
 
         return data.id || "online-submission";
       } catch (error) {
-        // If online submission fails, save offline as fallback
+        // If online submission fails, save offline as fallback (same key)
         console.error("Online submission failed, saving offline:", error);
 
-        const id = await saveOfflineSubmission(surveyData);
+        const id = await saveOfflineSubmission(payload, clientSubmissionId);
         await updatePendingCount();
 
         toast({
@@ -189,14 +229,21 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
       let successCount = 0;
       let failCount = 0;
 
-      for (const submission of pending) {
+      // Auto-sync skips needs-attention records; they require manual retry
+      // via retryFailedSubmissions().
+      const retryable = pending.filter((s) => s.status !== "needs-attention");
+
+      for (const submission of retryable) {
         try {
           const response = await fetch("/api/survey/submit", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(submission.surveyData),
+            body: JSON.stringify({
+              ...submission.surveyData,
+              clientSubmissionId: submission.clientSubmissionId,
+            }),
           });
 
           if (response.ok) {
@@ -245,6 +292,24 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
   }, [isOnline, isSyncing, updatePendingCount, isBrowser]);
 
   /**
+   * Manually retry every needs-attention submission, then run a sync pass.
+   */
+  const retryFailedSubmissions = useCallback(async () => {
+    if (!isBrowser || !isOnline || isSyncing) return;
+    try {
+      const failed = await getFailedSubmissions();
+      for (const submission of failed) {
+        await retrySubmission(submission.id);
+      }
+      await updatePendingCount();
+    } catch (error) {
+      console.error("Failed to reset submissions for retry:", error);
+    }
+    await syncPendingSubmissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBrowser, isOnline, isSyncing, updatePendingCount]);
+
+  /**
    * Get pending submissions
    */
   const getPending = useCallback(async (): Promise<OfflineSubmission[]> => {
@@ -255,9 +320,12 @@ export const OfflineProvider: React.FC<OfflineProviderProps> = ({ children }) =>
   const value: OfflineContextType = {
     isOnline,
     pendingCount,
+    failedCount,
     isSyncing,
+    lastOnlineAt,
     saveSubmission,
     syncPendingSubmissions,
+    retryFailedSubmissions,
     getPending,
   };
 

@@ -69,6 +69,8 @@ import {
   type LocationUpdate,
 } from "@/app/actions/location-actions";
 import { useToast } from "@/hooks/use-toast";
+import { Download, CheckCircle2 } from "lucide-react";
+import { usePwaInstall } from "@/components/pwa/use-pwa-install";
 
 const LOCATION_TYPES = [
   { value: "department", label: "Department" },
@@ -81,6 +83,13 @@ export default function SettingsPage() {
   const { isAuthenticated } = useSupabaseAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const {
+    installed,
+    isIos,
+    installing,
+    canInstall,
+    install,
+  } = usePwaInstall();
 
   // Location management state
   const [locations, setLocations] = useState<Location[]>([]);
@@ -396,6 +405,38 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <Label className="flex items-center gap-2">
+                      <Download size={16} />
+                      Install App
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {installed
+                        ? "The app is installed on this device."
+                        : isIos
+                          ? "On iPhone or iPad, tap Share then Add to Home Screen."
+                          : canInstall
+                            ? "Install the app for quick access — it also works offline."
+                            : "This browser doesn't support installing the app."}
+                    </p>
+                  </div>
+                  {installed ? (
+                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <CheckCircle2 size={16} />
+                      Installed
+                    </span>
+                  ) : canInstall && !isIos ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={install}
+                      disabled={installing}
+                    >
+                      {installing ? "Installing…" : "Install"}
+                    </Button>
+                  ) : null}
+                </div>
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="hospital-name">Hospital Name</Label>
